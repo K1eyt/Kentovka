@@ -5,6 +5,7 @@ OUT=ci-out; mkdir -p $OUT
 adb wait-for-device
 adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0
 adb install -r -g android/build/Kentovka-debug.apk > $OUT/install.txt 2>&1
+unzip -l android/build/Kentovka-debug.apk | grep -E "lib/|nodeproject|loading" > $OUT/apk.txt
 adb logcat -c
 adb shell am start -n ru.kentovka.app/.MainActivity --es kname "Тест" > $OUT/start1.txt 2>&1
 sleep 20
@@ -19,6 +20,8 @@ adb exec-out screencap -p > $OUT/2-server.png
 node android/ci-webview.js > $OUT/webview.txt 2>&1 || true
 adb exec-out screencap -p > $OUT/3-voice.png
 adb logcat -d > $OUT/logcat-all.txt
+adb shell run-as ru.kentovka.app ls -la files files/nodeproject files/kentovka > $OUT/files.txt 2>&1
+adb logcat -d -s kentovka kentovka-node AndroidRuntime > $OUT/logcat-node.txt
 grep -E "AndroidRuntime|FATAL|chromium|Kentovka|ru.kentovka" $OUT/logcat-all.txt | tail -400 > $OUT/logcat.txt
 adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity" > $OUT/activity.txt
 exit 0

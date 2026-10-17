@@ -32,6 +32,7 @@ public class NodeHost {
 
     static synchronized boolean start(final Context ctx) {
         if (started) return true;
+        Log.i("kentovka", "запускаю node");
         try {
             System.loadLibrary("node");
             System.loadLibrary("kentovka");
@@ -39,7 +40,9 @@ public class NodeHost {
         final File proj = new File(ctx.getFilesDir(), "nodeproject");
         final File data = new File(ctx.getFilesDir(), "kentovka");
         data.mkdirs();
+        Log.i("kentovka", "библиотеки загружены");
         try { unpack(ctx, proj); } catch (Exception e) { Log.e("kentovka", "не распаковать node", e); return false; }
+        Log.i("kentovka", "программа распакована: " + proj);
         started = true;
         Thread t = new Thread(null, new Runnable() { public void run() {
             try {
@@ -47,6 +50,7 @@ public class NodeHost {
                 android.system.Os.setenv("HOME", data.getAbsolutePath(), true);
                 android.system.Os.setenv("TMPDIR", ctx.getCacheDir().getAbsolutePath(), true);
             } catch (Exception ignored) {}
+            Log.i("kentovka", "node стартует");
             int code = startNode(new String[] { "node", new File(proj, "main.js").getAbsolutePath(), data.getAbsolutePath(), new File(proj, "app").getAbsolutePath() });
             Log.e("kentovka", "node завершился: " + code);
         } }, "kentovka-node", 16 * 1024 * 1024);
