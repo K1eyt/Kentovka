@@ -176,6 +176,7 @@ public class MainActivity extends Activity {
                 break;
             }
             case "saved": case "open": copyToDownloads(ev.optString("path"), ev.optString("name"), "open".equals(t)); break;
+            case "mirror": mirrorSaves(ev.optString("dir"), ev.optJSONArray("files")); break;
             case "call": {
                 JSONObject st = ev.optJSONObject("st");
                 if (st != null) { VoiceService.start(this, st.optString("name", "звонок")); audio.start(); } else { VoiceService.stop(this); audio.stop(); }
@@ -213,6 +214,43 @@ public class MainActivity extends Activity {
                     } });
                 }
             } catch (Exception ignored) {}
+        } }).start();
+    }
+
+    // автосохранения аккаунта → «Документы/Kentovka/Сохранения» (переживают удаление приложения)
+    private void mirrorSaves(final String dir, final JSONArray files) {
+        if (Build.VERSION.SDK_INT < 29 || files == null) return;
+        new Thread(new Runnable() { public void run() {
+            synchronized (MainActivity.class) {
+                try {
+                    final String rel = Environment.DIRECTORY_DOCUMENTS + "/Kentovka/Сохранения/";
+                    Uri base = MediaStore.Files.getContentUri("external");
+                    java.util.HashMap<String, long[]> have = new java.util.HashMap<String, long[]>();
+                    try (android.database.Cursor c = getContentResolver().query(base, new String[] { MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.SIZE },
+                            MediaStore.MediaColumns.RELATIVE_PATH + "=?", new String[] { rel }, null)) {
+                        if (c != null) while (c.moveToNext()) have.put(c.getString(1), new long[] { c.getLong(0), c.getLong(2) });
+                    }
+                    java.util.HashSet<String> want = new java.util.HashSet<String>();
+                    for (int i = 0; i < files.length(); i++) {
+                        JSONObject f = files.getJSONObject(i); String name = f.getString("name"); long size = f.optLong("size");
+                        want.add(name);
+                        long[] h = have.get(name);
+                        if (h != null && h[1] == size) continue;
+                        if (h != null) getContentResolver().delete(android.content.ContentUris.withAppendedId(base, h[0]), null, null);
+                        ContentValues v = new ContentValues();
+                        v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                        v.put(MediaStore.MediaColumns.MIME_TYPE, "application/octet-stream");
+                        v.put(MediaStore.MediaColumns.RELATIVE_PATH, rel);
+                        Uri u = getContentResolver().insert(base, v);
+                        if (u == null) continue;
+                        try (java.io.InputStream in = new java.io.FileInputStream(new java.io.File(dir, name)); OutputStream o = getContentResolver().openOutputStream(u)) {
+                            byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n);
+                        }
+                    }
+                    for (java.util.Map.Entry<String, long[]> e : have.entrySet())
+                        if (!want.contains(e.getKey())) getContentResolver().delete(android.content.ContentUris.withAppendedId(base, e.getValue()[0]), null, null);
+                } catch (Exception e) { android.util.Log.w("kentovka", "копия сохранений", e); }
+            }
         } }).start();
     }
 

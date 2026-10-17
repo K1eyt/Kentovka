@@ -113,6 +113,7 @@
   #running { margin: -6px 0 16px; padding: 9px 12px; border-radius: 10px; font-size: 13px; color: var(--green); background: rgba(60,255,160,.07); border: 1px solid rgba(60,255,160,.25); }
 
   .modes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 600px) { #accBanner { flex-wrap: wrap; font-size: 13px; } #accBanner span { flex: 1 1 100%; } #mainArea #accBanner { margin: 8px 8px 0; } }
   @media (max-width: 520px) { .modes { grid-template-columns: 1fr; } }
   /* узкое окно: кнопки сервера переезжают на вторую строку, ничего не вылезает за край */
   @media (max-width: 560px) { .box { padding: 20px 16px 18px; } .srv { flex-wrap: wrap; } .srv .info { flex: 1 1 calc(100% - 60px); } .srv .ib { margin-left: auto; } .srv .ib + .ib { margin-left: 0; } .hostrow { grid-template-columns: minmax(0, 1fr) 90px; } }
@@ -719,7 +720,7 @@
     const b = $('accBanner');
     if (info.mode || sessionStorage.getItem('accBannerOff')) { b.hidden = true; return; }
     b.hidden = false;
-    b.innerHTML = '<span>Аккаунт сохраняется сам в «Документы\\Kentovka\\Сохранения». Поставь пароль — без него любой с доступом к компу сможет забрать аккаунт.</span><button type="button" class="ok" id="bPw">Поставить пароль</button><button type="button" id="bNo">Без пароля</button>';
+    b.innerHTML = '<span>' + (A.android ? 'Аккаунт сохраняется сам в «Документы/Kentovka/Сохранения» на телефоне. Поставь пароль — без него любой с доступом к телефону сможет забрать аккаунт.' : 'Аккаунт сохраняется сам в «Документы\\Kentovka\\Сохранения». Поставь пароль — без него любой с доступом к компу сможет забрать аккаунт.') + '</span><button type="button" class="ok" id="bPw">Поставить пароль</button><button type="button" id="bNo">Без пароля</button>';
     $('bPw').onclick = setPw; $('bNo').onclick = async () => {
       if (!await kAsk('Без пароля сохранение можно открыть на любом компе — им сможет зайти кто угодно под твоим ником. Точно без пароля?', 'Без пароля', { title: 'Сохранения без пароля', danger: true })) return;
       await A.account.setPassword(null); info = await A.account.info(); banner();

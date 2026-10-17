@@ -309,6 +309,19 @@ function setIfaces(list) {
   javaIfaces = o;
 }
 
+// автосохранения аккаунта лежат внутри приложения — Java копирует их в «Документы/Kentovka/Сохранения»,
+// чтобы они пережили удаление приложения (как на ПК)
+const SAVES = path.join(process.env.KENTOVKA_DOCS || path.join(DATA, 'docs'), 'Kentovka', 'Сохранения');
+let savesSig = '';
+setInterval(() => {
+  let list = [];
+  try { list = fs.readdirSync(SAVES).filter((n) => n.endsWith('.knt')).map((n) => { const st = fs.statSync(path.join(SAVES, n)); return { name: n, size: st.size }; }); } catch { return; }
+  const sig = JSON.stringify(list);
+  if (sig === savesSig) return;
+  savesSig = sig;
+  toJava({ t: 'mirror', dir: SAVES, files: list });
+}, 4000).unref();
+
 server.listen(PORT, '127.0.0.1', () => {
   console.log('Кентовка (Android) слушает', HOME);
   app._ready = true; app.emit('ready');

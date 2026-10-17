@@ -35,7 +35,26 @@ const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.
     const f2 = await ev(`${F}.messages('${fid}').then((m) => { const x = m.find((y) => y.file); return x ? x.file.id : ''; })`);
     console.log('картинка от друга', f2 ? await ev(`${F}.fileInfo('${f2}').then((i) => JSON.stringify(i))`) : 'нет');
     await ev(`(() => { const w = document.getElementById('friendsFrame').contentWindow; const r = w.document.querySelector('.dm'); if (r) r.click(); })()`);
+    await sleep(2500);
+    const W = "document.getElementById('friendsFrame').contentWindow";
+    console.log('картинка видна', await ev(`(() => { const i = ${W}.document.querySelector('#msgs img'); return i ? i.naturalWidth + 'x' + i.naturalHeight + ' ' + i.src : 'нет img'; })()`));
+    execSync('adb exec-out screencap -p > ci-out/1b-chat.png');
+    // звонок в личке: жмём трубку, бот отвечает из Chromium
+    console.log('кнопка звонка', await ev(`(() => { const b = ${W}.document.querySelector('.chead .callme'); if (!b) return 'нет'; if (b.disabled) return 'выключена'; b.click(); return 'нажата'; })()`));
+    for (let i = 0; i < 8; i++) {
+      await sleep(2500);
+      const st = await ev('window.kentovkaApp.callState().then((s) => JSON.stringify(s))');
+      console.log('звонок', st);
+      if (/live/.test(st)) break;
+    }
+    console.log('сцена', await ev(`(() => { const d = ${W}.document; const s = d.querySelector('.stage'); return s ? 'есть, плиток ' + s.querySelectorAll('.tile').length : 'нет'; })()`));
+    execSync('adb exec-out screencap -p > ci-out/1c-call.png');
+    await sleep(3000);
+    console.log('звонок после', await ev('window.kentovkaApp.callState().then((s) => JSON.stringify(s))'));
+    console.log('положить', await ev(`(() => { const d = ${W}.document; const b = [...d.querySelectorAll('button')].find((x) => /Положить|Завершить|Сбросить/.test(x.title || '')); if (!b) return 'нет кнопки'; b.click(); return 'ок ' + b.title; })()`));
     await sleep(2000);
+    console.log('звонок в конце', await ev('window.kentovkaApp.callState().then((s) => JSON.stringify(s))'));
   }
+  try { console.log('сохранения в Документах', execSync("adb shell ls -la '/sdcard/Documents/Kentovka/Сохранения'").toString()); } catch (e) { console.log('сохранения в Документах: нет', e.message.slice(0, 200)); }
   process.exit(0);
 })().catch((e) => { console.log('ERR', e.message); process.exit(0); });

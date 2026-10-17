@@ -193,6 +193,14 @@
     .back, .mback { display: inline-grid !important; }
     .topbar { overflow-x: auto; scrollbar-width: none; }
     .chead .btn.ghost span { display: none; }
+    .chead { gap: 6px; padding: 0 6px 0 4px; }
+    .chead > div:not(.ava):not([class*=av]) { min-width: 0; flex: 0 1 auto; overflow: hidden; }
+    .chead .nm, .chead .st { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .chead .sp { flex: 1 1 0; min-width: 0; }
+    .chead .btn.ghost { padding: 0 9px; flex: none; }
+    .chead .iconbtn { flex: none; }
+    .m { max-width: 86%; }
+    #msgs { padding: 12px 10px 6px; }
     .send { margin: 8px; }
     .stage { min-height: 200px; height: 38vh; }
     .stage .tile { width: 140px; height: 100px; }
@@ -350,7 +358,7 @@
   };
   // ---------- файлы и скрины в переписке ----------
   const fsize = (n) => (n < 1024 ? n + ' Б' : n < 1048576 ? (n / 1024).toFixed(0) + ' КБ' : n < 1073741824 ? (n / 1048576).toFixed(1) + ' МБ' : (n / 1073741824).toFixed(2) + ' ГБ');
-  const fileUrl = (id) => 'kapp://app/dmfile/' + id;
+  const fileUrl = (id) => (location.protocol === 'http:' ? '/dmfile/' : 'kapp://app/dmfile/') + id;
   function fileView(file) {
     const box = document.createElement('div'); box.className = 'fv';
     const isImg = /^image\//.test(file.mime || ''), isVid = /^video\//.test(file.mime || ''), isAud = /^audio\//.test(file.mime || '');
