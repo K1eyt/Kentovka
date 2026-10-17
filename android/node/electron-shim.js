@@ -67,7 +67,7 @@ async function navigate(wc, url) {
   mainWC.emit('did-start-navigation', { isMainFrame: true, isSameDocument: false, url });
   mainWC.url = url;
   let real = url;
-  if (url.startsWith('file://')) real = HOME + '/' + path.relative(APPDIR, url.slice(7)).split(path.sep).join('/');
+  if (url.startsWith('file://')) real = HOME + '/' + path.basename(url.slice(7).split('?')[0]); // страницы приложения лежат в одной папке (/data/data и /data/user/0 — одно и то же)
   else if (/^https:\/\//.test(url)) {
     const u = new URL(url);
     const lp = await proxyFor(u.hostname, Number(u.port) || 443);
