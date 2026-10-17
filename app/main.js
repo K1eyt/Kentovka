@@ -44,6 +44,7 @@ function setupKapp(ses) {
     ['/df-shim.js', path.join(ROOT, 'public', 'df-shim.js')],
     ['/ns-async.js', path.join(ROOT, 'public', 'ns-async.js')],
     ['/ksound.js', path.join(ROOT, 'public', 'ksound.js')],
+    ['/kplatform.js', path.join(ROOT, 'public', 'kplatform.js')],
     ['/df-worker.js', path.join(ROOT, 'public', 'df-worker.js')],
     ['/kselect.js', path.join(ROOT, 'public', 'kselect.js')],
     ['/', __dirname],
@@ -204,7 +205,11 @@ const tabWC = (key) => { const t = key && tabs.get(key); return t && !t.view.web
 const allTabWC = () => [...tabs.values()].map((t) => t.view.webContents).filter((w) => !w.isDestroyed());
 function toPages(ch, ...args) { for (const w of [win && !win.isDestroyed() && win.webContents, fv(), ...allTabWC()]) if (w) { try { w.send(ch, ...args); } catch {} } }
 // горячие клавиши — странице сервера, где я в голосе (или открытой), и странице друзей (звонок из лички)
-function sendHotkey(action) { const w = tabWC(voiceTabKey) || tabWC(shellTab); if (w) w.send('hotkey', action); if (fv()) fv().send('hotkey', action); }
+// звонок в личке/группе — его странице друзей; голос на сервере — тому серверу; иначе — друзьям (общее «выключено»)
+function sendHotkey(action) {
+  const w = !dmCall && tabWC(voiceTabKey);
+  if (w) w.send('hotkey', action); else if (fv()) fv().send('hotkey', action);
+}
 let tray = null;
 let hostServer = null; // свой сервер, на котором я сейчас (или null)
 // свои серверы: можно держать несколько, каждый на своём порту и со своими каналами и чатом
@@ -477,17 +482,25 @@ function popAction(p, act) {
   if (act === 'show') { openFriends(p.focus || p.gid); return; }
   if (p.type === 'call' && p.gid) { if (act === 'accept') { openFriends(p.gid); setTimeout(() => fv() && fv().send('call:cmd', 'gjoin:' + p.gid), 300); } return; }
   if (p.type === 'call') { if (act === 'accept') { openFriends(p.focus); setTimeout(() => fv() && fv().send('call:cmd', 'accept'), 200); } else if (act === 'decline' && fv()) fv().send('call:cmd', 'decline'); return; }
-  if (act === 'open') openFriends(p.focus);
+  if (act === 'open') { if (p.tab && tabs.has(p.tab)) { if (win.isMinimized()) win.restore(); win.show(); win.focus(); showTab(p.tab); } else openFriends(p.focus); }
 }
+// сообщение на сервере, пока Кентовка не перед глазами: «Петя · Хата #общий»
+ipcMain.on('app:notify-msg', (e, m) => {
+  const t = tabOf(e.sender); if (!t || !m || kentovkaInFront()) return;
+  const name = String(m.from || '').slice(0, 24), text = String(m.text || '').slice(0, 140);
+  const where = (t.name || 'сервер') + (m.ch ? ' · #' + String(m.ch).slice(0, 32) : '');
+  const av = typeof m.avatar === 'string' && m.avatar.startsWith('data:image/') && m.avatar.length < 80000 ? m.avatar : null;
+  popShow({ id: 's:' + t.key, type: 'msg', name: name + ' · ' + where, text, tab: t.key, avatar: av }).then((ok) => { if (!ok) sysNotify(name + ' · ' + where, text, null, t.key); });
+});
 function friendNotify(title, body, focusId, avatar) {
   if (friendsShown && win && !win.isDestroyed() && win.isFocused()) return;
   popShow({ id: 'm:' + (focusId || title), type: 'msg', name: title, text: body, focus: focusId, avatar: avatar || null }).then((shown) => { if (!shown) sysNotify(title, body, focusId); });
 }
-function sysNotify(title, body, focusId) {
+function sysNotify(title, body, focusId, tabKey) {
   if (kentovkaInFront()) return;
   if (!Notification.isSupported()) return;
   const n = new Notification({ title, body, icon: ICON, silent: false });
-  n.on('click', () => openFriends(focusId));
+  n.on('click', () => { if (tabKey && tabs.has(tabKey)) { win.show(); win.focus(); showTab(tabKey); } else openFriends(focusId); });
   n.show();
 }
 
@@ -548,6 +561,8 @@ ipcMain.on('voice:settings-set', (e, v) => {
   const pick = {};
   for (const k of ['micLabel', 'outLabel', 'nsMode', 'nsStrength', 'gate', 'gateDb', 'ec', 'agc', 'micGain', 'masterVol', 'muted', 'deaf']) if (k in v && ['string', 'number', 'boolean'].includes(typeof v[k])) pick[k] = typeof v[k] === 'string' ? v[k].slice(0, 120) : v[k];
   const c = loadConfig(); c.voice = Object.assign(c.voice || {}, pick); saveConfig(c);
+  // микрофон и звук — одни на всё приложение: выключил на сервере — выключено и в друзьях, и наоборот
+  if ('muted' in pick || 'deaf' in pick) for (const w of [fv(), ...allTabWC()]) if (w && w !== e.sender) w.send('voice:mute-state', { muted: !!c.voice.muted, deaf: !!c.voice.deaf });
 });
 const myAddrs = () => lanAddresses().filter((a) => a.radmin).map((a) => a.address);
 ipcMain.handle('friends:open', (e, id) => openFriends(id));
@@ -1381,7 +1396,7 @@ app.whenReady().then(() => {
       onLink: (m, send, ws) => onLinkMessage(m, send, ws),
       onChange: friendsChanged,
       onMessage: (m) => {
-        if (m.kind === 'dm') { const f = friends && friends.db().friends.find((x) => x.id === m.id); friendNotify(m.name, m.text.slice(0, 140), m.id, f && f.avatar); }
+        if (m.kind === 'dm') { const f = friends && friends.db().friends.find((x) => x.id === m.id); friendNotify(m.name + ' · в личке', m.text.slice(0, 140), m.id, f && f.avatar); }
         if (m.kind === 'request') friendNotify('Заявка в друзья', `${m.name} хочет добавить тебя в друзья`);
         if (m.kind === 'accepted') friendNotify('Теперь вы друзья', `${m.name} принял заявку`);
         if (m.kind === 'group') friendNotify('Новая группа', `${m.by || 'Друг'} добавил тебя в «${m.name || 'группу'}»`, m.id);

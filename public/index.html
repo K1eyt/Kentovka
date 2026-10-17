@@ -1103,6 +1103,7 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
 
 <script src="/kselect.js"></script>
 <script src="/ksound.js"></script>
+<script src="/kplatform.js"></script>
 <script src="/transcode.js"></script>
 <script src="/swarm.js"></script>
 <script>
@@ -1706,6 +1707,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     msgsByCh.get(ch).push(m);
     const visible = ch === curCh && (view === 'chat' || (view === 'call' && chatSide));
     if (ch === curCh) renderMsg(m, fromHistory || !visible);
+    // Кентовка свёрнута, в трее или в другом окне — всплывашка «кто и откуда» (решает приложение)
+    if (!fromHistory && m.fromId !== myId && m.from && APP0 && APP0.notifyMsg) { try { APP0.notifyMsg({ from: m.from, ch: (chanOf(ch) || {}).name || '', text: m.text || (m.file ? '📎 ' + m.file.name : ''), avatar: avatars[m.from] || null }); } catch {} }
     if (!visible && !fromHistory && m.fromId !== myId) {
       unread.set(ch, (unread.get(ch) || 0) + 1);
       sfx('message');
@@ -2984,11 +2987,21 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   // ---------- голос ----------
   async function getMic() {
     try { return await getMicWith(); }
-    catch (e) { if (e.name === 'TypeError' || e.name === 'OverconstrainedError') return getMicWith(true); throw e; }
+    catch (e) {
+      // сохранённый микрофон пропал (на телефоне номера устройств меняются) или браузер не понял настройки — пробуем проще
+      if (e.name !== 'NotAllowedError' && e.name !== 'SecurityError') {
+        try { return await getMicWith(true, true); } catch {}
+        return navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+      // телефон: разрешение только что выдали в окне Android — ещё одна попытка
+      if (window.kAndroid) { await new Promise((r) => setTimeout(r, 1200)); return getMicWith(true, true); }
+      throw e;
+    }
   }
-  function getMicWith(plainEc) {
+  function getMicWith(plainEc, anyDevice) {
     return navigator.mediaDevices.getUserMedia({ audio: {
-      deviceId: settings.mic ? { exact: settings.mic } : undefined,
+      // на телефоне микрофон выбирает само приложение (динамик, гарнитура, блютуз) — номер устройства не передаём
+      deviceId: settings.mic && !anyDevice && !window.kAndroid ? { exact: settings.mic } : undefined,
       // 'all' — по возможности вычитать весь звук компа (игру, стрим), а не только голоса кентов
       echoCancellation: settings.ec ? 'all' : false, noiseSuppression: settings.nsMode === 'browser', autoGainControl: settings.agc,
       ...(plainEc ? { echoCancellation: settings.ec } : {}),
@@ -3862,9 +3875,10 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   // ---------- кнопки ----------
 
   $('leaveBtn').onclick = () => leaveVoice(false);
-  function setMute(v, silent) {
+  function setMute(v, silent, fromApp) {
     if (!silent && v !== muted) sfx(v ? 'mute' : 'unmute');
-    muted = v;
+    const was = muted; muted = v;
+    if (!fromApp && APP0 && APP0.saveVoiceSettings && (was !== v || !silent)) APP0.saveVoiceSettings({ muted, deaf });
     localStream?.getAudioTracks().forEach((t) => (t.enabled = !muted && !deaf));
     syncControls();
     wsSend({ type: 'state', muted, deaf, sharing });
@@ -3889,12 +3903,15 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     const A = window.kentovkaApp || window.kAndroid; if (!A || !A.voiceState) return;
     A.voiceState(inVoice ? { inVoice: true, ch: (chanOf(myVoice) || {}).name || '', muted: muted || deaf, deaf } : null);
   }
-  function setDeaf(v) {
-    if (v !== deaf) sfx(v ? 'deaf' : 'undeaf');
+  function setDeaf(v, fromApp) {
+    if (v !== deaf && !fromApp) sfx(v ? 'deaf' : 'undeaf');
     deaf = v;
     for (const id of peers.keys()) applyVolume(id);
-    setMute(muted, true);
+    setMute(muted, true, fromApp);
+    if (!fromApp && APP0 && APP0.saveVoiceSettings) APP0.saveVoiceSettings({ muted, deaf });
   }
+  // выключил микрофон/звук в другом месте приложения (друзья, другой сервер, горячая клавиша) — здесь так же
+  if (APP0 && APP0.onMuteState) APP0.onMuteState((st) => { if (!st) return; if (!!st.deaf !== deaf) setDeaf(!!st.deaf, true); if (!!st.muted !== muted) setMute(!!st.muted, true, true); });
   $('muteBtn').onclick = () => setMute(!muted);
   $('deafBtn').onclick = () => setDeaf(!deaf);
   $('callMute').onclick = () => setMute(!muted);
@@ -3923,7 +3940,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   if (APP) {
     // глобальные клавиши из игры
     APP.onHotkey((action) => {
-      if (!inVoice) return;
+      // горячая клавиша работает всегда (как в Discord): и в голосе, и просто так — состояние общее на всё приложение
       if (action === 'mute') setMute(!muted);
       if (action === 'deaf') setDeaf(!deaf);
     });
@@ -4514,6 +4531,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   };
   // общие настройки голоса из приложения (сменил шумодав на одном сервере — он такой же на всех)
   if (APP0 && APP0.voiceSettings) APP0.voiceSettings().then(async (v) => {
+    if (v && (typeof v.muted === 'boolean' || typeof v.deaf === 'boolean')) { if (!!v.deaf !== deaf) setDeaf(!!v.deaf, true); if (!!v.muted !== muted) setMute(!!v.muted, true, true); }
     if (!v || v.v !== 5) { shareVoice(settings); return; }
     let changed = false;
     for (const k of ['nsMode', 'nsStrength', 'gate', 'gateDb', 'ec', 'agc', 'micGain', 'masterVol']) if (k in v && v[k] !== undefined && settings[k] !== v[k]) { settings[k] = v[k]; changed = true; }

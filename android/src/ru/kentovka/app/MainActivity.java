@@ -80,7 +80,7 @@ public class MainActivity extends Activity {
     private volatile String currentHost = null;  // куда реально подключены (может быть мост)
     private volatile boolean viaAlt = false;
     private final Map<String, String> certSeen = new HashMap<>();
-    private PermissionRequest pendingPerm;
+    private final java.util.ArrayList<PermissionRequest> pendingPerms = new java.util.ArrayList<PermissionRequest>();
     private ValueCallback<Uri[]> fileCb;
     private static final int REQ_MIC = 1, REQ_FILE = 2, REQ_SAVE = 3, REQ_NOTIF = 4, REQ_SCREEN = 6;
     private int screenMax = 1280, screenFps = 10;
@@ -110,8 +110,11 @@ public class MainActivity extends Activity {
         // программа Кентовки (как на ПК) — в node внутри приложения; если не запустилась — простой режим (только серверы)
         nodeMode = NodeHost.start(this);
         if (!nodeMode) { discovery = new Discovery(this); discovery.start(); }
-        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
-            requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, REQ_NOTIF);
+        // микрофон и уведомления — сразу при запуске одним окном (иначе окно Android могло вылезти посреди входа в канал и «потеряться»)
+        { java.util.ArrayList<String> need = new java.util.ArrayList<String>();
+          if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) need.add(Manifest.permission.RECORD_AUDIO);
+          if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) need.add(Manifest.permission.POST_NOTIFICATIONS);
+          if (!need.isEmpty()) requestPermissions(need.toArray(new String[0]), REQ_NOTIF); }
         // отладочная сборка (проверки на GitHub): страницы можно смотреть через отладчик Chrome
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
         handleIntent(getIntent());
@@ -700,10 +703,13 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
-        if (req == REQ_MIC && pendingPerm != null) {
-            if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pendingPerm.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
-            else pendingPerm.deny();
-            pendingPerm = null;
+        // ответ на микрофон (из любого окна разрешений): отвечаем всем страницам, которые ждали
+        if (!pendingPerms.isEmpty()) {
+            boolean ok = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+            if (ok || req == REQ_MIC) {
+                for (PermissionRequest r : pendingPerms) { try { if (ok) r.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE }); else r.deny(); } catch (Exception ignored) {} }
+                pendingPerms.clear();
+            }
         }
     }
 
@@ -714,7 +720,7 @@ public class MainActivity extends Activity {
                 for (String x : r.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x)) wantsMic = true;
                 if (!wantsMic) { r.deny(); return; }
                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) r.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
-                else { pendingPerm = r; requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, REQ_MIC); }
+                else { pendingPerms.add(r); if (pendingPerms.size() == 1) requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, REQ_MIC); }
             } });
         }
         @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {

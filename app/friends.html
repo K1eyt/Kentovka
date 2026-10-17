@@ -1385,8 +1385,8 @@
     Object.assign(d.style, { position: 'fixed', left: '50%', bottom: '24px', transform: 'translateX(-50%)', background: 'var(--panel3)', border: '1px solid var(--line)', padding: '10px 16px', borderRadius: '10px', zIndex: 50, maxWidth: '90%' });
     document.body.appendChild(d); setTimeout(() => d.remove(), 3500);
   }
-  function setMuted(v) { pref.muted = v; savePref(); if (!call) return renderMe(); call.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
-  function setDeaf(v) { pref.deaf = v; savePref(); if (!call) return renderMe(); call.deaf = v; if (call.audio) call.audio.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
+  function setMuted(v) { if (window.KSound && v !== pref.muted) KSound.play(v ? 'mute' : 'unmute'); pref.muted = v; savePref(); if (!call) return renderMe(); call.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
+  function setDeaf(v) { if (window.KSound && v !== pref.deaf) KSound.play(v ? 'deaf' : 'undeaf'); pref.deaf = v; savePref(); if (!call) return renderMe(); call.deaf = v; if (call.audio) call.audio.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
   const applyMic = () => { if (call && call.mic) call.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !call.muted && !call.deaf)); };
 
   // микрофон с тем же шумодавом, что на серверах (настройки голоса общие)
@@ -1396,7 +1396,12 @@
     const c = { channelCount: 1, sampleRate: 48000, autoGainControl: VS.agc !== false, noiseSuppression: VS.nsMode === 'browser', deviceId: mic ? { exact: mic } : undefined };
     let raw;
     try { raw = await navigator.mediaDevices.getUserMedia({ audio: { ...c, echoCancellation: VS.ec !== false ? 'all' : false } }); }
-    catch (e) { if (e.name !== 'TypeError' && e.name !== 'OverconstrainedError') throw e; raw = await navigator.mediaDevices.getUserMedia({ audio: { ...c, echoCancellation: VS.ec !== false, deviceId: undefined } }); }
+    catch (e) {
+      if (e.name === 'NotAllowedError' && A.android) { await new Promise((r) => setTimeout(r, 1200)); } // телефон: разрешение только что выдали
+      else if (e.name === 'NotAllowedError' || e.name === 'SecurityError') throw e;
+      try { raw = await navigator.mediaDevices.getUserMedia({ audio: { ...c, echoCancellation: VS.ec !== false, deviceId: undefined } }); }
+      catch { raw = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    }
     const x = ctx(), nodes = [];
     const mono = () => { const g = x.createGain(); g.channelCount = 1; g.channelCountMode = 'explicit'; g.channelInterpretation = 'discrete'; nodes.push(g); return g; };
     let last = x.createMediaStreamSource(raw); nodes.push(last);
@@ -1841,8 +1846,8 @@
     gReport(); gRerender(); beepEnd();
   }
   function gApplyMic() { if (gcall && gcall.mic) gcall.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !gcall.muted && !gcall.deaf)); }
-  function gMute(v) { pref.muted = v; savePref(); if (!gcall) return renderMe(); gcall.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
-  function gDeaf(v) { pref.deaf = v; savePref(); if (!gcall) return renderMe(); gcall.deaf = v; for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
+  function gMute(v) { if (window.KSound && v !== pref.muted) KSound.play(v ? 'mute' : 'unmute'); pref.muted = v; savePref(); if (!gcall) return renderMe(); gcall.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
+  function gDeaf(v) { if (window.KSound && v !== pref.deaf) KSound.play(v ? 'deaf' : 'undeaf'); pref.deaf = v; savePref(); if (!gcall) return renderMe(); gcall.deaf = v; for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
   function gPeer(id, offerer) {
     const c = gcall; if (!c || c.peers.has(id)) return c && c.peers.get(id);
     const pc = new RTCPeerConnection({ iceServers: myIce, bundlePolicy: 'max-bundle' });
@@ -1911,7 +1916,16 @@
   F.onCallCmd((c) => { if (typeof c === 'string' && c.startsWith('gjoin:')) { const g = groups.find((x) => x.id === c.slice(6)); if (g) { openDm(g.id); if (!(gcall && gcall.gid === g.id)) gJoin(g); } return; } if (c === 'accept') acceptCall(); if (c === 'decline' && call && call.state === 'ringing' && call.dir === 'in') endCall('decline'); if (c === 'hangup') { if (gcall) gLeave(); else endCall('end'); } if (c === 'open' && gcall) openDm(gcall.gid); });
   F.onHotkey((a) => {
     if (gcall) { if (a === 'mute') gMute(!gcall.muted); if (a === 'deaf') gDeaf(!gcall.deaf); return; }
-    if (!call || call.state === 'ringing') return; if (a === 'mute') setMuted(!call.muted); if (a === 'deaf') setDeaf(!call.deaf);
+    if (call && call.state !== 'ringing') { if (a === 'mute') setMuted(!call.muted); if (a === 'deaf') setDeaf(!call.deaf); return; }
+    // не в звонке — общее состояние «микрофон/звук выключены» (подхватят и серверы)
+    if (a === 'mute') setMuted(!pref.muted); if (a === 'deaf') setDeaf(!pref.deaf);
+  });
+  // выключил на сервере — здесь то же самое (и в звонке, если идёт)
+  if (A.onMuteState) A.onMuteState((st) => {
+    if (!st) return; pref.muted = !!st.muted; pref.deaf = !!st.deaf; VS.muted = pref.muted; VS.deaf = pref.deaf;
+    const h = gcall || (call && call.state !== 'ringing' ? call : null);
+    if (h) { h.muted = pref.muted; h.deaf = pref.deaf; if (h === gcall) { for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = h.deaf; gApplyMic(); gRerender(); } else { if (call.audio) call.audio.muted = h.deaf; applyMic(); renderCall(); } sendCallState(); drawStage(); }
+    renderMe();
   });
   window.addEventListener('beforeunload', () => { if (call) endCall('end'); });
   F.onChanged(() => refresh());
@@ -1925,5 +1939,6 @@
 </script>
 <script src="/kselect.js"></script>
 <script src="/ksound.js"></script>
+<script src="/kplatform.js"></script>
 </body>
 </html>

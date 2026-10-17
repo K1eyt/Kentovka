@@ -62,6 +62,7 @@ const api = {
   tempNote: () => ipcRenderer.invoke('app:temp-note'),
   backupPort: (() => { try { return ipcRenderer.sendSync('backup:port'); } catch { return 8449; } })(),
   saveVoiceSettings: (v) => ipcRenderer.send('voice:settings-set', v),
+  onMuteState: (cb) => ipcRenderer.on('voice:mute-state', (_e, s) => cb(s)),
   servers: () => ipcRenderer.invoke('app:servers'),
   // мини-профиль: добавить кента в друзья прямо с сервера (по его адресу), узнать, друг ли он
   addFriend: (ip) => ipcRenderer.invoke('friends:add', ip),
@@ -74,6 +75,7 @@ const api = {
   // ник и аватарка — общие для всех серверов
   idleNow: () => ipcRenderer.invoke('app:idle'),
   onIdle: (cb) => ipcRenderer.on('app:idle', (_e, v) => cb(v)),
+  notifyMsg: (m) => ipcRenderer.send('app:notify-msg', m),
   popupAct: (id, act) => ipcRenderer.send('popup:act', id, act),
   onPopup: (cb) => ipcRenderer.on('popup:msg', (_e, m) => cb(m)),
   popupReady: () => ipcRenderer.send('popup:ready'),
