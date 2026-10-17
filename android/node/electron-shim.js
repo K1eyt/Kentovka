@@ -223,8 +223,8 @@ const clipboard = { writeText(t) { toJava({ t: 'copy', text: String(t) }); }, re
 class Notification extends EventEmitter {
   constructor(o) { super(); this.o = o || {}; }
   static isSupported() { return true; }
-  show() { const id = crypto.randomBytes(4).toString('hex'); notifs.set(id, this); toJava({ t: 'notify', id, title: String(this.o.title || 'Кентовка'), body: String(this.o.body || '') }); }
-  close() {}
+  show() { const id = this.id = crypto.randomBytes(4).toString('hex'); notifs.set(id, this); toJava({ t: 'notify', id, title: String(this.o.title || 'Кентовка'), body: String(this.o.body || ''), call: !!this.o.call, actions: Array.isArray(this.o.actions) && this.o.actions.length ? this.o.actions.map((a) => String(a.text || '')) : undefined }); }
+  close() { if (this.id) { toJava({ t: 'notifyCancel', id: this.id }); notifs.delete(this.id); } }
 }
 const notifs = new Map();
 class Tray extends EventEmitter { setToolTip() {} setContextMenu() {} setImage() {} destroy() {} }
@@ -273,6 +273,7 @@ const server = http.createServer(async (req, res) => {
       if (m.t === 'picked' && pickWait) { const w = pickWait; pickWait = null; w(m.path ? { canceled: false, filePaths: [m.path] } : { canceled: true, filePaths: [] }); }
       if (m.t === 'focus') { appFocused = !!m.on; }
       if (m.t === 'notifyClick') { const n = notifs.get(m.id); if (n) n.emit('click'); }
+      if (m.t === 'notifyAction') { const n = notifs.get(m.id); if (n) n.emit('action', {}, Number(m.i)); }
       if (m.t === 'ifaces' && Array.isArray(m.list)) setIfaces(m.list);
       if (m.t === 'page') { mainWC.url = m.url && m.url.startsWith(HOME) ? 'file://' + path.join(APPDIR, new URL(m.url).pathname) : mainWC.url; }
       res.writeHead(200); return res.end('ok');

@@ -30,6 +30,10 @@
   .btn.ghost { background: var(--panel3); color: var(--text); border: 1px solid var(--line); font-weight: 600; }
   .btn.ghost:hover { border-color: var(--accent); box-shadow: none; }
   .btn svg { width: 15px; height: 15px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--panel3); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--line); background-clip: padding-box; border: 2px solid transparent; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
   .iconbtn { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 8px; color: var(--dim); flex: none; transition: background var(--t), color var(--t); }
   .iconbtn:hover { background: var(--panel3); color: var(--text); }
   .iconbtn svg { width: 17px; height: 17px; }
@@ -76,6 +80,8 @@
   .ava.big { width: 40px; height: 40px; font-size: 16px; }
   .ava .dot { position: absolute; right: -2px; bottom: -2px; width: 12px; height: 12px; border-radius: 50%; background: var(--faint); border: 2.5px solid var(--panel); }
   .ava .dot.online { background: var(--green); box-shadow: 0 0 calc(8px * var(--glow)) var(--green); }
+  .ava .dot.idle { background: #f0b232; box-shadow: none; }
+  .ava .dot.idle::after { content: ""; position: absolute; left: -1px; top: -1px; width: 6px; height: 6px; border-radius: 50%; background: var(--panel); }
   .ava .dot.voice { background: var(--accent); box-shadow: 0 0 calc(8px * var(--glow)) var(--accent); }
   .badge { min-width: 19px; height: 19px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center; font: 700 11px/1 var(--font-display); color: var(--on-accent); flex: none;
     background: linear-gradient(135deg, var(--accent), var(--accent2)); }
@@ -114,6 +120,7 @@
   .vdlg .seg button.on { border-color: var(--accent); color: var(--text); background: rgba(var(--acc-rgb), .12); }
   .vdlg .chk { display: flex; align-items: center; gap: 9px; margin: 12px 0 0; font-size: 13.5px; }
   .vdlg .chk input { width: 17px; height: 17px; accent-color: var(--accent); }
+  .vdlg details { margin-top: 12px; } .vdlg summary { cursor: pointer; color: var(--dim); font-size: 13px; } .vdlg summary:hover { color: var(--text); }
   /* главная «Друзья» */
   main { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
   .topbar { height: 52px; padding: 0 10px 0 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex: none; min-width: 0; }
@@ -213,6 +220,18 @@
   @media (hover: none) { .m:hover .mreact, .gm:hover .mreact { display: none; } }
   .menu .mquick { display: flex; gap: 2px; padding: 2px 2px 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
   .menu .mquick button { width: 34px; height: 34px; padding: 0; justify-content: center; font-size: 19px; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+  .rq { display: flex; gap: 6px; align-items: baseline; max-width: 100%; margin: 2px 0 3px; padding: 3px 9px; border-left: 3px solid rgba(var(--acc-rgb), .7); border-radius: 4px 8px 8px 4px; background: rgba(var(--acc-rgb), .07); font-size: 12.5px; color: var(--dim); cursor: pointer; overflow: hidden; }
+  .rq b { color: var(--text); font-weight: 700; flex: none; } .rq span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .rq:hover { background: rgba(var(--acc-rgb), .13); }
+  .m.me .rq { align-self: flex-end; }
+  .replybar { display: flex; align-items: center; gap: 8px; margin: 0 16px -4px; padding: 6px 6px 6px 12px; border-radius: 10px 10px 0 0; background: var(--panel2); border: 1px solid var(--line); border-bottom: 0; font-size: 13px; color: var(--dim); }
+  .replybar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .replybar b { color: var(--text); } .replybar i { font-style: normal; }
+  .flash { animation: kflash 1.4s ease-out; } @keyframes kflash { 0%, 40% { background: rgba(var(--acc-rgb), .18); border-radius: 10px; } 100% { background: transparent; } }
+  .lbox { position: fixed; inset: 0; z-index: 90; background: rgba(4,5,12,.88); display: grid; place-items: center; backdrop-filter: blur(4px); }
+  .lbox img { max-width: calc(100vw - 48px); max-height: calc(100vh - 96px); border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+  .lbar { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 4px; padding: 10px 12px; color: var(--dim); font-size: 13.5px; }
+  .lbar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lbar .iconbtn { color: var(--text); }
   .rxpop { width: 292px; max-width: calc(100vw - 16px); }
   .rxpop .rpg { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; margin-bottom: 6px; }
   .rxpop .rpg button { height: 32px; padding: 0; justify-content: center; font-size: 20px; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
@@ -417,6 +436,7 @@
     check: P('<path d="M20 6L9 17l-5-5"/>'),
     user: P('<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/>'),
     speaker: P('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>'),
+    reply: P('<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>'),
     smile: P('<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/>'),
     copy: P('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
   };
@@ -432,7 +452,7 @@
       box.innerHTML = '';
       if (info && info.done && isImg) {
         const img = document.createElement('img'); img.className = 'fimg'; img.src = fileUrl(file.id); img.alt = file.name; img.title = file.name + ' — открыть';
-        img.onclick = () => F.fileOpen(file.id); img.onload = () => { const m = document.getElementById('msgs'); if (m && m.scrollHeight - m.scrollTop - m.clientHeight < 400) m.scrollTop = m.scrollHeight; };
+        img.onclick = () => viewImage(file); img.onload = () => { const m = document.getElementById('msgs'); if (m && m.scrollHeight - m.scrollTop - m.clientHeight < 400) m.scrollTop = m.scrollHeight; };
         box.appendChild(img);
       } else if (info && info.done && (isVid || isAud)) {
         const v = document.createElement(isVid ? 'video' : 'audio'); v.controls = true; v.preload = 'metadata'; v.src = fileUrl(file.id); v.className = isVid ? 'fvid' : 'faud';
@@ -483,10 +503,15 @@
     };
     fi.onchange = () => { const l = [...fi.files]; fi.value = ''; sendFiles(l); };
     inp.addEventListener('paste', (e) => { const files = [...(e.clipboardData && e.clipboardData.files || [])]; if (files.length) { e.preventDefault(); sendFiles(files); } });
+    // область чата живёт между перерисовками — обработчики ставим ОДИН раз (иначе файл уходил столько раз, сколько было перерисовок)
     const z = dropZone || form;
-    z.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); z.classList.add('drop'); } });
-    z.addEventListener('dragleave', (e) => { if (e.target === z) z.classList.remove('drop'); });
-    z.addEventListener('drop', (e) => { z.classList.remove('drop'); const files = [...(e.dataTransfer && e.dataTransfer.files || [])]; if (files.length) { e.preventDefault(); sendFiles(files); } });
+    z.__send = sendFiles;
+    if (!z.__dropHooked) {
+      z.__dropHooked = true;
+      z.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); z.classList.add('drop'); } });
+      z.addEventListener('dragleave', (e) => { if (e.target === z) z.classList.remove('drop'); });
+      z.addEventListener('drop', (e) => { z.classList.remove('drop'); const files = [...(e.dataTransfer && e.dataTransfer.files || [])]; if (files.length) { e.preventDefault(); e.stopPropagation(); z.__send(files); } });
+    }
     form.prepend(ab, fi);
   }
   // ---------- вид — тот же, что в приложении (цвета, свечение, свой фон) ----------
@@ -516,7 +541,7 @@
   const ava = (f, withDot, cls) => {
     const d = document.createElement('div'); d.className = 'ava' + (cls ? ' ' + cls : '');
     if (f.avatar) d.style.backgroundImage = `url("${f.avatar}")`; else { d.style.background = colorOf(f.name); d.textContent = (f.name || '?')[0].toUpperCase(); }
-    if (withDot) { const dot = document.createElement('i'); dot.className = 'dot' + (f.online ? (f.presence && (f.presence.voice || f.presence.call) ? ' voice' : ' online') : ''); d.appendChild(dot); }
+    if (withDot) { const dot = document.createElement('i'); dot.className = 'dot' + (f.online ? (f.presence && (f.presence.voice || f.presence.call) ? ' voice' : f.presence && f.presence.idle ? ' idle' : ' online') : ''); d.appendChild(dot); }
     return d;
   };
   const seen = (t) => {
@@ -532,8 +557,8 @@
     if (!p) return 'в сети';
     if (p.call) return 'в звонке';
     if (p.voice) return `в голосе «${p.voice}»` + (p.server ? ` · ${p.server}` : '');
-    if (p.server) return `на сервере «${p.server}»`;
-    return 'в сети';
+    if (p.server) return `на сервере «${p.server}»` + (p.idle ? ' · неактивен' : '');
+    return p.idle ? 'неактивен' : 'в сети';
   };
 
   const me = await F.me();
@@ -571,13 +596,17 @@
   window.addEventListener('message', (e) => { if (e.data && e.data.k === 'kshown') { lastDeep = null; renderSide(); } });
   // кнопка «назад» на телефоне: закрыть окно/меню, из чата — к списку бесед
   window.kentovkaBack = () => {
+    if (document.querySelector('.lbox') && window.__lboxClose) { window.__lboxClose(); return true; }
     const d = [...document.querySelectorAll('dialog[open]')].pop(); if (d) { d.close(); return true; }
+    if (replyTo && document.querySelector('.replybar')) { replyTo = null; document.querySelector('.replybar').remove(); return true; }
     if (document.querySelector('.card, .menu, .devpop')) { closeFloat(); closeDev(); return true; }
     if (narrow() && (cur || mobFriends)) { goHome(); return true; }
     return false;
   };
+  let lastUnread = null;
   async function refresh() {
     [list, groups] = await Promise.all([F.list(), F.groups()]);
+    { const u = list.reduce((a, f) => a + (f.unread || 0), 0) + groups.reduce((a, g) => a + (g.unread || 0), 0); if (lastUnread !== null && u > lastUnread && window.KSound) KSound.play('dm'); lastUnread = u; }
     for (const f of list) if (f.status === 'friend' && f.unread && !openDms.includes(f.id)) openDms.unshift(f.id); // новое сообщение — личка сама появляется слева
     for (const g of groups) if ((g.unread || !ls.get('seenGroups', []).includes(g.id)) && !openDms.includes(g.id)) openDms.unshift(g.id);
     ls.set('seenGroups', groups.map((g) => g.id));
@@ -869,7 +898,7 @@
     box.hidden = !box.children.length;
     return box;
   }
-  function rxHook(row, m, target) {
+  function rxHook(row, m, target, who, mine) {
     if (!m.mid) return;
     const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'mreact'; rb.title = 'Поставить реакцию'; rb.innerHTML = I.smile;
     rb.onclick = (e) => { e.stopPropagation(); rxPicker(m, target, rb.getBoundingClientRect()); };
@@ -883,8 +912,14 @@
       for (const em of (recentRx.length ? recentRx : RX).slice(0, 6)) { const q = document.createElement('button'); q.type = 'button'; q.textContent = em; q.onclick = () => { closeFloat(); doReact(m, target, em); }; quick.appendChild(q); }
       mn.appendChild(quick);
       const item = (ic, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = ic + '<span></span>'; b.lastChild.textContent = label; b.onclick = () => { closeFloat(); fn(); }; mn.appendChild(b); };
+      item(I.reply, 'Ответить', () => setReply(target.id || target.gid, m, who));
       item(I.smile, 'Реакция…', () => rxPicker(m, target, pt));
-      if (m.text) item(I.copy, 'Копировать текст', () => { A.copy(m.text); flash('Скопировано'); });
+      const sel = String(window.getSelection() || '').trim();
+      if (sel) item(I.copy, 'Копировать выделенное', () => { A.copy(sel); flash('Скопировано'); });
+      else if (m.text) item(I.copy, 'Копировать текст', () => { A.copy(m.text); flash('Скопировано'); });
+      if (m.file) item(I.down, 'Сохранить файл…', () => F.fileSave(m.file.id));
+      mn.appendChild(document.createElement('hr'));
+      { const b = document.createElement('button'); b.type = 'button'; b.className = 'danger'; b.innerHTML = I.trash + '<span>Удалить</span>'; b.onclick = () => { closeFloat(); askDelete(m, target, who, mine); }; mn.appendChild(b); }
       place(mn, pt);
     });
     // на телефоне: долгое нажатие — то же меню
@@ -892,6 +927,58 @@
     row.addEventListener('touchstart', (e) => { const t = e.touches[0]; lt = setTimeout(() => { lt = null; row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: t.clientX, clientY: t.clientY })); }, 500); }, { passive: true });
     const cancel = () => { if (lt) { clearTimeout(lt); lt = null; } };
     row.addEventListener('touchend', cancel); row.addEventListener('touchmove', cancel); row.addEventListener('touchcancel', cancel);
+  }
+  // ---------- ответ на сообщение (цитата), как на сервере ----------
+  let replyTo = null; // { key, mid, from, text }
+  const snip = (m) => (m.text ? m.text.slice(0, 140) : m.file ? '📎 ' + m.file.name : '');
+  function setReply(key, m, who) {
+    replyTo = { key, mid: m.mid, from: who || '', text: snip(m) };
+    const bar = document.querySelector('.replybar'); if (bar) bar.remove();
+    const form = document.querySelector('form.send'); if (form) replyBar(form, key);
+    const i = document.getElementById('msgInput'); if (i) i.focus();
+  }
+  function takeReply(key) { if (!replyTo || replyTo.key !== key) return null; const r = { mid: replyTo.mid, from: replyTo.from, text: replyTo.text }; replyTo = null; const b = document.querySelector('.replybar'); if (b) b.remove(); return r; }
+  function replyBar(form, key) {
+    if (!replyTo || replyTo.key !== key) return;
+    const bar = document.createElement('div'); bar.className = 'replybar';
+    bar.innerHTML = '<span></span><button type="button" class="iconbtn" title="Не отвечать (Esc)"></button>';
+    bar.firstChild.innerHTML = 'Ответ <b></b>: <i></i>'; bar.querySelector('b').textContent = replyTo.from; bar.querySelector('i').textContent = replyTo.text;
+    bar.lastChild.innerHTML = I.x; bar.lastChild.onclick = () => { replyTo = null; bar.remove(); };
+    form.parentNode.insertBefore(bar, form);
+  }
+  function quoteView(r) {
+    const q = document.createElement('div'); q.className = 'rq'; q.title = 'Показать сообщение';
+    q.innerHTML = '<b></b><span></span>'; q.firstChild.textContent = r.from || ''; q.lastChild.textContent = r.text || '';
+    q.onclick = () => { const el = document.querySelector(`#msgs [data-mid="${CSS.escape(r.mid)}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1400); } };
+    return q;
+  }
+  // ---------- удаление: своё — у всех, любое — только у себя ----------
+  function askDelete(m, target, who, mine) {
+    const d = document.createElement('dialog'); d.className = 'kdlg';
+    d.innerHTML = '<div class="kd-b"><div class="kd-t">Удалить сообщение?</div><div class="kd-x"></div></div><div class="kd-f"></div>';
+    d.querySelector('.kd-x').textContent = (who ? who + ': ' : '') + (snip(m) || 'сообщение') + (mine ? '\n\n«У всех» — пропадёт и у ' + (target.gid ? 'всех в группе' : 'друга') + '. «Только у меня» — скроется только у тебя.' : '\n\nЧужое сообщение можно скрыть только у себя.');
+    const f = d.querySelector('.kd-f');
+    const bt = (t, cls, fn) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; if (cls) b.className = cls; b.onclick = () => { d.close(); if (fn) fn(); }; f.appendChild(b); return b; };
+    bt('Отмена', '');
+    bt('Только у меня', mine ? '' : 'ok danger', () => F.deleteMsg(target, m.mid, false).then(() => { lastRendered = ''; gLast = ''; refresh(); }));
+    if (mine) bt('У всех', 'ok danger', () => F.deleteMsg(target, m.mid, true).then(() => { lastRendered = ''; gLast = ''; refresh(); }));
+    d.addEventListener('close', () => d.remove());
+    document.body.appendChild(d); d.showModal();
+  }
+  // ---------- картинка во весь экран ----------
+  function viewImage(file) {
+    const o = document.createElement('div'); o.className = 'lbox';
+    const img = document.createElement('img'); img.src = fileUrl(file.id); img.alt = file.name;
+    const bar = document.createElement('div'); bar.className = 'lbar';
+    bar.innerHTML = '<span></span>'; bar.firstChild.textContent = file.name;
+    const bt = (ic, title, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'iconbtn'; b.innerHTML = ic; b.title = title; b.onclick = (e) => { e.stopPropagation(); fn(); }; bar.appendChild(b); };
+    bt(I.down, 'Сохранить…', () => F.fileSave(file.id)); bt(I.invite, 'Открыть в программе', () => F.fileOpen(file.id)); bt(I.x, 'Закрыть (Esc)', () => close());
+    const close = () => { o.remove(); document.removeEventListener('keydown', key, true); };
+    const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+    document.addEventListener('keydown', key, true);
+    o.onclick = (e) => { if (e.target === o) close(); };
+    o.append(bar, img); document.body.appendChild(o);
+    window.__lboxClose = close;
   }
   function rxPicker(m, target, r) {
     closeFloat();
@@ -982,7 +1069,7 @@
     for (const m of msgs) {
       const day = new Date(m.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
       if (day !== lastDay) { lastDay = day; const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.appendChild(d); }
-      const row = document.createElement('div'); row.className = 'm' + (m.from === 'me' ? ' me' : '');
+      const row = document.createElement('div'); row.className = 'm' + (m.from === 'me' ? ' me' : ''); row.dataset.mid = m.mid || '';
       if (m.invite) {
         const c = document.createElement('div'); c.className = 'inv';
         const t = document.createElement('div'); t.style.flex = '1';
@@ -997,6 +1084,7 @@
         }
         row.appendChild(c);
       } else {
+        if (m.reply) row.appendChild(quoteView(m.reply));
         if (m.file) row.appendChild(fileView(m.file));
         if (m.text) {
           const b = document.createElement('div'); b.className = 'b';
@@ -1006,7 +1094,7 @@
           row.appendChild(b);
         }
       }
-      if (!m.invite) { row.appendChild(rxView(m, { id: f.id }, (uid) => (uid === me.id ? (myProf.name || 'Я') : f.name))); rxHook(row, m, { id: f.id }); }
+      if (!m.invite) { row.appendChild(rxView(m, { id: f.id }, (uid) => (uid === me.id ? (myProf.name || 'Я') : f.name))); rxHook(row, m, { id: f.id }, m.from === 'me' ? (myProf.name || 'Я') : f.name, m.from === 'me'); }
       const t = document.createElement('div'); t.className = 't';
       t.textContent = new Date(m.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + (m.from === 'me' ? (m.delivered ? ' · доставлено' : ' · ждёт друга') : '');
       row.appendChild(t);
@@ -1017,7 +1105,8 @@
     const inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать ${f.name}`;
     const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
     form.append(inp, sb);
-    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; await F.send(f.id, v); refresh(); };
+    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(f.id); await F.send(f.id, v, rp); refresh(); };
+    replyBar(form, f.id);
     attachTo(form, inp, { id: f.id }, main);
     main.append(head);
     mountStage(main);
@@ -1112,7 +1201,21 @@
   async function applyOut() {
     const auds = [call && call.audio, ...(gcall ? [...gcall.peers.values()].map((x) => x.audio) : [])].filter(Boolean);
     const dv = VS.outLabel ? (await navigator.mediaDevices.enumerateDevices().catch(() => [])).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel) : null;
-    for (const a of auds) { a.volume = Math.min(1, (a.__vol ?? 1) * (VS.masterVol ?? 1)); if (a.setSinkId) a.setSinkId(dv ? dv.deviceId : '').catch(() => {}); }
+    for (const a of auds) { setVol(a, (a === (call && call.audio) ? (call.vol ?? 1) : 1) * (VS.masterVol ?? 1)); if (a.setSinkId) a.setSinkId(dv ? dv.deviceId : '').catch(() => {}); }
+  }
+  // громкость до 200%: сверх 100% — через усилитель WebAudio (сам <audio> тогда беззвучный, но играет)
+  function setVol(a, v) {
+    v = Math.max(0, Math.min(4, v || 0));
+    const src = a.srcObject;
+    if (v > 1.001 && src) {
+      try {
+        if (!a.__boost || a.__boost.stream !== src) { if (a.__boost) { try { a.__boost.s.disconnect(); } catch {} } const c = ctx(), sN = c.createMediaStreamSource(src), g = c.createGain(); sN.connect(g); g.connect(c.destination); a.__boost = { s: sN, g, stream: src }; }
+        a.__boost.g.gain.value = v; a.volume = 1; a.__boostMuted = true; a.muted = true; return;
+      } catch {}
+    }
+    if (a.__boost) { try { a.__boost.s.disconnect(); a.__boost.g.disconnect(); } catch {} a.__boost = null; }
+    if (a.__boostMuted) { a.__boostMuted = false; a.muted = false; }
+    a.volume = Math.min(1, v);
   }
   // ---------- настройки голоса (общие с серверами) ----------
   function voiceDialog() {
@@ -1123,7 +1226,10 @@
       <label class="vl">Сила шумодава: <b id="vdStrV"></b></label><input type="range" id="vdStr" min="40" max="100" step="5">
       <label class="chk"><input type="checkbox" id="vdEc"> Убирать эхо</label>
       <label class="chk"><input type="checkbox" id="vdAgc"> Выравнивать громкость микрофона</label>
-      <p class="hint">Шумодав сменится со следующего звонка.</p></div><div class="kd-f"><button type="button" class="ok">Готово</button></div>`;
+      <p class="hint">Шумодав сменится со следующего звонка.</p>
+      <label class="chk"><input type="checkbox" id="vdSnd"> Звуки (звонки, сообщения, вход в голос)</label>
+      <label class="vl">Громкость звуков: <b id="vdSndV"></b></label><input type="range" id="vdSndVol" min="0" max="200" step="5">
+      <details class="vsnd"><summary>Звуки по событиям — послушать, поставить свой</summary><div id="vdSndList"></div></details></div><div class="kd-f"><button type="button" class="ok">Готово</button></div>`;
     dl.querySelector('.ok').onclick = () => dl.close();
     const seg = dl.querySelector('#vdNs');
     for (const [v, t] of NS) { const x = document.createElement('button'); x.type = 'button'; x.textContent = t; x.classList.toggle('on', VS.nsMode === v); x.onclick = () => { saveVS({ nsMode: v }); seg.querySelectorAll('button').forEach((y) => y.classList.toggle('on', y === x)); }; seg.appendChild(x); }
@@ -1131,6 +1237,13 @@
     sr.oninput = () => { sv.textContent = sr.value + '%'; }; sr.onchange = () => saveVS({ nsStrength: Number(sr.value) });
     const ec = dl.querySelector('#vdEc'), agc = dl.querySelector('#vdAgc'); ec.checked = VS.ec !== false; agc.checked = VS.agc !== false;
     ec.onchange = () => saveVS({ ec: ec.checked }); agc.onchange = () => saveVS({ agc: agc.checked });
+    if (window.KSound) KSound.ready.then(() => {
+      const sc = dl.querySelector('#vdSnd'), sv2 = dl.querySelector('#vdSndVol'), sl = dl.querySelector('#vdSndV');
+      sc.checked = KSound.enabled; sv2.value = Math.round(KSound.volume * 100); sl.textContent = sv2.value + '%';
+      sc.onchange = () => { KSound.enabled = sc.checked; };
+      sv2.oninput = () => { sl.textContent = sv2.value + '%'; }; sv2.onchange = () => { KSound.volume = sv2.value / 100; KSound.play('dm', 1); };
+      dl.querySelector('.vsnd').addEventListener('toggle', (e) => { if (e.target.open) KSound.renderSettings(dl.querySelector('#vdSndList')); });
+    });
     dl.addEventListener('close', () => dl.remove());
     document.body.appendChild(dl); dl.showModal();
   }
@@ -1142,6 +1255,7 @@
 
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
+    if (replyTo && document.querySelector('.replybar')) { replyTo = null; document.querySelector('.replybar').remove(); return; }
     if (document.querySelector('.card, .menu')) { closeFloat(); return; }
     if (!atHome) F.close();
   });
@@ -1176,9 +1290,12 @@
   const ctx = () => { if (!actx || actx.state === 'closed') actx = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' }); if (actx.state !== 'running') actx.resume().catch(() => {}); return actx; };
   // гудки: исходящий — длинные, входящий — двойной звонок
   let toneT = null;
+  let toneStop = null;
   function tone(kind) {
     clearInterval(toneT); toneT = null;
+    if (toneStop) { toneStop(); toneStop = null; }
     if (!kind) return;
+    if (window.KSound) { toneStop = KSound.loop(kind === 'out' ? 'ringOut' : 'ringIn'); return; } // свои звуки Кентовки (можно поставить свой файл)
     const beep = (f, dur, at = 0) => { const c = ctx(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = f; g.gain.value = 0;
       g.gain.setTargetAtTime(0.08, c.currentTime + at, 0.01); g.gain.setTargetAtTime(0, c.currentTime + at + dur, 0.02); o.connect(g).connect(c.destination); o.start(c.currentTime + at); o.stop(c.currentTime + at + dur + 0.2); };
     const play = kind === 'out' ? () => beep(425, 1) : () => { beep(660, 0.25); beep(880, 0.25, 0.32); };
@@ -1214,9 +1331,9 @@
     }
     if (call.state === 'live' || call.state === 'connecting') {
       const vol = document.createElement('label'); vol.className = 'cvol'; vol.title = 'Громкость друга';
-      vol.innerHTML = I.vol; const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 100; r.step = 5; r.value = Math.round((call.vol ?? 1) * 100);
-      const fill = () => r.style.setProperty('--v', r.value + '%'); fill();
-      r.oninput = () => { fill(); call.vol = r.value / 100; if (call.audio) call.audio.volume = Math.min(1, call.vol * (VS.masterVol ?? 1)); };
+      vol.innerHTML = I.vol; const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 200; r.step = 5; r.value = Math.round((call.vol ?? 1) * 100);
+      const fill = () => r.style.setProperty('--v', (r.value / 2) + '%'); fill();
+      r.oninput = () => { fill(); call.vol = r.value / 100; if (call.audio) setVol(call.audio, call.vol * (VS.masterVol ?? 1)); };
       vol.appendChild(r); bar.appendChild(vol);
       btn(call.muted ? 'off' : '', call.muted ? I.micOff : I.mic, call.muted ? 'Включить микрофон' : 'Выключить микрофон', () => setMuted(!call.muted));
       btn(call.deaf ? 'off' : '', call.deaf ? I.headOff : I.head, call.deaf ? 'Включить звук' : 'Выключить звук', () => setDeaf(!call.deaf));
@@ -1224,7 +1341,7 @@
     btn('red', I.hang, call.state === 'ringing' ? 'Отменить звонок' : 'Завершить звонок', () => endCall(call.state === 'ringing' && call.dir === 'out' ? 'cancel' : 'end'));
   }
   const say = (id, k, data, cidOverride) => F.call(id, { k, cid: cidOverride || (call ? call.cid : ''), data });
-  function setState(st) { if (!call) return; call.state = st; if (st === 'live') { call.t0 = call.t0 || Date.now(); tone(null); } report(); renderCall(); lastRendered = ''; renderMain(); }
+  function setState(st) { if (!call) return; call.state = st; if (st === 'live') { if (!call.t0 && window.KSound) KSound.play('callStart'); call.t0 = call.t0 || Date.now(); tone(null); } report(); renderCall(); lastRendered = ''; renderMain(); }
   async function leaveVoiceIfNeeded() {
     if (!voice) return true;
     if (!(await kAsk(`Ты в голосовом канале «${voice.ch || 'голос'}». Выйти из него, чтобы созвониться?`, 'Выйти и позвонить'))) return false;
@@ -1262,7 +1379,7 @@
     if (note) flash(note);
     if (c.state === 'live') { tone(null); beepEnd(); }
   }
-  const beepEnd = () => { try { const c = ctx(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 480; g.gain.value = 0.06; g.gain.setTargetAtTime(0, c.currentTime + 0.25, 0.03); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + 0.5); } catch {} };
+  const beepEnd = () => { if (window.KSound) { KSound.play('callEnd'); return; } try { const c = ctx(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 480; g.gain.value = 0.06; g.gain.setTargetAtTime(0, c.currentTime + 0.25, 0.03); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + 0.5); } catch {} };
   function flash(t) {
     const d = document.createElement('div'); d.textContent = t;
     Object.assign(d.style, { position: 'fixed', left: '50%', bottom: '24px', transform: 'translateX(-50%)', background: 'var(--panel3)', border: '1px solid var(--line)', padding: '10px 16px', borderRadius: '10px', zIndex: 50, maxWidth: '90%' });
@@ -1329,7 +1446,7 @@
     pc.ontrack = (e) => {
       if (onRemoteTrack(c.id, e)) return;
       const a = c.audio || (c.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
-      a.volume = Math.min(1, (c.vol ?? 1) * (VS.masterVol ?? 1));
+      setVol(a, (c.vol ?? 1) * (VS.masterVol ?? 1));
       (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
       a.play().catch(() => {});
       watchTalk(e.track);
@@ -1617,12 +1734,13 @@
       const day = new Date(m.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
       if (day !== lastDay) { lastDay = day; lastFrom = ''; const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.appendChild(d); }
       const cont = lastFrom === m.from && m.ts - lastTs < 5 * 60000; lastFrom = m.from; lastTs = m.ts;
-      const row = document.createElement('div'); row.className = 'gm' + (cont ? ' cont' : '');
+      const row = document.createElement('div'); row.className = 'gm' + (cont ? ' cont' : ''); row.dataset.mid = m.mid || '';
       const mb = g.members.find((x) => x.id === m.from) || { name: m.name };
       const av = ava({ name: mb.name || m.name, avatar: mb.avatar }, false);
       if (!cont) { av.style.cursor = 'pointer'; av.onclick = () => { const f = list.find((x) => x.id === m.from); if (f) openCard(f, av); }; }
       const b = document.createElement('div'); b.className = 'gb';
       if (!cont) { const h = document.createElement('div'); h.className = 'gh'; h.innerHTML = '<b></b><span></span>'; h.firstChild.textContent = m.from === me.id ? (myProf.name || 'Я') : (mb.name || m.name); h.lastChild.textContent = new Date(m.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); b.appendChild(h); }
+      if (m.reply) b.appendChild(quoteView(m.reply));
       if (m.file) b.appendChild(fileView(m.file));
       if (m.text) {
         const t = document.createElement('div'); t.className = 'gt';
@@ -1630,7 +1748,7 @@
         b.appendChild(t);
       }
       b.appendChild(rxView(m, { gid: g.id }, (uid) => (uid === me.id ? (myProf.name || 'Я') : ((g.members.find((x) => x.id === uid) || {}).name || 'кент'))));
-      rxHook(row, m, { gid: g.id });
+      rxHook(row, m, { gid: g.id }, m.from === me.id ? (myProf.name || 'Я') : (mb.name || m.name), m.from === me.id);
       row.append(cont ? Object.assign(document.createElement('div'), { className: 'gpad' }) : av, b);
       box.appendChild(row);
     }
@@ -1639,7 +1757,8 @@
     const inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать в «${gTitle(g)}»`;
     const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
     form.append(inp, sb);
-    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; await F.groupSend(g.id, v); refresh(); };
+    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(g.id); await F.groupSend(g.id, v, rp); refresh(); };
+    replyBar(form, g.id);
     attachTo(form, inp, { gid: g.id }, main);
     col.append(box, form);
     // участники справа
@@ -1735,7 +1854,7 @@
     pc.ontrack = (e) => {
       if (onRemoteTrack(id, e)) return;
       const a = p.audio || (p.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
-      a.volume = Math.min(1, VS.masterVol ?? 1);
+      setVol(a, VS.masterVol ?? 1);
       (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
       a.play().catch(() => {});
       gTalk(id, e.track);
@@ -1789,7 +1908,7 @@
   });
   window.kgcall = () => gcall && { gid: gcall.gid, parts: [...gcall.parts], peers: [...gcall.peers.entries()].map(([id, p]) => ({ id, state: p.pc.connectionState, audio: !!(p.audio && p.audio.srcObject) })) };
 
-  F.onCallCmd((c) => { if (c === 'accept') acceptCall(); if (c === 'decline' && call && call.state === 'ringing' && call.dir === 'in') endCall('decline'); if (c === 'hangup') { if (gcall) gLeave(); else endCall('end'); } if (c === 'open' && gcall) openDm(gcall.gid); });
+  F.onCallCmd((c) => { if (typeof c === 'string' && c.startsWith('gjoin:')) { const g = groups.find((x) => x.id === c.slice(6)); if (g) { openDm(g.id); if (!(gcall && gcall.gid === g.id)) gJoin(g); } return; } if (c === 'accept') acceptCall(); if (c === 'decline' && call && call.state === 'ringing' && call.dir === 'in') endCall('decline'); if (c === 'hangup') { if (gcall) gLeave(); else endCall('end'); } if (c === 'open' && gcall) openDm(gcall.gid); });
   F.onHotkey((a) => {
     if (gcall) { if (a === 'mute') gMute(!gcall.muted); if (a === 'deaf') gDeaf(!gcall.deaf); return; }
     if (!call || call.state === 'ringing') return; if (a === 'mute') setMuted(!call.muted); if (a === 'deaf') setDeaf(!call.deaf);
@@ -1805,5 +1924,6 @@
 })();
 </script>
 <script src="/kselect.js"></script>
+<script src="/ksound.js"></script>
 </body>
 </html>

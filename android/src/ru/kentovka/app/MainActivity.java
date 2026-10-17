@@ -168,9 +168,19 @@ public class MainActivity extends Activity {
                 Intent it = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("knotify", ev.optString("id"));
                 android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, ev.optString("id").hashCode(), it, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
                 android.app.Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new android.app.Notification.Builder(this, "msgs") : new android.app.Notification.Builder(this);
-                nm().notify(ev.optString("id").hashCode(), b.setSmallIcon(R.drawable.ic_voice).setContentTitle(ev.optString("title")).setContentText(ev.optString("body")).setAutoCancel(true).setContentIntent(pi).build());
+                b.setSmallIcon(R.drawable.ic_voice).setContentTitle(ev.optString("title")).setContentText(ev.optString("body")).setAutoCancel(true).setContentIntent(pi);
+                // звонок: кнопки «Отклонить / Принять» прямо в уведомлении
+                JSONArray acts = ev.optJSONArray("actions");
+                if (acts != null) for (int i = 0; i < acts.length(); i++) {
+                    Intent ai = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("knotify", ev.optString("id")).putExtra("kaction", i);
+                    android.app.PendingIntent api = android.app.PendingIntent.getActivity(this, (ev.optString("id") + ":" + i).hashCode(), ai, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+                    b.addAction(new android.app.Notification.Action.Builder(null, acts.optString(i), api).build());
+                }
+                if (ev.optBoolean("call")) { b.setCategory(android.app.Notification.CATEGORY_CALL).setOngoing(true); if (Build.VERSION.SDK_INT < 26) b.setPriority(android.app.Notification.PRIORITY_MAX); }
+                nm().notify(ev.optString("id").hashCode(), b.build());
                 break;
             }
+            case "notifyCancel": nm().cancel(ev.optString("id").hashCode()); break;
             case "pick": {
                 Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("*/*");
                 try { startActivityForResult(i, REQ_PICK); } catch (Exception e) { NodeHost.tell(jo("t", "picked")); }
@@ -283,7 +293,9 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent it) {
         super.onNewIntent(it); setIntent(it); handleIntent(it);
         final String nid = it.getStringExtra("knotify");
-        if (nodeMode && nid != null) new Thread(new Runnable() { public void run() { NodeHost.tell(jo("t", "notifyClick", "id", nid)); } }).start();
+        final int act = it.getIntExtra("kaction", -1);
+        if (nid != null) nm().cancel(nid.hashCode());
+        if (nodeMode && nid != null) new Thread(new Runnable() { public void run() { NodeHost.tell(act >= 0 ? jo("t", "notifyAction", "id", nid, "i", act) : jo("t", "notifyClick", "id", nid)); } }).start();
     }
     @Override protected void onResume() { super.onResume(); if (nodeMode) new Thread(new Runnable() { public void run() { NodeHost.tell(jo("t", "focus", "on", true)); sendIfaces(); } }).start(); }
     @Override protected void onPause() { super.onPause(); if (nodeMode) new Thread(new Runnable() { public void run() { NodeHost.tell(jo("t", "focus", "on", false)); } }).start(); }

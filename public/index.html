@@ -41,6 +41,10 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
   .ipeye { font-size: 12px; color: var(--dim); text-decoration: underline dotted; background: none; border: 0; padding: 0 4px; cursor: pointer; }
   .ipeye:hover { color: var(--text); }
   input[type=checkbox] { accent-color: var(--accent); }
+  /* «неактивен» — жёлтая луна у аватарки */
+  .user .ava.idle { position: relative; overflow: visible; }
+  .user .ava.idle::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 11px; height: 11px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, var(--panel) 0 3px, #f0b232 3.5px); border: 2px solid var(--panel); }
+  .user.idle .uname { opacity: .7; }
   /* ползунки: своя дорожка, заливка ровно до значения (--v считает скрипт), кружок по центру дорожки */
   input[type=range] { -webkit-appearance: none; appearance: none; height: 18px; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; vertical-align: middle; min-width: 40px; --v: 50%; }
   input[type=range]:focus { box-shadow: none; border: 0; }
@@ -926,7 +930,7 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
         <div class="meterRow"><span id="micDb">—</span>
           <button type="button" class="ctl" id="monitorBtn"></button></div>
         <label>Громкость кентов (общая): <b id="masterVal"></b></label>
-        <input type="range" id="masterVol" min="0" max="100" step="5">
+        <input type="range" id="masterVol" min="0" max="200" step="5">
         <p class="hint">Громкость отдельного кента — нажми на него в звонке или в списке слева.</p>
         <label>Шумодав</label>
         <select id="nsMode">
@@ -950,7 +954,8 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
         <label class="check"><input type="checkbox" id="agcCheck" checked><span>Автогромкость микрофона</span></label>
         <label class="check"><input type="checkbox" id="soundsCheck"><span>Звуки: сообщения, вход и выход, микрофон, стрим</span></label>
         <div id="soundBox"><label>Громкость звуков: <b id="soundVal"></b></label>
-          <input type="range" id="soundVol" min="0" max="100" step="5"></div>
+          <input type="range" id="soundVol" min="0" max="200" step="5">
+          <details id="sndMore"><summary>Звуки по событиям — послушать, поставить свой</summary><div id="sndList"></div></details></div>
         <p id="hotkeyHint" class="hint">Горячие клавиши (когда окно в фокусе): M — микрофон, D — звук.</p>
         <div id="hkBox" hidden>
           <label>Горячие клавиши (работают даже в игре)</label>
@@ -1097,6 +1102,7 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
 </dialog>
 
 <script src="/kselect.js"></script>
+<script src="/ksound.js"></script>
 <script src="/transcode.js"></script>
 <script src="/swarm.js"></script>
 <script>
@@ -1347,8 +1353,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   if (settings.nsVer !== 5 && settings.nsVer !== 6) { settings.nsVer = 5; settings.nsMode = window.kAndroid ? 'off' : 'ultra'; settings.nsStrength = 80; store.set('settings', settings); }
   // 1.8: «умный» шумодав (нейросеть в отдельном потоке — без треска) вместо тяжёлых режимов по умолчанию
   if (settings.nsVer === 5) { settings.nsVer = 6; if (!window.kAndroid && ['ultra', 'dfn'].includes(settings.nsMode)) settings.nsMode = 'smart'; store.set('settings', settings); }
-  settings.masterVol = Math.min(1, settings.masterVol);
-  for (const k of Object.keys(volumes)) volumes[k] = Math.min(1, volumes[k]);
+  settings.masterVol = Math.min(2, settings.masterVol);
+  for (const k of Object.keys(volumes)) volumes[k] = Math.min(2, volumes[k]);
   let rawStream = null, micNodes = [];
   // демка: mid "1" — видео экрана, mid "2" — звук экрана (mid "0" — микрофон)
   let sharing = false, screenStream = null, watching = null;
@@ -1551,6 +1557,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
           iceCfg = m.ice || null; // хост включил прямое соединение
           { const KX = window.kentovkaApp || window.kAndroid; if (m.alts && KX && KX.serverAlts) KX.serverAlts(m.alts); };
           isHost = !!m.isHost;
+          if (APP0 && APP0.idleNow) APP0.idleNow().then((v) => { if (v) wsSend({ type: 'idle', on: true }); }).catch(() => {});
           showDirectStatus();
           Object.assign(avatars, m.avatars || {});
           Object.assign(profiles, m.profiles || {});
@@ -1662,39 +1669,11 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   });
   window.kentovka.swarm = swarm;
 
-  // ---------- звуки (свои, синтезированные) ----------
-  let sfxCtx = null;
-  const SFX = {
-    message: [[880, 0, 0.07], [1320, 0.07, 0.11]],
-    join:    [[523, 0, 0.09], [784, 0.09, 0.14]],
-    leave:   [[784, 0, 0.09], [523, 0.09, 0.14]],
-    mute:    [[660, 0, 0.06], [440, 0.06, 0.08]],
-    unmute:  [[440, 0, 0.06], [660, 0.06, 0.08]],
-    deaf:    [[392, 0, 0.07], [262, 0.07, 0.12]],
-    undeaf:  [[262, 0, 0.07], [392, 0.07, 0.12]],
-    stream:  [[523, 0, 0.08], [659, 0.08, 0.08], [988, 0.16, 0.16]],
-    online:  [[1047, 0, 0.09]],
-  };
+  // ---------- звуки: фирменные Кентовки (ksound.js), можно поставить свои файлы ----------
   function sfx(name) {
-    if (!settings.sounds || !SFX[name]) return;
-    try {
-      sfxCtx = sfxCtx || new AudioContext({ latencyHint: 'interactive' });
-      if (sfxCtx.state === 'suspended') sfxCtx.resume().catch(() => {});
-      if (settings.out && sfxCtx.setSinkId && !sfxCtx._sink) { sfxCtx._sink = 1; sfxCtx.setSinkId(settings.out).catch(() => {}); }
-      const t0 = sfxCtx.currentTime + 0.01;
-      const vol = 0.18 * settings.soundVol;
-      for (const [hz, at, dur] of SFX[name]) {
-        const o = sfxCtx.createOscillator(), g = sfxCtx.createGain();
-        o.type = 'sine'; o.frequency.value = hz;
-        g.gain.setValueAtTime(0, t0 + at);
-        g.gain.linearRampToValueAtTime(vol, t0 + at + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
-        o.connect(g); g.connect(sfxCtx.destination);
-        o.start(t0 + at); o.stop(t0 + at + dur + 0.02);
-      }
-    } catch {}
+    if (!settings.sounds || !window.KSound) return;
+    try { KSound.play(name); } catch {}
   }
-  document.addEventListener('pointerdown', () => { if (sfxCtx && sfxCtx.state === 'suspended') sfxCtx.resume().catch(() => {}); }, true);
 
   // кто зашёл/вышел из голоса, кто начал стрим — для звуков
   let prevVoice = null, prevSharing = new Set();
@@ -2605,8 +2584,9 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     const seenKey = (u.voice || 'o') + ':' + u.id;
     const li = document.createElement('li'); li.className = 'user' + (seenRows.has(seenKey) ? '' : ' new'); li.dataset.id = u.id;
     seenRows.add(seenKey);
-    li.appendChild(ava(u.name));
+    { const a = ava(u.name); if (u.idle && !u.inVoice) { a.classList.add('idle'); a.title = 'Неактивен'; } li.appendChild(a); }
     const n = document.createElement('span'); n.className = 'uname'; n.textContent = u.name + (u.id === myId ? ' (ты)' : ''); li.appendChild(n);
+    if (u.idle && !u.inVoice) li.classList.add('idle');
     li.onclick = () => openProfile(u.name, li);
     li.title = 'Профиль';
     if (!u.inVoice) return li;
@@ -2667,7 +2647,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     } else if (kind === 'in' || kind === 'out') {
       // выбор устройства: микрофон или куда выводить звук
       const isIn = kind === 'in';
-      p.innerHTML = `<h4>${isIn ? 'Микрофон' : 'Звук'}</h4><div class="devlist"></div><label>${isIn ? 'Громкость микрофона' : 'Громкость кентов'}: <b class="vv"></b></label><input type="range" class="vr2" min="0" max="${isIn ? 200 : 100}" step="5"><button type="button" class="vbmore">Все настройки голоса</button>`;
+      p.innerHTML = `<h4>${isIn ? 'Микрофон' : 'Звук'}</h4><div class="devlist"></div><label>${isIn ? 'Громкость микрофона' : 'Громкость кентов'}: <b class="vv"></b></label><input type="range" class="vr2" min="0" max="200" step="5"><button type="button" class="vbmore">Все настройки голоса</button>`;
       const list = p.querySelector('.devlist'), sel = $(isIn ? 'micSelect' : 'outSelect');
       const draw = () => {
         list.innerHTML = '';
@@ -2770,7 +2750,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       const vb = document.createElement('div'); vb.className = 'box';
       vb.innerHTML = '<div class="h">ГРОМКОСТЬ</div>';
       const row = document.createElement('div'); row.className = 'vrow2';
-      const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 100; r.step = 5; r.value = Math.round(Math.min(1, volumes[name] ?? 1) * 100);
+      const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 200; r.step = 5; r.value = Math.round(Math.min(2, volumes[name] ?? 1) * 100);
       const lab = document.createElement('span'); lab.textContent = r.value + '%'; lab.style.fontSize = '12px';
       r.oninput = () => { volumes[name] = r.value / 100; lab.textContent = r.value + '%'; store.set('volumes', volumes); applyVolume(u.id); syncVolPopups(); };
       row.insertAdjacentHTML('beforeend', ICON.volume); row.append(r, lab); vb.appendChild(row); body.appendChild(vb);
@@ -2969,7 +2949,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       const vol = document.createElement('div'); vol.className = 'vol';
       const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 100; r.step = 5;
       const lab = document.createElement('span');
-      const sync = () => { r.value = Math.round(Math.min(1, volumes[u.name] ?? 1) * 100); lab.textContent = r.value + '%'; };
+      const sync = () => { r.value = Math.round(Math.min(2, volumes[u.name] ?? 1) * 100); lab.textContent = r.value + '%'; };
       sync(); el._syncVol = sync;
       r.oninput = () => { volumes[u.name] = r.value / 100; lab.textContent = r.value + '%'; store.set('volumes', volumes); applyVolume(u.id); };
       vol.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -3394,18 +3374,35 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
 
   function dropPeer(id) {
     const p = peers.get(id); if (!p) return;
-    p.pc.close(); p.audio.srcObject = null; p.screenAudio.srcObject = null; peers.delete(id);
+    p.pc.close(); if (p.boost) { try { p.boost.src.disconnect(); p.boost.g.disconnect(); } catch {} p.boost = null; } p.audio.srcObject = null; p.screenAudio.srcObject = null; peers.delete(id);
     viewers.delete(id);
     rebalance();
     if (watching === id) closeStage(true);
     unwatch(id);
   }
 
+  // громче 100%: <audio> не умеет, поэтому сверх 100% звук кента идёт через усилитель (WebAudio),
+  // а сам <audio> играет беззвучно (чтобы поток не засыпал). До 100% — как раньше, напрямую (так лучше работает эхоподавление).
+  function boostAudio(p, v) {
+    const src = p.audio.srcObject;
+    if (v > 1.001 && !deaf && src) {
+      try {
+        if (!p.boost || p.boost.stream !== src) {
+          if (p.boost) { try { p.boost.src.disconnect(); p.boost.g.disconnect(); } catch {} }
+          const c = getProcCtx(); const sN = c.createMediaStreamSource(src), g = c.createGain();
+          sN.connect(g); g.connect(c.destination); p.boost = { src: sN, g, stream: src };
+        }
+        p.boost.g.gain.value = v; p.audio.volume = 1; p.audio.muted = true; return;
+      } catch {}
+    }
+    if (p.boost) { try { p.boost.src.disconnect(); p.boost.g.disconnect(); } catch {} p.boost = null; }
+    p.audio.volume = Math.min(1, v); p.audio.muted = deaf;
+  }
   function applyVolume(id) {
     const p = peers.get(id); if (!p) return;
     const u = users.find((x) => x.id === id);
-    p.audio.volume = Math.max(0, Math.min(1, (u ? (volumes[u.name] ?? 1) : 1) * settings.masterVol));
-    p.audio.muted = deaf;
+    const v = Math.max(0, Math.min(4, (u ? (volumes[u.name] ?? 1) : 1) * settings.masterVol));
+    boostAudio(p, v);
     p.screenAudio.volume = $('stageVol').value / 100;
     p.screenAudio.muted = deaf || watching !== id;
   }
@@ -3855,9 +3852,12 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   $('masterVol').onchange = () => store.set('settings', settings);
   const syncSoundUi = () => { $('soundBox').style.display = settings.sounds ? '' : 'none'; $('soundVal').textContent = Math.round(settings.soundVol * 100) + '%'; };
   $('soundsCheck').checked = settings.sounds; $('soundVol').value = Math.round(settings.soundVol * 100); syncSoundUi();
-  $('soundsCheck').onchange = () => { settings.sounds = $('soundsCheck').checked; syncSoundUi(); store.set('settings', settings); };
+  $('soundsCheck').onchange = () => { settings.sounds = $('soundsCheck').checked; syncSoundUi(); store.set('settings', settings); if (window.KSound) KSound.enabled = settings.sounds; };
   $('soundVol').oninput = () => { settings.soundVol = $('soundVol').value / 100; syncSoundUi(); };
-  $('soundVol').onchange = () => { store.set('settings', settings); sfx('message'); };
+  $('soundVol').onchange = () => { store.set('settings', settings); if (window.KSound) KSound.volume = settings.soundVol; sfx('message'); };
+  // громкость и вкл/выкл звуков — общие для всех серверов и друзей (в приложении)
+  if (window.KSound) KSound.ready.then(() => { if (APP0) { settings.soundVol = KSound.volume; settings.sounds = KSound.enabled; $('soundsCheck').checked = settings.sounds; $('soundVol').value = Math.round(settings.soundVol * 100); syncSoundUi(); } KSound.setSink(settings.out || ''); });
+  $('sndMore').addEventListener('toggle', () => { if ($('sndMore').open && window.KSound) KSound.renderSettings($('sndList')); });
 
   // ---------- кнопки ----------
 
@@ -3884,6 +3884,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     reportVoice();
   }
   // приложение: страница друзей показывает «Голос подключён» внизу, пока ты в голосовом канале
+  if (APP0 && APP0.onIdle) APP0.onIdle((v) => wsSend({ type: 'idle', on: !!v }));
   function reportVoice() {
     const A = window.kentovkaApp || window.kAndroid; if (!A || !A.voiceState) return;
     A.voiceState(inVoice ? { inVoice: true, ch: (chanOf(myVoice) || {}).name || '', muted: muted || deaf, deaf } : null);

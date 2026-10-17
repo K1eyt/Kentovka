@@ -2,7 +2,7 @@
 // Стартовый экран: подключиться к хосту или самому стать хостом (сервер крутится прямо в приложении).
 const {
   app, BrowserWindow, session, ipcMain, desktopCapturer, globalShortcut,
-  Tray, Menu, nativeImage, clipboard, Notification, protocol, WebContentsView, dialog, safeStorage, shell,
+  Tray, Menu, nativeImage, clipboard, Notification, protocol, WebContentsView, dialog, safeStorage, shell, screen, powerMonitor,
 } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -43,6 +43,7 @@ function setupKapp(ses) {
     ['/voice-fx.js', path.join(ROOT, 'public', 'voice-fx.js')],
     ['/df-shim.js', path.join(ROOT, 'public', 'df-shim.js')],
     ['/ns-async.js', path.join(ROOT, 'public', 'ns-async.js')],
+    ['/ksound.js', path.join(ROOT, 'public', 'ksound.js')],
     ['/df-worker.js', path.join(ROOT, 'public', 'df-worker.js')],
     ['/kselect.js', path.join(ROOT, 'public', 'kselect.js')],
     ['/', __dirname],
@@ -217,10 +218,22 @@ let connected = false;
 // чем я занят — показываем друзьям («Активные контакты»)
 let presenceSince = Date.now(), presenceKey = '';
 function presenceNow() {
-  const p = { server: connected ? currentServerName || null : null, voice: (typeof voiceState !== 'undefined' && voiceState && voiceState.ch) || null, call: !!(typeof dmCall !== 'undefined' && dmCall && dmCall.state === 'live') };
+  const p = { server: connected ? currentServerName || null : null, voice: (typeof voiceState !== 'undefined' && voiceState && voiceState.ch) || null, call: !!(typeof dmCall !== 'undefined' && dmCall && dmCall.state === 'live'), idle: idleNow };
   const k = JSON.stringify(p); if (k !== presenceKey) { presenceKey = k; presenceSince = Date.now(); }
   return { ...p, since: presenceSince };
 }
+// «неактивен» (как луна в Discord): 10 минут не трогал комп (на телефоне — 5 минут приложение в фоне)
+let idleNow = false, unfocusedSince = 0;
+setInterval(() => {
+  let idle = false;
+  try {
+    if (typeof powerMonitor !== 'undefined' && powerMonitor.getSystemIdleTime) idle = powerMonitor.getSystemIdleTime() >= 600;
+    else { const f = win && !win.isDestroyed() && win.isFocused(); if (f) unfocusedSince = 0; else if (!unfocusedSince) unfocusedSince = Date.now(); idle = !!unfocusedSince && Date.now() - unfocusedSince > 5 * 60000; }
+  } catch {}
+  if ((typeof voiceState !== 'undefined' && voiceState) || (typeof dmCall !== 'undefined' && dmCall)) idle = false; // в голосе и в звонке — не «неактивен»
+  if (idle !== idleNow) { idleNow = idle; presenceChanged(); for (const w of allTabWC()) w.send('app:idle', idle); }
+}, 20000).unref?.();
+ipcMain.handle('app:idle', () => idleNow);
 let presenceT = null;
 function presenceChanged() { clearTimeout(presenceT); presenceT = setTimeout(() => { if (friends && friends.sendPresence) { presenceNow(); friends.sendPresence(); } }, 400); }
 let quitting = false;
@@ -390,8 +403,88 @@ function friendsChanged() {
   if (fv()) fv().send('friends:changed');
   if (process.platform === 'win32' && win && !win.isDestroyed()) win.setOverlayIcon(n ? nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }) : null, n ? `${n} новых` : '');
 }
-function friendNotify(title, body, focusId) {
+// ---------- всплывашки в углу экрана (как в Discord): кто звонит — «Принять / Отклонить», кто написал ----------
+// показываем, только когда Кентовка не перед глазами и сейчас не игра/видео во весь экран
+let popWin = null, popReady = false; const pops = new Map(), popQueue = [];
+function popSend(m) { if (popWin && !popWin.isDestroyed() && popReady) popWin.webContents.send('popup:msg', m); else popQueue.push(m); }
+function popLayout() {
+  if (!popWin || popWin.isDestroyed()) return;
+  const n = pops.size; if (!n) { popWin.hide(); return; }
+  const wa = screen.getPrimaryDisplay().workArea, w = 372, h = 12 + n * 70 + (n - 1) * 8;
+  popWin.setBounds({ x: wa.x + wa.width - w - 12, y: wa.y + wa.height - h - 12, width: w, height: h });
+  if (!popWin.isVisible()) popWin.showInactive();
+}
+function ensurePop() {
+  if (popWin && !popWin.isDestroyed()) return popWin;
+  popReady = false;
+  popWin = new BrowserWindow({ width: 372, height: 90, frame: false, transparent: true, resizable: false, movable: false, minimizable: false, maximizable: false, skipTaskbar: true, alwaysOnTop: true, focusable: false, show: false, hasShadow: false,
+    webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true } });
+  popWin.setAlwaysOnTop(true, 'screen-saver');
+  popWin.loadURL('kapp://app/popup.html');
+  popWin.on('closed', () => { popWin = null; popReady = false; });
+  return popWin;
+}
+ipcMain.on('popup:ready', (e) => { if (!popWin || e.sender !== popWin.webContents) return; popReady = true; for (const m of popQueue.splice(0)) popWin.webContents.send('popup:msg', m); });
+const kentovkaInFront = () => !!(win && !win.isDestroyed() && win.isVisible() && !win.isMinimized() && win.isFocused());
+// игра или видео во весь экран (Windows: «не беспокоить»)
+let fsProc = null, fsWait = [];
+function fullscreenBusy() {
+  if (process.platform !== 'win32') return Promise.resolve(false);
+  return new Promise((resolve) => {
+    try {
+      if (!fsProc) {
+        const ps = 'Add-Type -TypeDefinition \'using System;using System.Runtime.InteropServices;public class KQ{[DllImport("shell32.dll")]public static extern int SHQueryUserNotificationState(out int s);}\'; while(($l=[Console]::In.ReadLine()) -ne $null){$s=0;[void][KQ]::SHQueryUserNotificationState([ref]$s);[Console]::Out.WriteLine($s)}';
+        fsProc = require('child_process').spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', ps], { windowsHide: true });
+        let buf = '';
+        fsProc.stdout.on('data', (d) => { buf += d; let i; while ((i = buf.indexOf('\n')) >= 0) { const v = Number(buf.slice(0, i).trim()); buf = buf.slice(i + 1); const w = fsWait.shift(); if (w) w([2, 3, 4].includes(v)); } });
+        fsProc.on('exit', () => { fsProc = null; for (const w of fsWait.splice(0)) w(false); });
+      }
+      const t = setTimeout(() => { const i = fsWait.indexOf(done); if (i >= 0) fsWait.splice(i, 1); resolve(false); }, 2500);
+      const done = (v) => { clearTimeout(t); resolve(v); };
+      fsWait.push(done); fsProc.stdin.write('q\n');
+    } catch { resolve(false); }
+  });
+}
+const isAndroid = !!process.env.KENTOVKA_ANDROID_PORT;
+async function popShow(p) {
+  if (kentovkaInFront()) return false;
+  if (isAndroid) { // телефон: уведомление с кнопками «Отклонить / Принять»
+    const old = pops.get(p.id); if (old && old.n) { try { old.n.close(); } catch {} }
+    const n = new Notification({ title: p.name, body: p.text, tag: p.id, call: p.type === 'call', actions: p.type === 'call' ? [{ type: 'button', text: 'Отклонить' }, { type: 'button', text: p.gid ? 'Присоединиться' : 'Принять' }] : [] });
+    p.n = n; pops.set(p.id, p);
+    n.on('action', (_e, i) => { pops.delete(p.id); popAction(p, i === 1 ? 'accept' : 'decline'); });
+    n.on('click', () => { pops.delete(p.id); popAction(p, p.type === 'call' ? 'show' : 'open'); });
+    n.show(); return true;
+  }
+  if (await fullscreenBusy()) return false;
+  const th = (loadConfig().theme || {}); const hex = th.accent || '#22e1ff';
+  const n = parseInt(hex.slice(1), 16);
+  p.theme = { accent: th.accent, accent2: th.accent2, rgb: [(n >> 16) & 255, (n >> 8) & 255, n & 255].join(',') };
+  const old = pops.get(p.id); if (old && old.timer) clearTimeout(old.timer);
+  if (p.type !== 'call') p.timer = setTimeout(() => popHide(p.id), 7000);
+  pops.set(p.id, p); ensurePop(); popSend({ show: { ...p, timer: undefined } }); popLayout();
+  return true;
+}
+function popHide(id) { const p = pops.get(id); if (!p) return; if (p.timer) clearTimeout(p.timer); pops.delete(id); if (p.n) { try { p.n.close(); } catch {} return; } popSend({ hide: id }); setTimeout(popLayout, 50); }
+ipcMain.on('popup:act', (e, id, act) => {
+  if (!popWin || e.sender !== popWin.webContents) return;
+  const p = pops.get(id); if (!p) return;
+  popHide(id);
+  popAction(p, act);
+});
+function popAction(p, act) {
+  if (act === 'close') return;
+  if (act === 'show') { openFriends(p.focus || p.gid); return; }
+  if (p.type === 'call' && p.gid) { if (act === 'accept') { openFriends(p.gid); setTimeout(() => fv() && fv().send('call:cmd', 'gjoin:' + p.gid), 300); } return; }
+  if (p.type === 'call') { if (act === 'accept') { openFriends(p.focus); setTimeout(() => fv() && fv().send('call:cmd', 'accept'), 200); } else if (act === 'decline' && fv()) fv().send('call:cmd', 'decline'); return; }
+  if (act === 'open') openFriends(p.focus);
+}
+function friendNotify(title, body, focusId, avatar) {
   if (friendsShown && win && !win.isDestroyed() && win.isFocused()) return;
+  popShow({ id: 'm:' + (focusId || title), type: 'msg', name: title, text: body, focus: focusId, avatar: avatar || null }).then((shown) => { if (!shown) sysNotify(title, body, focusId); });
+}
+function sysNotify(title, body, focusId) {
+  if (kentovkaInFront()) return;
   if (!Notification.isSupported()) return;
   const n = new Notification({ title, body, icon: ICON, silent: false });
   n.on('click', () => openFriends(focusId));
@@ -405,6 +498,7 @@ ipcMain.handle('call:send', (e, id, msg) => (friends && fv() && e.sender === fv(
 ipcMain.on('call:state', (e, st) => {
   if (!fv() || e.sender !== fv()) return;
   dmCall = st && st.state ? { id: String(st.id || ''), name: String(st.name || '').slice(0, 40), state: String(st.state), group: !!st.group } : null;
+  if (!dmCall || dmCall.state !== 'ringing') for (const id of [...pops.keys()]) if (id.startsWith('c:')) popHide(id);
   presenceChanged();
   if (win && !win.isDestroyed()) win.webContents.send('call:state', dmCall);
   for (const w of allTabWC()) w.send('call:state', dmCall);
@@ -475,7 +569,7 @@ ipcMain.handle('groups:update', (e, gid, o) => (friends ? friends.groupUpdate(St
 ipcMain.handle('groups:leave', (e, gid) => friends && friends.groupLeave(String(gid)));
 ipcMain.handle('groups:messages', (e, gid) => (friends ? friends.groupMessages(String(gid)) : []));
 ipcMain.handle('groups:read', (e, gid) => friends && friends.groupRead(String(gid)));
-ipcMain.handle('groups:send', (e, gid, text) => friends && friends.groupSend(String(gid), String(text || '')));
+ipcMain.handle('groups:send', (e, gid, text, reply) => friends && friends.groupSend(String(gid), String(text || ''), reply));
 ipcMain.handle('groups:call', (e, gid, msg) => (friends && fv() && e.sender === fv() ? friends.groupCall(String(gid), msg) : false));
 ipcMain.handle('friends:add', async (e, ip) => {
   if (!friends) return { error: 'не готово' };
@@ -517,7 +611,8 @@ ipcMain.handle('friends:respond', (e, id, yes) => friends && friends.respond(id,
 ipcMain.handle('friends:remove', (e, id) => friends && friends.remove(id));
 ipcMain.handle('friends:messages', (e, id) => (friends ? friends.messages(id) : []));
 ipcMain.handle('friends:read', (e, id) => friends && friends.read(id));
-ipcMain.handle('friends:send', (e, id, text) => friends && friends.send(id, text));
+ipcMain.handle('friends:send', (e, id, text, reply) => friends && friends.send(id, text, reply));
+ipcMain.handle('friends:delete', (e, target, mid, forAll) => friends && friends.deleteMsg(target && typeof target === 'object' ? { id: target.id ? String(target.id) : undefined, gid: target.gid ? String(target.gid) : undefined } : null, String(mid || ''), !!forAll));
 ipcMain.handle('friends:react', (e, target, mid, emoji) => friends && friends.react(target && typeof target === 'object' ? { id: target.id ? String(target.id) : undefined, gid: target.gid ? String(target.gid) : undefined } : null, String(mid || ''), String(emoji || '')));
 // «Позвать на сервер»: список серверов, где ты состоишь
 function inviteTargets() {
@@ -983,6 +1078,25 @@ ipcMain.handle('app:set-hotkey', (e, action, accel) => {
   const c = loadConfig(); c.hotkeys = { ...HOTKEYS }; saveConfig(c);
   return { ok: true, hotkeys: { ...HOTKEYS } };
 });
+// звуки: громкость, вкл/выкл и свои файлы на события — общие для всех серверов и друзей
+const SOUND_EVENTS = ['message', 'dm', 'join', 'leave', 'mute', 'unmute', 'deaf', 'undeaf', 'stream', 'online', 'ringIn', 'ringOut', 'callStart', 'callEnd'];
+const soundsOf = (c) => { const s = c.sounds || {}; return { vol: Number.isFinite(+s.vol) ? Math.max(0, Math.min(2, +s.vol)) : 1, on: s.on !== false, custom: s.custom && typeof s.custom === 'object' ? s.custom : {} }; };
+ipcMain.handle('app:sounds-get', () => soundsOf(loadConfig()));
+ipcMain.handle('app:sounds-set', (e, o) => {
+  if (!o || typeof o !== 'object') return { error: 'нет данных' };
+  const c = loadConfig(); const s = soundsOf(c);
+  if ('vol' in o) s.vol = Math.max(0, Math.min(2, Number(o.vol) || 0));
+  if ('on' in o) s.on = !!o.on;
+  if (o.name) {
+    if (!SOUND_EVENTS.includes(o.name)) return { error: 'нет такого события' };
+    if (o.data == null) delete s.custom[o.name];
+    else if (typeof o.data === 'string' && o.data.length < 1.5 * 1024 * 1024 && /^data:(audio|video|application)\/[\w.+-]+;base64,/.test(o.data)) s.custom[o.name] = o.data;
+    else return { error: 'это не звуковой файл или он больше 1 МБ' };
+  }
+  c.sounds = s; saveConfig(c, true);
+  for (const wc of [win && !win.isDestroyed() && win.webContents, fv(), ...allTabWC()]) if (wc && wc !== e.sender) wc.send('sounds:changed', s);
+  return { ok: true };
+});
 ipcMain.handle('app:profile-get', () => loadConfig().profile || null);
 ipcMain.handle('app:profile-set', (e, p) => {
   if (!p || typeof p !== 'object') return;
@@ -1267,7 +1381,7 @@ app.whenReady().then(() => {
       onLink: (m, send, ws) => onLinkMessage(m, send, ws),
       onChange: friendsChanged,
       onMessage: (m) => {
-        if (m.kind === 'dm') friendNotify(m.name, m.text.slice(0, 140), m.id);
+        if (m.kind === 'dm') { const f = friends && friends.db().friends.find((x) => x.id === m.id); friendNotify(m.name, m.text.slice(0, 140), m.id, f && f.avatar); }
         if (m.kind === 'request') friendNotify('Заявка в друзья', `${m.name} хочет добавить тебя в друзья`);
         if (m.kind === 'accepted') friendNotify('Теперь вы друзья', `${m.name} принял заявку`);
         if (m.kind === 'group') friendNotify('Новая группа', `${m.by || 'Друг'} добавил тебя в «${m.name || 'группу'}»`, m.id);
@@ -1276,19 +1390,24 @@ app.whenReady().then(() => {
       onInvite: (m) => friendNotify(`${m.name} зовёт на сервер`, m.server ? `«${m.server}» — нажми, чтобы открыть` : m.address, m.id),
       onGroupCall: (m) => {
         if (fv()) fv().send('gcall:in', m);
-        if (m.k === 'start' && Notification.isSupported() && !(win && win.isFocused())) {
-          const n = new Notification({ title: 'Звонок в группе', body: 'Начался звонок — нажми, чтобы присоединиться', icon: ICON }); n.on('click', () => openFriends(m.gid)); n.show();
+        if (m.k === 'start') {
+          const g = friends && (friends.db().groups || {})[m.gid];
+          const who = g && (g.members || []).find((x) => x.id === m.from);
+          popShow({ id: 'g:' + m.gid, type: 'call', gid: m.gid, name: (g && g.name) || 'Звонок в группе', text: (who ? who.name + ' начал звонок' : 'начался звонок') + ' — присоединишься?', avatar: who && who.avatar }).then((ok) => {
+            if (!ok && Notification.isSupported() && !kentovkaInFront()) { const n = new Notification({ title: 'Звонок в группе', body: 'Начался звонок — нажми, чтобы присоединиться', icon: ICON }); n.on('click', () => openFriends(m.gid)); n.show(); }
+          });
+          setTimeout(() => popHide('g:' + m.gid), 30000);
         }
       },
       onCall: (m) => {
         if (fv()) fv().send('call:in', m);
+        if (['end', 'gone', 'busy', 'decline'].includes(m.k)) popHide('c:' + m.id);
         if (m.k === 'ring') {
           // входящий звонок: страница сервера покажет «Принять / Отклонить», а если окно свёрнуто — уведомление
           { const w = tabWC(shellTab); if (w) w.send('call:ring', { id: m.id, name: m.name, avatar: m.avatar }); }
-          if (Notification.isSupported() && !(win && win.isFocused())) {
-            const n = new Notification({ title: 'Звонок', body: `${m.name} звонит тебе`, icon: ICON });
-            n.on('click', () => openFriends(m.id)); n.show();
-          }
+          popShow({ id: 'c:' + m.id, type: 'call', name: m.name, text: 'звонит тебе', avatar: m.avatar, focus: m.id }).then((ok) => {
+            if (!ok && Notification.isSupported() && !kentovkaInFront()) { const n = new Notification({ title: 'Звонок', body: `${m.name} звонит тебе`, icon: ICON }); n.on('click', () => openFriends(m.id)); n.show(); }
+          });
         }
       },
     });

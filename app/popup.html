@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Кентовка</title>
+<style>
+  :root { --bg: #0a0b14; --panel: #11131f; --panel2: #171a2a; --panel3: #1e2236; --line: #262a40; --text: #e6e8ff; --dim: #8a8fb3; --accent: #22e1ff; --accent2: #ff3ec8; --acc-rgb: 34,225,255; --green: #3ddc84; --red: #ff4d6d; --glow: .7;
+    --font: "Segoe UI", system-ui, sans-serif; --font-display: Bahnschrift, "Segoe UI Semibold", system-ui, sans-serif; }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; font: 14px/1.35 var(--font); color: var(--text); user-select: none; }
+  #wrap { position: absolute; inset: 6px; display: flex; flex-direction: column; gap: 8px; justify-content: flex-end; }
+  .card { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 14px; border-radius: 16px; background: var(--panel); border: 1px solid rgba(var(--acc-rgb), .45);
+    box-shadow: 0 10px 28px rgba(0,0,0,.55), 0 0 calc(22px * var(--glow)) rgba(var(--acc-rgb), calc(.22 * var(--glow))); animation: in .18s ease-out; cursor: default; }
+  .card.msg { cursor: pointer; }
+  .card.msg:hover { border-color: var(--accent); }
+  @keyframes in { from { transform: translateY(14px); opacity: 0; } }
+  .ava { width: 44px; height: 44px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 18px var(--font-display); color: #fff; background-size: cover; background-position: center; position: relative; }
+  .card.call .ava::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--green); animation: ring 1.2s ease-out infinite; }
+  @keyframes ring { from { transform: scale(.9); opacity: 1; } to { transform: scale(1.25); opacity: 0; } }
+  .txt { flex: 1; min-width: 0; }
+  .txt b { display: block; font: 700 15px var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .txt span { display: block; color: var(--dim); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn { width: 42px; height: 42px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; flex: none; color: #fff; transition: transform .12s, filter .12s; }
+  .btn:hover { transform: scale(1.08); filter: brightness(1.1); }
+  .btn svg { width: 20px; height: 20px; }
+  .ok { background: var(--green); color: #06110b; } .no { background: var(--red); }
+  .x { width: 26px; height: 26px; border-radius: 8px; border: 0; background: transparent; color: var(--dim); cursor: pointer; display: grid; place-items: center; flex: none; align-self: flex-start; }
+  .x:hover { background: var(--panel3); color: var(--text); }
+</style>
+</head>
+<body>
+<div id="wrap"></div>
+<script>
+  const A = window.kentovkaApp;
+  const P = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const PHONE = P('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>');
+  const HANG = P('<path d="M10.7 13.3a16 16 0 0 0 3.4 2.6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8"/><path d="M22 2 2 22"/>');
+  const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const colorOf = (t) => { let h = 0; for (const c of String(t)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
+  const cards = new Map();
+  function show(p) {
+    if (p.theme) { const r = document.documentElement.style; if (p.theme.accent) r.setProperty('--accent', p.theme.accent); if (p.theme.accent2) r.setProperty('--accent2', p.theme.accent2); if (p.theme.rgb) r.setProperty('--acc-rgb', p.theme.rgb); }
+    let c = cards.get(p.id);
+    if (!c) { c = document.createElement('div'); cards.set(p.id, c); document.getElementById('wrap').appendChild(c); }
+    c.className = 'card ' + p.type;
+    c.innerHTML = '';
+    const av = document.createElement('div'); av.className = 'ava';
+    if (p.avatar) av.style.backgroundImage = `url("${p.avatar}")`; else { av.style.background = colorOf(p.name || '?'); av.textContent = (String(p.name || '?').trim()[0] || '?').toUpperCase(); }
+    const t = document.createElement('div'); t.className = 'txt'; t.innerHTML = '<b></b><span></span>';
+    t.firstChild.textContent = p.name || 'Кентовка'; t.lastChild.textContent = p.text || '';
+    c.append(av, t);
+    const act = (a) => A.popupAct(p.id, a);
+    if (p.type === 'call') {
+      const no = document.createElement('button'); no.className = 'btn no'; no.innerHTML = HANG; no.title = 'Отклонить'; no.onclick = (e) => { e.stopPropagation(); act('decline'); };
+      const ok = document.createElement('button'); ok.className = 'btn ok'; ok.innerHTML = PHONE; ok.title = p.join ? 'Присоединиться' : 'Принять'; ok.onclick = (e) => { e.stopPropagation(); act('accept'); };
+      c.append(no, ok);
+    } else {
+      const x = document.createElement('button'); x.className = 'x'; x.innerHTML = P('<path d="M18 6 6 18M6 6l12 12"/>'); x.title = 'Скрыть'; x.onclick = (e) => { e.stopPropagation(); act('close'); };
+      c.appendChild(x);
+      c.onclick = () => act('open');
+    }
+  }
+  A.onPopup((m) => {
+    if (m.show) show(m.show);
+    if (m.hide) { const c = cards.get(m.hide); if (c) { c.remove(); cards.delete(m.hide); } }
+  });
+  A.popupReady();
+</script>
+</body>
+</html>

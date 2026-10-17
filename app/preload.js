@@ -72,6 +72,14 @@ const api = {
   hostKnock: (name) => ipcRenderer.send('host:knock', name),
   setAccess: (a) => ipcRenderer.invoke('app:set-access', a),
   // ник и аватарка — общие для всех серверов
+  idleNow: () => ipcRenderer.invoke('app:idle'),
+  onIdle: (cb) => ipcRenderer.on('app:idle', (_e, v) => cb(v)),
+  popupAct: (id, act) => ipcRenderer.send('popup:act', id, act),
+  onPopup: (cb) => ipcRenderer.on('popup:msg', (_e, m) => cb(m)),
+  popupReady: () => ipcRenderer.send('popup:ready'),
+  soundsGet: () => ipcRenderer.invoke('app:sounds-get'),
+  soundsSet: (o) => ipcRenderer.invoke('app:sounds-set', o),
+  onSounds: (cb) => ipcRenderer.on('sounds:changed', (_e, s) => cb(s)),
   getProfile: () => ipcRenderer.invoke('app:profile-get'),
   setProfile: (p) => ipcRenderer.invoke('app:profile-set', p),
 };
@@ -117,7 +125,8 @@ if (isLocal) {
       remove: (id) => ipcRenderer.invoke('friends:remove', id),
       messages: (id) => ipcRenderer.invoke('friends:messages', id),
       read: (id) => ipcRenderer.invoke('friends:read', id),
-      send: (id, text) => ipcRenderer.invoke('friends:send', id, text),
+      send: (id, text, reply) => ipcRenderer.invoke('friends:send', id, text, reply),
+      deleteMsg: (target, mid, forAll) => ipcRenderer.invoke('friends:delete', target, mid, forAll),
       invite: (id, key) => ipcRenderer.invoke('friends:invite', id, key),
       inviteList: () => ipcRenderer.invoke('friends:invite-list'),
       react: (target, mid, emoji) => ipcRenderer.invoke('friends:react', target, mid, emoji),
@@ -143,7 +152,7 @@ if (isLocal) {
       groupLeave: (gid) => ipcRenderer.invoke('groups:leave', gid),
       groupMessages: (gid) => ipcRenderer.invoke('groups:messages', gid),
       groupRead: (gid) => ipcRenderer.invoke('groups:read', gid),
-      groupSend: (gid, text) => ipcRenderer.invoke('groups:send', gid, text),
+      groupSend: (gid, text, reply) => ipcRenderer.invoke('groups:send', gid, text, reply),
       groupCall: (gid, msg) => ipcRenderer.invoke('groups:call', gid, msg),
       onGroupCall: (cb) => ipcRenderer.on('gcall:in', (_e, m) => cb(m)),
       onCall: (cb) => ipcRenderer.on('call:in', (_e, m) => cb(m)),
@@ -163,7 +172,7 @@ contextBridge.exposeInMainWorld('kentovkaApp', api);
 
 // ---------- своя рамка окна: неоновая полоса сверху с кнопками свернуть / развернуть / закрыть ----------
 // одна и та же на стартовом экране и в приложении; в полноэкранном режиме (F11) прячется
-if (!/picker\.html$/.test(location.pathname) && !isEmbed && !isAndroid) {
+if (!/(picker|popup)\.html$/.test(location.pathname) && !isEmbed && !isAndroid) {
   const SVG = (d) => `<svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2">${d}</svg>`;
   const ICONS = {
     min: SVG('<path d="M1.5 6.5h9"/>'),

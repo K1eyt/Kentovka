@@ -89,7 +89,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
   }
   function cleanPresence(p) {
     if (!p || typeof p !== 'object') return null;
-    return { server: short(p.server, 40) || null, voice: short(p.voice, 40) || null, call: !!p.call, since: Number(p.since) || null };
+    return { server: short(p.server, 40) || null, voice: short(p.voice, 40) || null, call: !!p.call, idle: !!p.idle, since: Number(p.since) || null };
   }
   const byId = (id) => db.friends.find((f) => f.id === id);
   // через мост адрес соединения — это мост или 127.0.0.1, а не адрес друга: такой не запоминаем
@@ -178,7 +178,8 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
           const list = (db.dms[peer] = db.dms[peer] || []);
           if (!list.some((x) => x.mid === m.mid)) {
             if (dfile) knowFile(dfile, { from: peer, peer });
-            list.push(Object.assign({ mid: short(m.mid, 32), from: 'them', text, ts: Number(m.ts) || Date.now() }, dfile ? { file: dfile } : {}));
+            const rp = cleanReply(m.reply);
+            list.push(Object.assign({ mid: short(m.mid, 32), from: 'them', text, ts: Number(m.ts) || Date.now() }, dfile ? { file: dfile } : {}, rp ? { reply: rp } : {}));
             if (list.length > DM_MAX) list.splice(0, list.length - DM_MAX);
             f.unread = (f.unread || 0) + 1;
             save(); changed();
@@ -202,6 +203,12 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
             send({ t: 'ack', mid });
           }
           break;
+        case 'del': { // друг удалил своё сообщение у всех
+          if (!authed || !f) return;
+          const list = db.dms[peer] || []; const i = list.findIndex((y) => y.mid === m.mid && y.from === 'them');
+          if (i >= 0) { list.splice(i, 1); save(); changed(); }
+          break;
+        }
         case 'rx': { // друг поставил или убрал реакцию в личке
           if (!authed || !f) return;
           const x = (db.dms[peer] || []).find((y) => y.mid === m.mid);
@@ -266,6 +273,8 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     if (Object.keys(r).length) x.reactions = r; else delete x.reactions;
     return changedAny;
   }
+  // ответ на сообщение: кусочек исходного (как на сервере)
+  const cleanReply = (r) => (r && typeof r === 'object' && typeof r.mid === 'string' ? { mid: short(r.mid, 32), from: short(r.from, 24), text: short(r.text, 140) } : null);
   const myRx = (x) => Object.keys(x.reactions || {}).filter((e) => x.reactions[e].includes(db.me.id));
   function gsendAll(g, obj, except) {
     for (const mb of g.members) if (mb.id !== db.me.id && mb.id !== except) { const w = linkTo(mb.id); if (w) w.send(JSON.stringify(obj)); }
@@ -282,6 +291,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     const list = (db.gm[g.id] = db.gm[g.id] || []);
     if (list.some((x) => x.mid === m.mid)) return false;
     const x = { mid: short(m.mid, 32), from: m.from, name: short(m.name, 24), text: short(m.text, 4000), ts: Number(m.ts) || Date.now() };
+    const rp = cleanReply(m.reply); if (rp) x.reply = rp;
     const gf = cleanFile(m.file); if (gf) x.file = gf;
     if ((!x.text && !gf) || !/^[0-9a-f]{32}$/.test(x.from)) return false;
     if (gf && x.from !== db.me.id) knowFile(gf, { from: x.from, gid: g.id });
@@ -326,8 +336,14 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
         if (storeGroupMsg(g, m)) {
           save(); changed();
           onMessage && onMessage({ kind: 'gmsg', id: gid, name: `${m.name} · ${g.name || 'группа'}`, text: short(m.text, 140) });
-          gsendAll(g, { t: 'g-msg', gid, mid: m.mid, from: m.from, name: m.name, text: m.text, ts: m.ts, file: m.file || undefined }, peerId); // передаём дальше тем, кто не на прямой связи с автором
+          gsendAll(g, { t: 'g-msg', gid, mid: m.mid, from: m.from, name: m.name, text: m.text, ts: m.ts, file: m.file || undefined, reply: m.reply || undefined }, peerId); // передаём дальше тем, кто не на прямой связи с автором
         }
+        break;
+      }
+      case 'g-del': { // участник удалил своё сообщение у всех
+        const who = /^[0-9a-f]{32}$/.test(m.from || '') ? m.from : peerId;
+        const list = db.gm[gid] || []; const i = list.findIndex((y) => y.mid === m.mid && y.from === who);
+        if (i >= 0) { list.splice(i, 1); save(); changed(); gsendAll(g, { t: 'g-del', gid, mid: m.mid, from: who }, peerId); }
         break;
       }
       case 'g-rx': { // реакция в группе (передаём дальше тем, кто не на прямой связи)
@@ -339,7 +355,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
       case 'g-sync': { // участник просит то, что пропустил
         if (m.meta) { const ng = cleanGroup(m.meta); if (ng && ng.key === g.key && ng.v > (g.v || 0)) { db.groups[gid] = Object.assign(g, ng); save(); changed(); } }
         const since = Number(m.since) || 0;
-        for (const x of (db.gm[gid] || []).filter((y) => y.ts > since).slice(-500)) send({ t: 'g-msg', gid, mid: x.mid, from: x.from, name: x.name, text: x.text, ts: x.ts, file: x.file || undefined });
+        for (const x of (db.gm[gid] || []).filter((y) => y.ts > since).slice(-500)) send({ t: 'g-msg', gid, mid: x.mid, from: x.from, name: x.name, text: x.text, ts: x.ts, file: x.file || undefined, reply: x.reply || undefined });
         break;
       }
       case 'g-call': // звонок в группе: сигналы, кому адресовано — тому и отдаём
@@ -417,8 +433,9 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     if (!ws || ws.readyState !== 1) return;
     for (const x of db.dms[id] || []) {
       if (x.from !== 'me' || x.delivered) continue;
-      ws.send(JSON.stringify(x.invite ? { t: 'invite', mid: x.mid, address: x.invite.address, name: x.invite.name } : { t: 'dm', mid: x.mid, text: x.text, ts: x.ts, file: x.file || undefined }));
+      ws.send(JSON.stringify(x.invite ? { t: 'invite', mid: x.mid, address: x.invite.address, name: x.invite.name } : { t: 'dm', mid: x.mid, text: x.text, ts: x.ts, file: x.file || undefined, reply: x.reply || undefined }));
     }
+    if (db.delOut && db.delOut[id] && db.delOut[id].length) { for (const mid of db.delOut[id]) ws.send(JSON.stringify({ t: 'del', mid })); delete db.delOut[id]; save(); }
     for (const x of db.dms[id] || []) if (x.rxOut) { ws.send(JSON.stringify({ t: 'rx', mid: x.mid, mine: myRx(x) })); delete x.rxOut; }
   }
 
@@ -594,10 +611,11 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     },
     groupMessages(gid) { return (db.gm[gid] || []).slice(-G_MAX); },
     groupRead(gid) { const g = db.groups[gid]; if (g && g.unread) { g.unread = 0; save(); changed(); } },
-    groupSend(gid, text) {
+    groupSend(gid, text, reply) {
       const g = db.groups[gid]; text = short(text, 4000).trim(); if (!g || !text) return null;
       const p = getProfile() || {};
       const m = { mid: rid(), from: db.me.id, name: short(p.name, 24) || 'кент', text, ts: Date.now() };
+      const rp = cleanReply(reply); if (rp) m.reply = rp;
       storeGroupMsg(g, m); save();
       gsendAll(g, { t: 'g-msg', gid, ...m });
       changed();
@@ -614,6 +632,22 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     announce() { for (const ws of conns.values()) if (ws.readyState === 1) hello(ws); },
     // чем я занят сейчас — друзьям на связи
     sendPresence() { const p = getPresence ? getPresence() : null; for (const ws of conns.values()) if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'presence', p })); },
+    // удалить сообщение: forAll — своё у всех, иначе только у себя
+    deleteMsg(target, mid, forAll) {
+      mid = String(mid || '');
+      if (target && target.gid) {
+        const g = db.groups[target.gid]; const list = g && db.gm[g.id]; if (!list) return false;
+        const i = list.findIndex((y) => y.mid === mid); if (i < 0) return false;
+        const x = list[i]; list.splice(i, 1); save();
+        if (forAll && x.from === db.me.id) gsendAll(g, { t: 'g-del', gid: g.id, mid, from: db.me.id });
+        changed(); return true;
+      }
+      const id = target && target.id; const list = db.dms[id]; if (!list) return false;
+      const i = list.findIndex((y) => y.mid === mid); if (i < 0) return false;
+      const x = list[i]; list.splice(i, 1);
+      if (forAll && x.from === 'me' && x.delivered) { db.delOut = db.delOut || {}; (db.delOut[id] = db.delOut[id] || []).push(mid); }
+      save(); flush(id); changed(); return true;
+    },
     // поставить или убрать реакцию (нажал ещё раз — убрал)
     react(target, mid, emoji) {
       emoji = String(emoji || ''); if (!RX_RE.test(emoji)) return false;
@@ -627,10 +661,11 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     },
     messages(id) { return (db.dms[id] || []).slice(-DM_MAX); },
     read(id) { const f = byId(id); if (f && f.unread) { f.unread = 0; save(); changed(); } },
-    send(id, text) {
+    send(id, text, reply) {
       const f = byId(id); text = short(text, 4000).trim();
       if (!f || f.status !== 'friend' || !text) return null;
       const x = { mid: rid(), from: 'me', text, ts: Date.now() };
+      const rp = cleanReply(reply); if (rp) x.reply = rp;
       (db.dms[id] = db.dms[id] || []).push(x); save(); flush(id); changed();
       return x;
     },

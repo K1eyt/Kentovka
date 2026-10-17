@@ -174,6 +174,11 @@
       border: 1px solid rgba(var(--acc-rgb, 34,225,255), .4); box-shadow: 0 24px 60px rgba(0,0,0,.6), 0 0 calc(30px * var(--glow, .7)) rgba(var(--acc-rgb, 34,225,255), calc(.18 * var(--glow, .7)));
       font: 15px/1.45 var(--font, "Segoe UI", system-ui, sans-serif); animation: kselin .14s ease-out; }
     dialog.kdlg::backdrop { background: rgba(4,5,12,.6); backdrop-filter: blur(3px); }
+    dialog.kdlg[open] { display: flex; flex-direction: column; max-height: calc(100vh - 32px); overflow: hidden; }
+    dialog.kdlg[open] > .kd-b { overflow-y: auto; min-height: 0; }
+    dialog.kdlg[open] > .kd-f { flex: none; padding-top: 12px; }
+    .kdlg, .kdlg * { scrollbar-width: thin; scrollbar-color: var(--line, #262a40) transparent; }
+    .kdlg ::-webkit-scrollbar { width: 8px; height: 8px; } .kdlg ::-webkit-scrollbar-thumb { background: var(--line, #262a40); border-radius: 8px; } .kdlg ::-webkit-scrollbar-track { background: transparent; }
     .kdlg input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), .kdlg textarea { display: block; width: 100%; box-sizing: border-box; margin: 8px 0 0; font: inherit; font-size: 14.5px; color: var(--text, #e6e8ff);
       background: var(--panel2, #171a29); border: 1px solid var(--line, #262a40); border-radius: 10px; padding: 10px 12px; outline: none; box-shadow: none; transition: border-color .15s, box-shadow .15s; }
     .kdlg input:not([type=checkbox]):not([type=radio]):not([type=range]):focus, .kdlg textarea:focus { border-color: var(--accent, #22e1ff); box-shadow: 0 0 0 3px rgba(var(--acc-rgb, 34,225,255), calc(.18 * var(--glow, .7))); outline: none; }

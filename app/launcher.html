@@ -46,6 +46,10 @@
   .frbtn:hover { border-color: var(--accent); }
   /* ---------- главная: полоса серверов слева, справа друзья ---------- */
   #shell { display: grid; grid-template-columns: 72px minmax(0, 1fr); height: 100%; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--panel3); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--line); background-clip: padding-box; border: 2px solid transparent; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
   #rail { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0; background: color-mix(in srgb, var(--bg) 70%, #000); border-right: 1px solid var(--line); overflow-y: auto; scrollbar-width: none; }
   #rail .rb { position: relative; width: 48px; height: 48px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--panel2); color: var(--text);
     font: 700 18px var(--font-display); transition: border-radius var(--t), background var(--t), box-shadow var(--t); }
@@ -785,6 +789,9 @@
     const d = document.createElement('dialog'); d.className = 'kdlg acc';
     d.innerHTML = '<div class="kd-b">' + html + '</div><div class="kd-f"><button type="button" class="cancel">Закрыть</button></div>';
     d.querySelector('.kd-f .cancel').onclick = () => d.close();
+    // кнопки действий — внизу справа, как во всех окнах Кентовки
+    const btns = d.querySelector('.kd-b > .btns:last-child');
+    if (btns) { const f = d.querySelector('.kd-f'); for (const b of [...btns.children]) { b.classList.remove('b'); f.appendChild(b); } btns.remove(); f.querySelector('.cancel').textContent = 'Отмена'; }
     d.addEventListener('close', () => d.remove());
     document.body.appendChild(d); d.showModal(); return d;
   }

@@ -290,7 +290,7 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
   const broadcast = (msg, exceptId) => { for (const [id, c] of clients) if (id !== exceptId) send(c.ws, msg); };
   const userList = () => [...clients].filter(([, c]) => c.name && c.admitted).map(([id, c]) => ({
     ip: c.ip, appId: c.appId || null, host: !!c.isHost, since: c.since,
-    id, name: c.name, inVoice: !!c.voice, voice: c.voice || null, muted: c.muted, deaf: c.deaf, sharing: !!c.voice && c.sharing,
+    id, name: c.name, inVoice: !!c.voice, voice: c.voice || null, muted: c.muted, deaf: c.deaf, sharing: !!c.voice && c.sharing, idle: !!c.idle,
   }));
   // последние сообщения каждого канала — для нового участника
   const recentHistory = () => { const out = []; for (const c of channels) out.push(...history.filter((h) => h.ch === c.id).slice(-100)); return out.sort((a, b) => a.mid - b.mid); };
@@ -629,6 +629,9 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
         case 'state':
           me.muted = !!m.muted; me.deaf = !!m.deaf; me.sharing = !!m.sharing;
           pushUsers();
+          break;
+        case 'idle': // «неактивен» — давно не трогал комп
+          if (me.idle !== !!m.on) { me.idle = !!m.on; pushUsers(); }
           break;
         case 'signal':
         case 'dsignal': {
