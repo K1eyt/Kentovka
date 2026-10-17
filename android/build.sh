@@ -12,6 +12,8 @@ NM="${NM:-/tmp/claude-0/nm}"; NDK="${NDK:-/tmp/claude-0/ndk/android-ndk-r26d}"; 
 for abi in $ABIS; do
   case $abi in arm64-v8a) tr=aarch64-linux-android26;; x86_64) tr=x86_64-linux-android26;; armeabi-v7a) tr=armv7a-linux-androideabi26;; esac
   mkdir -p "$OUT/lib/lib/$abi"; cp "$NM/bin/$abi/libnode.so" "$OUT/lib/lib/$abi/"
+  case $abi in arm64-v8a) st=aarch64-linux-android;; x86_64) st=x86_64-linux-android;; armeabi-v7a) st=arm-linux-androideabi;; esac
+  cp "$NDK/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/lib/$st/libc++_shared.so" "$OUT/lib/lib/$abi/"
   "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/${tr}-clang++" -shared -fPIC -std=c++17 -O2 -I"$NM/include/node" "$HERE/jni/kentovka-node.cpp" -L"$NM/bin/$abi" -lnode -llog -o "$OUT/lib/lib/$abi/libkentovka.so"
 done
 "$TOOLS/aapt2" compile --dir "$HERE/res" -o "$OUT/res.zip"

@@ -34,6 +34,7 @@ public class NodeHost {
         if (started) return true;
         Log.i("kentovka", "запускаю node");
         try {
+            System.loadLibrary("c++_shared");
             System.loadLibrary("node");
             System.loadLibrary("kentovka");
         } catch (Throwable t) { Log.e("kentovka", "node не загрузился", t); return false; }
