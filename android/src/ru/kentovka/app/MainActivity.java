@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private Discovery discovery;
     AudioRoute audio;
+    private volatile LocalProxy proxy;
     private volatile String currentKey = null;   // адрес сервера, как он сохранён (ip:порт)
     private volatile String currentHost = null;  // куда реально подключены (может быть мост)
     private volatile boolean viaAlt = false;
@@ -135,7 +136,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         String u = web.getUrl();
-        if (u != null && !u.startsWith("file:")) {
+        if (u != null && !u.startsWith("file:")) { // на сервере: «назад» — выйти на стартовый экран
             new AlertDialog.Builder(this).setMessage("Выйти с сервера на стартовый экран?")
                 .setPositiveButton("Выйти", new android.content.DialogInterface.OnClickListener() { public void onClick(android.content.DialogInterface d, int w) { goLauncher(); } }).setNegativeButton("Остаться", null).show();
         } else super.onBackPressed();
@@ -145,6 +146,7 @@ public class MainActivity extends Activity {
         VoiceService.stop(this);
         if (audio != null) audio.stop();
         currentKey = null; currentHost = null; viaAlt = false;
+        if (proxy != null) { proxy.stop(); proxy = null; }
         web.loadUrl(LAUNCHER);
     }
 
@@ -247,7 +249,23 @@ public class MainActivity extends Activity {
                 saveConfig(c);
             } catch (Exception ignored) {}
             final String t = target;
-            ui.post(new Runnable() { public void run() { currentKey = key; currentHost = t; viaAlt = !t.equals(key); web.loadUrl("https://" + t + "/"); } });
+            // страница идёт через мостик на телефоне: http://127.0.0.1:порт → TLS к серверу
+            final LocalProxy lp;
+            try {
+                int i = t.lastIndexOf(':');
+                lp = new LocalProxy(t.substring(0, i), Integer.parseInt(t.substring(i + 1)), new LocalProxy.Pins() {
+                    public boolean ok(String h, String fp) { Set<String> p = bridgePins(h); return p == null || p.isEmpty() || p.contains(fp); }
+                });
+                lp.start();
+            } catch (Exception e) {
+                js("window.onConnectError && onConnectError(" + JSONObject.quote("Не получилось открыть сервер: " + e.getMessage()) + ")");
+                return;
+            }
+            ui.post(new Runnable() { public void run() {
+                if (proxy != null) proxy.stop();
+                proxy = lp; currentKey = key; currentHost = t; viaAlt = !t.equals(key);
+                web.loadUrl("http://127.0.0.1:" + lp.localPort + "/");
+            } });
         } }).start();
     }
 
@@ -354,6 +372,9 @@ public class MainActivity extends Activity {
         // подпись для входа на сервер — только для того сервера, к которому мы сейчас подключены
         @JavascriptInterface public String sign(String nonce, String host) {
             try {
+                // страница видит адрес мостика 127.0.0.1:порт — подписываем настоящий адрес сервера
+                LocalProxy lp = proxy;
+                if (lp != null && host.equals("127.0.0.1:" + lp.localPort)) host = currentHost;
                 if (!nonce.matches("[0-9a-f]{16,64}") || currentHost == null || !currentHost.equals(host)) return "null";
                 byte[] seed = seed();
                 String text = "kentovka:" + nonce + ":" + accId() + ":" + host;
@@ -376,7 +397,7 @@ public class MainActivity extends Activity {
                 JSONObject c = MainActivity.this.config(); JSONObject sv = serverEntry(c, currentKey); if (sv == null) return;
                 sv.put("alts", out);
                 if (!viaAlt && currentHost != null) {
-                    String fp = certSeen.get(currentHost.replaceAll(":\\d+$", ""));
+                    String fp = proxy != null && proxy.lastFp != null ? proxy.lastFp : certSeen.get(currentHost.replaceAll(":\\d+$", ""));
                     if (fp != null) { JSONArray fps = sv.optJSONArray("fps"); if (fps == null) { fps = new JSONArray(); sv.put("fps", fps); } boolean has = false; for (int i = 0; i < fps.length(); i++) if (fp.equals(fps.optString(i))) has = true; if (!has) fps.put(fp); }
                 }
                 saveConfig(c);

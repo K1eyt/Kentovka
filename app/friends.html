@@ -251,7 +251,7 @@
   /* файлы в переписке */
   .fv { display: flex; flex-direction: column; gap: 6px; max-width: min(420px, 100%); margin: 2px 0; }
   .m.me .fv { align-self: flex-end; }
-  .fimg { max-width: 100%; max-height: 320px; border-radius: 10px; cursor: zoom-in; border: 1px solid var(--line); object-fit: contain; background: var(--panel2); }
+  .fimg { width: auto; align-self: flex-start; max-width: 100%; max-height: 320px; border-radius: 10px; cursor: zoom-in; border: 1px solid var(--line); object-fit: contain; background: var(--panel2); }
   .fvid { max-width: 100%; max-height: 320px; border-radius: 10px; background: #000; }
   .faud { width: 100%; }
   .fcard { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); min-width: 240px; overflow: hidden; }
@@ -364,7 +364,13 @@
     const sendFiles = async (files) => {
       for (const file of files) {
         if (!file) continue;
-        const r = await F.sendFile(target, file, '').catch((e) => ({ error: e.message }));
+        let r;
+        try {
+          const p = F.filePath ? F.filePath(file) : '';
+          const src = p ? { path: p, name: file.name, mime: file.type } : { bytes: await file.arrayBuffer(), name: file.name || 'скрин.png', mime: file.type };
+          if (!p && file.size > 200 * 1024 * 1024) throw new Error('файл больше 200 МБ — перетащи его из папки');
+          r = await F.sendFile(target, src, '');
+        } catch (e) { r = { error: 'Не получилось отправить: ' + e.message }; }
         if (r && r.error) kSay(r.error);
       }
       lastRendered = ''; refresh();

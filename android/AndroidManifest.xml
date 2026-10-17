@@ -22,7 +22,7 @@
         android:label="Кентовка"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
-        android:usesCleartextTraffic="false"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:hardwareAccelerated="true"
         android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
         <activity

@@ -110,11 +110,8 @@ if (isLocal) {
       isShown: () => ipcRenderer.invoke('friends:is-shown'),
       isHome: () => ipcRenderer.invoke('friends:is-home'),
       // файл с диска отдаём путём (быстро, любого размера), вставленный скрин — байтами
-      sendFile: (target, file, caption) => {
-        let p = ''; try { p = webUtils.getPathForFile(file); } catch {}
-        if (p) return ipcRenderer.invoke('friends:send-file', target, { path: p, name: file.name, mime: file.type }, caption);
-        return file.arrayBuffer().then((b) => ipcRenderer.invoke('friends:send-file', target, { bytes: b, name: file.name || 'скрин.png', mime: file.type }, caption));
-      },
+      filePath: (file) => { try { return webUtils.getPathForFile(file) || ''; } catch { return ''; } },
+      sendFile: (target, src, caption) => ipcRenderer.invoke('friends:send-file', target, src, caption),
       fileInfo: (fid) => ipcRenderer.invoke('friends:file-info', fid),
       fileFetch: (fid) => ipcRenderer.invoke('friends:file-fetch', fid),
       fileSave: (fid) => ipcRenderer.invoke('friends:file-save', fid),

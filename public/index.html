@@ -1490,7 +1490,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   // ---------- сокет ----------
   function connect(onFail) {
     let opened = false;
-    ws = new WebSocket(`wss://${wsHost}`);
+    // телефон открывает сервер через свой мостик http://127.0.0.1 (шифрует до сервера само приложение)
+    ws = new WebSocket(`${location.protocol === 'http:' && wsHost === HOME ? 'ws' : 'wss'}://${wsHost}`);
     const my = ws;
     ws.binaryType = 'arraybuffer';
     // знакомство: сервер присылает «вызов», приложение подписывает его ключом аккаунта (под чужим аккаунтом не зайти)

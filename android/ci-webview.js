@@ -22,9 +22,13 @@ const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.
   console.log('myName', await ev("document.getElementById('myName') && document.getElementById('myName').textContent"));
   console.log('audioDevices', JSON.stringify(await ev('window.kAndroid && window.kAndroid.audioDevices && JSON.stringify(window.kAndroid.audioDevices())')));
   console.log('nsMode default', await ev("JSON.parse(localStorage.getItem('settings') || '{}').nsMode || '(по умолчанию)'"));
+  console.log('ws connected (каналы)', await ev("[...document.querySelectorAll('#textList .channel, #voiceList .channel')].map((x) => x.textContent.trim()).join(' | ')"));
+  console.log('getUserMedia', await ev("navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); return 'ok'; }, (e) => e.name + ': ' + e.message)"));
+  console.log('secure context', await ev('window.isSecureContext'));
   await ev("document.getElementById('voiceChannel') && document.getElementById('voiceChannel').click()");
   await sleep(6000);
   console.log('inVoice', await ev("document.getElementById('voiceBar') && document.getElementById('voiceBar').classList.contains('on')"));
-  console.log('errors', JSON.stringify(await ev("(window.__errs || []).slice(-10)")));
+  console.log('messages', JSON.stringify(await ev("(document.getElementById('messages') || {}).innerText && document.getElementById('messages').innerText.slice(-600)")));
+  console.log('peers', await ev("window.kentovka && window.kentovka.budget ? JSON.stringify(window.kentovka.budget()) : '-'"));
   process.exit(0);
 })().catch((e) => { console.log('ERR', e.message); process.exit(0); });
