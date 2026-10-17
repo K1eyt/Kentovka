@@ -288,9 +288,15 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
   let nextId = 1;
   const send = (ws, msg) => ws.readyState === 1 && ws.send(JSON.stringify(msg));
   const broadcast = (msg, exceptId) => { for (const [id, c] of clients) if (id !== exceptId) send(c.ws, msg); };
-  const userList = () => [...clients].filter(([, c]) => c.name && c.admitted).map(([id, c]) => ({
+  // один человек с двух устройств (комп и телефон) — в списке один раз; в голосе показываем то устройство, что в голосе
+  const dupHidden = (id, c) => {
+    if (!c.appId || c.voice) return false;
+    for (const [oid, oc] of clients) if (oid !== id && oc.appId === c.appId && oc.name && oc.admitted && (oc.voice || (oc.since || 0) > (c.since || 0) || ((oc.since || 0) === (c.since || 0) && oid > id))) return true;
+    return false;
+  };
+  const userList = () => [...clients].filter(([id, c]) => c.name && c.admitted).map(([id, c]) => ({
     ip: c.ip, appId: c.appId || null, host: !!c.isHost, since: c.since,
-    id, name: c.name, inVoice: !!c.voice, voice: c.voice || null, muted: c.muted, deaf: c.deaf, sharing: !!c.voice && c.sharing, idle: !!c.idle,
+    id, name: c.name, inVoice: !!c.voice, voice: c.voice || null, muted: c.muted, deaf: c.deaf, sharing: !!c.voice && c.sharing, idle: !!c.idle, dup: dupHidden(id, c),
   }));
   // последние сообщения каждого канала — для нового участника
   const recentHistory = () => { const out = []; for (const c of channels) out.push(...history.filter((h) => h.ch === c.id).slice(-100)); return out.sort((a, b) => a.mid - b.mid); };
@@ -379,6 +385,9 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
             }
             if (me.appId && !owner) claimName(me.name, me.appId);
           }
+          // то же устройство переподключилось (сеть моргнула, вкладка перезагрузилась) — старое подключение закрываем, чтобы не было двух «тебя»
+          me.dev = typeof m.dev === 'string' && /^[\w-]{6,40}$/.test(m.dev) ? m.dev : null;
+          if (me.dev) for (const [oid, oc] of clients) if (oid !== id && oc.dev === me.dev && (oc.appId || oc.name) === (me.appId || me.name)) { try { oc.ws.terminate(); } catch {} }
           me.helloAvatar = cleanAvatar(m.avatar);
           me.helloProfile = { bio: m.bio, color: m.color, color2: m.color2 };
           if (process.env.KENTOVKA_TEST_HOST && !noHost) { me.isHost = me.name === process.env.KENTOVKA_TEST_HOST; if (me.isHost) me.admitted = true; }

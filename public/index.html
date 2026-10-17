@@ -1509,6 +1509,9 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
         members: users.filter((u) => u.appId).map((u) => ({ ip: u.ip, appId: u.appId, name: u.name })), mode: serverMode, ice: iceCfg });
     }, 3000);
   }
+  // номер этого устройства (браузера/приложения): переподключился — сервер закроет старое «зависшее» подключение, а не покажет тебя дважды
+  // свой на каждую вкладку/окно (sessionStorage), но тот же после перезагрузки и переподключения
+  function deviceId() { try { let d = sessionStorage.getItem('kdev'); if (!d) { d = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); sessionStorage.setItem('kdev', d); } return d; } catch { return ''; } }
   let pendingImport = null; // что писали, пока хоста не было, — отдадим хосту, когда он вернётся
   function moveTo(host) { // временный сервер сказал: хост вернулся
     try { const all = []; for (const l of msgsByCh.values()) for (const x of l) if (x.offline && x.text) all.push({ ch: x.ch, from: x.from, text: x.text, ts: x.ts }); if (all.length) pendingImport = all; } catch {}
@@ -1529,7 +1532,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     let helloSent = false, helloT = null;
     const sendHello = async (nonce) => {
       if (helloSent || my !== ws) return; helloSent = true; clearTimeout(helloT);
-      const hello = { type: 'hello', name: myName, avatar: myAvatar, bio: myBio, color: myColor, color2: myColor2 };
+      const hello = { type: 'hello', name: myName, avatar: myAvatar, bio: myBio, color: myColor, color2: myColor2, dev: deviceId() };
       const A = window.kentovkaApp || window.kAndroid;
       if (A && A.sign && nonce) { const sg = await A.sign(nonce, wsHost).catch(() => null); if (sg) Object.assign(hello, { appId: sg.id, pub: sg.pub, sig: sg.sig, host: sg.host }); }
       else if (A && A.appId) hello.appId = A.appId; // старый сервер без проверки подписи
@@ -2579,8 +2582,11 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       for (const u of users.filter((x) => x.voice === c.id)) ul.appendChild(userRow(u, here));
       vl.appendChild(ul);
     }
-    for (const u of users.filter((x) => !x.inVoice)) ou.appendChild(userRow(u, false));
-    $('onlineCount').textContent = `— ${users.filter((u) => !u.inVoice).length}`;
+    // один человек с нескольких устройств — в «В сети» один раз (себя всегда видишь как «ты»)
+    const meU = users.find((x) => x.id === myId);
+    const shown = users.filter((x) => !x.inVoice && (x.id === myId || !(x.appId && ((meU && meU.appId === x.appId) || x.dup || users.some((y) => y.inVoice && y.appId === x.appId)))));
+    for (const u of shown) ou.appendChild(userRow(u, false));
+    $('onlineCount').textContent = `— ${shown.length}`;
     renderCall();
   }
   function userRow(u, sameVoice) {
@@ -4146,7 +4152,13 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   }
 
   $('menuBtn').onclick = (e) => { e.stopPropagation(); const o = !$('side').classList.contains('open'); $('side').classList.toggle('open', o); $('app').classList.toggle('drawer', o); };
-  document.addEventListener('click', (e) => { if (!$('side').contains(e.target) && !$('rail').contains(e.target)) { $('side').classList.remove('open'); $('app').classList.remove('drawer'); } });
+  document.addEventListener('click', (e) => {
+    if ($('side').contains(e.target) || $('rail').contains(e.target)) return;
+    // мини-профиль поверх списка (на телефоне): нажатие по нему не закрывает список; закрылся список — закрываем и профиль
+    if (e.target.closest && e.target.closest('.mp.float, dialog, #ctxMenu, #reactPop, #vbPop')) return;
+    $('side').classList.remove('open'); $('app').classList.remove('drawer');
+    if (document.querySelector('.mp.float')) closeProfile();
+  });
   // телефон: выбрал канал — список каналов уезжает, открывается чат (как в мобильном Discord)
   const narrowScr = () => innerWidth <= 760;
   const setDrawer = (o) => { $('side').classList.toggle('open', o); $('app').classList.toggle('drawer', o); };
@@ -4168,6 +4180,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     if (document.getElementById('vbPop')) { closeVb(); return true; }
     if (document.getElementById('reactPop')) { closeReactPicker(); return true; }
     if ($('ctxMenu').classList.contains('on')) { hideCtx(); return true; }
+    if (document.querySelector('.mp.float')) { closeProfile(); return true; }
     if (narrowScr() && !$('side').classList.contains('open')) { setDrawer(true); return true; }
     return false;
   };
