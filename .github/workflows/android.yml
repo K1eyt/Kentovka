@@ -1,0 +1,37 @@
+# Сборка Кентовки для Android на GitHub (Actions → «Android APK» → Run workflow, или при каждом пуше в android/)
+# Ключ подписи: секрет ANDROID_KEYSTORE_B64 (base64 от .jks) и ANDROID_KEYSTORE_PASS.
+# Если секрета нет — APK подписывается временным ключом (ставится, но обновление поверх старого не встанет).
+name: Android APK
+on:
+  workflow_dispatch:
+  push:
+    paths: ['android/**', 'public/**', '.github/workflows/android.yml']
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '17' }
+      - name: Build
+        run: |
+          set -e
+          BT=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -1)
+          PLAT=$(ls -d $ANDROID_HOME/platforms/android-* | sort -V | tail -1)
+          echo "build-tools: $BT, platform: $PLAT"
+          cd android && rm -rf build && mkdir -p build/gen build/classes build/dex
+          $BT/aapt2 compile --dir res -o build/res.zip
+          $BT/aapt2 link -I $PLAT/android.jar --manifest AndroidManifest.xml -A assets --java build/gen -o build/base.apk build/res.zip --min-sdk-version 26 --target-sdk-version 34
+          javac -encoding UTF-8 --release 8 -nowarn -cp $PLAT/android.jar -d build/classes $(find src build/gen -name '*.java')
+          $BT/d8 --min-api 26 --output build/dex $(find build/classes -name '*.class')
+          cp build/base.apk build/unsigned.apk && (cd build/dex && zip -q -j ../unsigned.apk classes.dex)
+          $BT/zipalign -f -p 4 build/unsigned.apk build/aligned.apk
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_B64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > ks.jks; PASS="${{ secrets.ANDROID_KEYSTORE_PASS }}"
+          else
+            keytool -genkeypair -keystore ks.jks -storepass kentovka -keypass kentovka -alias kentovka -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Kentovka"; PASS=kentovka
+          fi
+          $BT/apksigner sign --ks ks.jks --ks-pass pass:$PASS --out build/Kentovka.apk build/aligned.apk
+          $BT/apksigner verify --verbose build/Kentovka.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: Kentovka-android, path: android/build/Kentovka.apk }

@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Кентовка</title>
+<style>
+  :root {
+    --bg: #0a0b14; --panel: #11131f; --panel2: #171a2a; --panel3: #1e2236; --line: #262a40;
+    --text: #e6e8ff; --dim: #8a8fb3; --faint: #5d6286; --red: #ff4d6d; --yellow: #ffc94d; --green: #3cffa0;
+    --accent: #22e1ff; --accent2: #ff3ec8; --acc-rgb: 34,225,255; --acc2-rgb: 255,62,200; --on-accent: #070812; --glow: .7;
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: Bahnschrift, "DIN Alternate", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    --t: .22s;
+  }
+  [data-motion="off"] { --t: 0s; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--font); }
+  body { height: calc(100vh - var(--k-tb, 0px)); overflow: hidden; box-sizing: border-box; background-attachment: fixed;
+    background:
+      radial-gradient(800px 460px at 0% -10%, rgba(var(--acc-rgb), calc(.12 * var(--glow))), transparent 70%),
+      radial-gradient(700px 460px at 100% 110%, rgba(var(--acc2-rgb), calc(.10 * var(--glow))), transparent 70%), var(--bg); }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  input[type=text], input[type=number], select { width: 100%; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 10px 12px; outline: none; transition: border-color var(--t), box-shadow var(--t); }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), calc(.2 * var(--glow))); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .box { width: 100%; max-width: 560px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 26px 26px 22px;
+    box-shadow: 0 0 calc(70px * var(--glow)) rgba(var(--acc-rgb), calc(.10 * var(--glow))), 0 24px 60px rgba(0,0,0,.5); animation: rise .35s ease-out both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+  [data-motion="off"] .box { animation: none; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .logo { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; flex: none; font: 800 26px/1 var(--font-display); color: var(--on-accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 calc(26px * var(--glow)) rgba(var(--acc-rgb), calc(.5 * var(--glow))); }
+  h1 { margin: 0; font: 700 28px/1.05 var(--font-display); text-shadow: 0 0 calc(16px * var(--glow)) rgba(var(--acc-rgb), calc(.45 * var(--glow))); }
+  header p { margin: 3px 0 0; color: var(--dim); font-size: 14px; }
+  header .hd { flex: 1; min-width: 0; }
+  .frbtn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font: 600 13.5px var(--font-display); transition: border-color var(--t); flex: none; align-self: flex-start; }
+  .frbtn:hover { border-color: var(--accent); }
+  /* ---------- главная: полоса серверов слева, справа друзья ---------- */
+  #shell { display: grid; grid-template-columns: 72px minmax(0, 1fr); height: 100%; }
+  #rail { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0; background: color-mix(in srgb, var(--bg) 70%, #000); border-right: 1px solid var(--line); overflow-y: auto; scrollbar-width: none; }
+  #rail .rb { position: relative; width: 48px; height: 48px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--panel2); color: var(--text);
+    font: 700 18px var(--font-display); transition: border-radius var(--t), background var(--t), box-shadow var(--t); }
+  #rail .rb:hover, #rail .rb.on { border-radius: 16px; }
+  #rail .rb svg { width: 22px; height: 22px; }
+  #rail .rb.home { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--on-accent); }
+  #rail .rb.home.on { box-shadow: 0 0 calc(18px * var(--glow)) rgba(var(--acc-rgb), calc(.5 * var(--glow))); }
+  #rail .rb.add { color: var(--green); background: var(--panel2); }
+  #rail .rb.add:hover { background: var(--green); color: #06110b; }
+  #rail .rb.mine::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; background: var(--faint); border: 3px solid var(--bg); }
+  #rail .rb.mine.run::after { background: var(--green); }
+  #rail .rb.busy { opacity: .55; pointer-events: none; }
+  #rail .rb .badge { position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; font: 700 11px/1 var(--font-display); color: #fff; background: var(--red); border: 3px solid var(--bg); }
+  #rail .sep { width: 32px; height: 2px; border-radius: 1px; background: var(--line); flex: none; }
+  #rail .sp { flex: 1; }
+  #railList { display: contents; }
+  #mainArea { position: relative; min-width: 0; display: flex; flex-direction: column; }
+  #mainArea #accBanner { margin: 12px 16px 0; }
+  #mainHint { flex: 1; display: grid; place-items: center; color: var(--faint); font: 600 14px var(--font-display); }
+  .rmenu { position: fixed; z-index: 50; min-width: 190px; padding: 6px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.55); }
+  .rmenu button { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
+  .rmenu button:hover { background: var(--panel2); }
+  .rmenu button.danger { color: var(--red); }
+  .rmenu .t { padding: 6px 10px 8px; font: 700 13px var(--font-display); color: var(--dim); border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  dialog#addDlg { padding: 0; border: 0; background: none; width: min(580px, calc(100vw - 32px)); max-height: calc(100vh - 60px); overflow: visible; color: var(--text); }
+  dialog#addDlg::backdrop { background: rgba(4,5,12,.6); backdrop-filter: blur(3px); }
+  dialog#addDlg .box { max-height: calc(100vh - 70px); overflow-y: auto; }
+  .xbtn { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--dim); flex: none; align-self: flex-start; }
+  .xbtn:hover { background: var(--panel2); color: var(--text); }
+  .xbtn svg { width: 18px; height: 18px; }
+  /* ---------- регистрация (первый запуск) ---------- */
+  #reg { position: fixed; inset: var(--k-tb, 0px) 0 0 0; z-index: 30; display: grid; place-items: center; padding: 20px 16px; overflow-y: auto; background:
+      radial-gradient(800px 460px at 0% -10%, rgba(var(--acc-rgb), calc(.12 * var(--glow))), transparent 70%),
+      radial-gradient(700px 460px at 100% 110%, rgba(var(--acc2-rgb), calc(.10 * var(--glow))), transparent 70%), var(--bg); }
+  #reg .box { max-width: 440px; }
+  #reg .avarow { display: flex; align-items: center; gap: 14px; margin: 6px 0 14px; }
+  #reg .ava { width: 72px; height: 72px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 30px var(--font-display); color: #fff; background: var(--panel3) center/cover no-repeat; border: 2px dashed var(--line); cursor: pointer; }
+  #reg .ava.has { border-style: solid; border-color: var(--accent); }
+  #reg .linkbtn { color: var(--accent); text-decoration: underline dotted; font-size: 13.5px; }
+  #reg .regerr { color: var(--red); font-size: 13.5px; min-height: 1.2em; margin-top: 8px; }
+  #accBanner { margin: 0 0 14px; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(var(--acc-rgb), .45); background: rgba(var(--acc-rgb), .08); font-size: 13.5px; line-height: 1.4; display: flex; gap: 10px; align-items: center; }
+  #accBanner span { flex: 1; }
+  #accBanner button, .acc button.b { padding: 8px 12px; border-radius: 9px; font: 600 13px var(--font-display); background: var(--panel3); border: 1px solid var(--line); color: var(--text); flex: none; }
+  #accBanner button:hover, .acc button.b:hover { border-color: var(--accent); }
+  #accBanner button.ok, .acc button.b.ok { border: 0; color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  dialog.acc { width: min(520px, calc(100vw - 32px)); }
+  .acc .kd-b { white-space: normal !important; }
+  .acc h3 { font: 700 14px var(--font-display); margin: 16px 0 6px; color: var(--text); }
+  .acc p { margin: 0 0 8px; color: var(--dim); font-size: 13px; }
+  .acc .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  .acc input { width: 100%; margin: 4px 0 8px; }
+  .acc .code { display: flex; gap: 14px; align-items: center; margin-top: 8px; }
+  .acc .code img { width: 140px; height: 140px; border-radius: 10px; background: #fff; flex: none; }
+  .acc .code textarea { flex: 1; min-height: 110px; font: 12px/1.35 Consolas, monospace; resize: none; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; color: var(--text); padding: 8px; word-break: break-all; }
+  .acc .note { font-size: 13px; min-height: 1.2em; margin-top: 6px; color: var(--accent); }
+  .acc .note.bad { color: var(--red); }
+  .acc .saves { max-height: 130px; overflow: auto; font-size: 12.5px; color: var(--dim); }
+  .acc .saves div { padding: 3px 0; display: flex; gap: 8px; }
+  .nearlist { display: grid; gap: 6px; margin-bottom: 14px; }
+  .nearlist button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 11px; background: var(--panel2); border: 1px solid var(--line); color: var(--text); transition: border-color var(--t); }
+  .nearlist button:hover { border-color: var(--accent); }
+  .nearlist b { font: 600 14px var(--font-display); }
+  .nearlist small { color: var(--dim); font-size: 12.5px; margin-left: auto; text-align: right; }
+  .nearlist i { width: 8px; height: 8px; border-radius: 50%; background: var(--green, #3ddc97); box-shadow: 0 0 8px var(--green, #3ddc97); flex: none; }
+  .acc .saves a { color: var(--accent); cursor: pointer; margin-left: auto; }
+  .frbtn svg { width: 17px; height: 17px; color: var(--accent); }
+  .frbtn .badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; font: 700 11px/1 var(--font-display); color: #fff; background: var(--red); }
+
+  #running { margin: -6px 0 16px; padding: 9px 12px; border-radius: 10px; font-size: 13px; color: var(--green); background: rgba(60,255,160,.07); border: 1px solid rgba(60,255,160,.25); }
+
+  .modes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+  @media (max-width: 520px) { .modes { grid-template-columns: 1fr; } }
+  /* узкое окно: кнопки сервера переезжают на вторую строку, ничего не вылезает за край */
+  @media (max-width: 560px) { .box { padding: 20px 16px 18px; } .srv { flex-wrap: wrap; } .srv .info { flex: 1 1 calc(100% - 60px); } .srv .ib { margin-left: auto; } .srv .ib + .ib { margin-left: 0; } .hostrow { grid-template-columns: minmax(0, 1fr) 90px; } }
+  .mode .cnt { position: absolute; top: 10px; right: 10px; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center;
+    font: 700 11px/1 var(--font-display); color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  /* мои серверы */
+  .srvlist { display: flex; flex-direction: column; gap: 8px; max-height: 330px; overflow-y: auto; padding: 2px; margin: -2px; }
+  .srv { display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 12px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line);
+    transition: border-color var(--t), background var(--t); }
+  .srv:hover { border-color: rgba(var(--acc-rgb), .5); }
+  .srv .ic { width: 40px; height: 40px; border-radius: 12px; flex: none; display: grid; place-items: center; font: 800 18px/1 var(--font-display); color: #fff; }
+  .srv .ic.mine { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--on-accent); }
+  .srv .info { flex: 1; min-width: 0; }
+  .srv .nm { font: 600 15px/1.25 var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .srv .sub { color: var(--dim); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .srv input.ren { width: 100%; padding: 5px 8px; font: 600 14px var(--font-display); }
+  .srv .ib { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; color: var(--dim); flex: none; transition: background var(--t), color var(--t); }
+  .srv .ib:hover { background: var(--panel3); color: var(--text); }
+  .srv .ib.del:hover { color: var(--red); }
+  .srv .ib svg { width: 16px; height: 16px; }
+  .srv .enter { padding: 8px 14px; border-radius: 9px; font: 700 13px/1 var(--font-display); letter-spacing: .03em; color: var(--on-accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); flex: none; transition: box-shadow var(--t), filter var(--t); }
+  .srv .enter:hover { box-shadow: 0 0 calc(18px * var(--glow)) rgba(var(--acc-rgb), calc(.5 * var(--glow))); filter: brightness(1.06); }
+  .srv .enter:disabled { opacity: .6; }
+  .srvempty { padding: 22px 16px; text-align: center; color: var(--dim); font-size: 14px; border: 1px dashed var(--line); border-radius: 12px; }
+  .srvempty b { display: block; color: var(--text); font: 600 15px var(--font-display); margin-bottom: 4px; }
+  .mode { position: relative; padding: 14px 14px 13px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); cursor: pointer;
+    transition: border-color var(--t), box-shadow var(--t), background var(--t); }
+  .mode input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+  .mode svg { width: 24px; height: 24px; color: var(--dim); transition: color var(--t); display: block; margin-bottom: 8px; }
+  .mode b { display: block; font: 600 16px/1.2 var(--font-display); }
+  .mode small { display: block; color: var(--dim); font-size: 12.5px; margin-top: 3px; line-height: 1.35; }
+  .mode:hover { border-color: var(--panel3); background: var(--panel3); }
+  .mode:has(input:checked) { border-color: var(--accent); background: linear-gradient(160deg, rgba(var(--acc-rgb), .10), rgba(var(--acc2-rgb), .05));
+    box-shadow: 0 0 calc(22px * var(--glow)) rgba(var(--acc-rgb), calc(.22 * var(--glow))), inset 0 0 0 1px rgba(var(--acc-rgb), .25); }
+  .mode:has(input:checked) svg { color: var(--accent); }
+  .mode:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .card { animation: fade var(--t) ease-out both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } }
+  label.f { display: block; color: var(--dim); font-size: 13px; margin: 0 0 6px; }
+  .hint { color: var(--dim); font-size: 12.5px; margin-top: 7px; line-height: 1.45; }
+  .hint b { color: var(--text); font-weight: 600; }
+
+  #hostBox { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 14px; }
+  .hostrow { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; margin-top: 14px; }
+  .hostrow input { width: 100%; }
+  .srv .enter.stop { background: var(--panel3); color: var(--text); border: 1px solid var(--line); box-shadow: none; }
+  #hostBox .head { color: var(--dim); font-size: 13px; }
+  .addr { display: flex; align-items: center; gap: 10px; padding: 6px 0 2px; }
+  .addr code { font: 600 18px/1.2 var(--font-display); letter-spacing: .03em; color: var(--accent); text-shadow: 0 0 calc(12px * var(--glow)) rgba(var(--acc-rgb), calc(.5 * var(--glow))); }
+  .addr .n { color: var(--faint); font-size: 12px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .addr button { background: var(--panel3); border: 1px solid var(--line); border-radius: 7px; padding: 5px 11px; font-size: 13px; transition: border-color var(--t); }
+  .addr button:hover { border-color: var(--accent); }
+  .warn { color: var(--yellow); font-size: 13px; margin-top: 6px; }
+
+  .toggle { display: flex; gap: 12px; align-items: flex-start; margin-top: 12px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); cursor: pointer; transition: background var(--t); }
+  .toggle:hover { background: var(--panel2); }
+  .toggle input { appearance: none; flex: none; width: 36px; height: 20px; margin: 1px 0 0; border-radius: 999px; background: var(--panel3); border: 1px solid var(--line); position: relative; cursor: pointer; transition: background var(--t), border-color var(--t); }
+  .toggle input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--dim); transition: transform var(--t), background var(--t); }
+  .toggle input:checked { background: linear-gradient(135deg, var(--accent), var(--accent2)); border-color: transparent; box-shadow: 0 0 calc(12px * var(--glow)) rgba(var(--acc-rgb), calc(.45 * var(--glow))); }
+  .toggle input:checked::after { transform: translateX(16px); background: #fff; }
+  .toggle b { font-weight: 600; }
+  .toggle small { display: block; color: var(--dim); font-size: 12.5px; margin-top: 2px; line-height: 1.4; }
+
+  div.f { color: var(--dim); font-size: 13px; margin: 0 0 6px; }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg label { position: relative; cursor: pointer; }
+  .seg input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .seg span { display: grid; place-items: center; text-align: center; height: 100%; min-height: 44px; padding: 6px 8px; border-radius: 10px; font-size: 12.5px; line-height: 1.25;
+    background: var(--panel2); border: 1px solid var(--line); color: var(--dim); transition: border-color var(--t), color var(--t), background var(--t); }
+  .seg label:hover span { border-color: var(--panel3); color: var(--text); }
+  .seg input:checked + span { color: var(--text); border-color: var(--accent); background: rgba(var(--acc-rgb), .1); box-shadow: inset 0 0 0 1px rgba(var(--acc-rgb), .25); }
+  .seg input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+  details { margin-top: 14px; color: var(--dim); font-size: 13px; }
+  details summary { cursor: pointer; width: max-content; padding: 2px 0; }
+  details summary:hover { color: var(--text); }
+  details .row { margin-top: 10px; }
+  details select { margin-bottom: 4px; }
+
+  .go { width: 100%; margin-top: 18px; padding: 13px; border-radius: 11px; font: 700 16px/1 var(--font-display); letter-spacing: .03em; color: var(--on-accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); transition: box-shadow var(--t), filter var(--t), transform .12s; }
+  .go:hover { box-shadow: 0 0 calc(26px * var(--glow)) rgba(var(--acc-rgb), calc(.55 * var(--glow))); filter: brightness(1.06); }
+  .go:active { transform: scale(.98); }
+  .go:disabled { opacity: .6; cursor: default; box-shadow: none; }
+  #err { color: var(--red); font-size: 14px; margin-top: 10px; min-height: 1.2em; }
+  .keys { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--faint); font-size: 12.5px; }
+  kbd { background: var(--panel2); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; font: 12px var(--font); color: var(--text); }
+</style>
+</head>
+<body>
+<div id="shell">
+  <nav id="rail" aria-label="Серверы">
+    <button type="button" class="rb home on" id="friendsBtn" aria-label="Друзья и личные сообщения" data-tip="Друзья и личные сообщения">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg>
+      <span class="badge" id="friendsBadge" hidden></span></button>
+    <div class="sep"></div>
+    <div id="railList"></div>
+    <button type="button" class="rb add" id="railAdd" aria-label="Добавить сервер" data-tip="Создать сервер или зайти по адресу">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <div class="sp"></div>
+    <button type="button" class="rb" id="accBtn" aria-label="Аккаунт и сеть" data-tip="Аккаунт и сеть: сохранения, другие устройства, мост">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+  </nav>
+  <main id="mainArea">
+    <div id="accBanner" hidden></div>
+    <div id="mainHint">Кентовка</div>
+  </main>
+</div>
+
+<div id="reg" hidden>
+  <form class="box" id="regForm" autocomplete="off">
+    <header><div class="logo">К</div><div class="hd"><h1>Кентовка</h1><p>Голос, чат и стримы для своей компании</p></div></header>
+    <label class="f" for="regName">Как тебя зовут</label>
+    <input type="text" id="regName" maxlength="24" placeholder="Ник для кентов" spellcheck="false">
+    <div class="avarow">
+      <label class="ava" id="regAva" title="Аватарка (по желанию)">+<input type="file" id="regAvaFile" accept="image/*" hidden></label>
+      <div class="hint" style="margin:0">Аватарка — по желанию, можно поставить потом. Ник и аватарка общие для всех серверов.</div>
+    </div>
+    <button class="go" id="regGo">Начать</button>
+    <div class="regerr" id="regErr" role="alert"></div>
+    <div class="hint">Уже есть аккаунт? <button type="button" class="linkbtn" id="regRestore">Восстановить из сохранения</button> — вернутся ник, друзья, личка и серверы.</div>
+  </form>
+</div>
+
+<dialog id="addDlg" aria-label="Создать сервер или зайти по адресу">
+<form class="box" id="form" autocomplete="off">
+  <header>
+    <div class="logo">К</div>
+    <div class="hd"><h1>Серверы</h1><p>Зайти к кентам или создать свой</p></div>
+    <button type="button" class="xbtn" id="addClose" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </header>
+  <div id="running" hidden>● Твой сервер работает, кенты на связи.</div>
+
+  <div class="modes" role="radiogroup" aria-label="Что делаем">
+    <input type="radio" name="mode" id="saved" value="saved" hidden><span id="srvCnt" hidden></span>
+    <label class="mode">
+      <input type="radio" name="mode" id="join" value="join">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+      <b>Зайти по адресу</b><small>Сервер создал кто-то из друзей</small>
+    </label>
+    <label class="mode">
+      <input type="radio" name="mode" id="host" value="host">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>
+      <b>Создать сервер</b><small>Ты хост, друзья заходят к тебе</small>
+    </label>
+  </div>
+
+  <div id="savedCard" class="card" hidden>
+    <div class="srvlist" id="srvList"></div>
+  </div>
+
+  <div id="joinCard" class="card">
+    <div id="nearBox" hidden><div class="f">Серверы рядом в сети</div><div class="nearlist" id="nearList"></div></div>
+    <label class="f" for="address">Адрес друга, который создал сервер</label>
+    <input type="text" id="address" placeholder="например 26.123.45.67 или 26.123.45.67:8450" spellcheck="false">
+    <div class="hint">Попроси у хоста адрес: он видит его у себя после «Создать сервер». Подойдёт адрес из любой вашей общей локальной сети. Если у хоста порт не 8443, допиши его через двоеточие.</div>
+    <label class="f" for="srvName" style="margin-top:14px">Как назвать сервер (необязательно)</label>
+    <input type="text" id="srvName" placeholder="например «Сервер Лёхи»" maxlength="40" spellcheck="false">
+    <div class="hint">Сервер сохранится в «Мои серверы» — в следующий раз адрес вводить не нужно.</div>
+  </div>
+
+  <div id="hostCard" class="card" hidden>
+    <div id="hostBox"></div>
+    <div class="hostrow">
+      <div><label class="f" for="hostName">Название сервера</label>
+        <input type="text" id="hostName" placeholder="Мой сервер" maxlength="40" spellcheck="false"></div>
+      <div class="hp"><label class="f" for="port">Порт</label>
+        <input type="number" id="port" min="1024" max="65535"></div>
+    </div>
+    <div class="hint" id="portHint"></div>
+    <div class="f" style="margin-top:14px">Кто может зайти</div>
+    <div class="seg" role="radiogroup" aria-label="Кто может зайти">
+      <label><input type="radio" name="access" value="open"><span>Все, у кого есть адрес</span></label>
+      <label><input type="radio" name="access" value="approve"><span>С моего подтверждения</span></label>
+      <label><input type="radio" name="access" value="friends"><span>Только мои друзья</span></label>
+    </div>
+    <div class="hint" id="accessHint"></div>
+    <label class="toggle"><input type="checkbox" id="direct">
+      <span><b>Прямое соединение</b>
+        <small>Голос идёт напрямую между вами, пинг ниже. Если с кем-то так не выйдет, с ним голос пойдёт через локальную сеть.</small></span>
+    </label>
+  </div>
+
+  <details id="advanced">
+    <summary>Дополнительно</summary>
+    <div id="directFields" class="row">
+      <label class="f" for="stunMode">Как узнавать внешний адрес для прямого соединения</label>
+      <select id="stunMode">
+        <option value="public">Публичный STUN в России (ничего настраивать)</option>
+        <option value="own">Свой STUN (нужен белый IP)</option>
+      </select>
+      <div id="publicFields" class="row">
+        <label class="f" for="stunUrl">Адрес STUN-сервера (можно несколько через запятую)</label>
+        <input type="text" id="stunUrl" spellcheck="false">
+        <div class="hint">Через него каждый узнаёт свой внешний адрес, это несколько байт. Голос через него не идёт.</div>
+      </div>
+      <div id="ownFields" class="row">
+        <label class="f" for="publicHost">Твой внешний (белый) IP или домен</label>
+        <input type="text" id="publicHost" placeholder="например 95.12.34.56" spellcheck="false">
+        <div class="hint">На роутере пробрось <b>UDP 3478</b> на этот комп.</div>
+      </div>
+    </div>
+  </details>
+
+  <button class="go" id="go">Зайти</button>
+  <div id="err" role="alert"></div>
+  <div class="keys">Твои серверы — в полосе слева: клик — зайти, правый клик — переименовать, убрать или остановить. В игре: <kbd id="kMute">Ctrl+Shift+M</kbd> микрофон, <kbd id="kDeaf">Ctrl+Shift+D</kbd> звук</div>
+</form>
+</dialog>
+
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const A = window.kentovkaApp;
+  const { config, addresses, hotkeys, hostRunning, mainHostPort } = await A.launcherGet();
+  let running = (await A.launcherGet()).running || [];
+
+  // тема та же, что в приложении
+  const th = Object.assign({ accent: '#22e1ff', accent2: '#ff3ec8', glow: 0.7, motion: true }, config.theme || {});
+  const hex = (h) => /^#[0-9a-f]{6}$/i.test(h) ? h : null;
+  const rgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  const a1 = hex(th.accent) || '#22e1ff', a2 = hex(th.accent2) || '#ff3ec8';
+  const r = document.documentElement.style;
+  r.setProperty('--accent', a1); r.setProperty('--accent2', a2);
+  r.setProperty('--acc-rgb', rgb(a1).join(',')); r.setProperty('--acc2-rgb', rgb(a2).join(','));
+  r.setProperty('--glow', String(Number.isFinite(+th.glow) ? +th.glow : 0.7));
+  const [R, G, B] = rgb(a1); r.setProperty('--on-accent', (0.299 * R + 0.587 * G + 0.114 * B) / 255 > 0.55 ? '#070812' : '#ffffff');
+  document.documentElement.dataset.motion = th.motion === false ? 'off' : 'on';
+
+  $('running').hidden = !hostRunning;
+  const setBadge = (n) => { $('friendsBadge').hidden = !n; $('friendsBadge').textContent = n > 99 ? '99+' : n; };
+  A.friendsBadge().then(setBadge); A.onFriendsBadge(setBadge);
+  $('friendsBtn').onclick = () => (A.toggleFriends ? A.toggleFriends() : A.openFriends());
+  $('address').value = config.address || '';
+  // свои серверы: у каждого свой порт, свои каналы и чат
+  const ownPort = (sv) => (sv.address === 'host' ? mainHostPort : Number(String(sv.address).split(':')[1]) || 8443);
+  const own = () => servers.filter((x) => x.host);
+  const freePort = () => { const used = new Set(own().map(ownPort)); let p = 8443; while (used.has(p) || p === 8444) p++; return p; };
+  $('port').value = config.port || 8443;
+  const syncPort = () => {
+    const p = Number($('port').value);
+    const ex = own().find((x) => ownPort(x) === p);
+    const others = own().filter((x) => ownPort(x) !== p);
+    if (ex) { if (!$('hostName').dataset.touched) $('hostName').value = ex.name || ''; }
+    else if (!$('hostName').dataset.touched) $('hostName').value = '';
+    $('portHint').textContent = ex ? `На этом порту уже есть твой сервер «${ex.name || 'Мой сервер'}» — откроется он.`
+      : p === 8444 ? 'Порт 8444 занят друзьями и личкой — возьми другой.'
+      : own().length ? `Будет новый сервер со своими каналами и чатом. Уже есть: ${others.map((x) => `«${x.name || 'Мой сервер'}» (${ownPort(x)})`).join(', ')}. Новый порт: например ${freePort()}.`
+      : 'Друзья заходят по адресу и этому порту. Можно сделать ещё серверы — на других портах.';
+    if ($('go') && isHost()) $('go').textContent = ex ? 'Открыть сервер' : own().length ? 'Создать ещё сервер' : 'Создать и зайти';
+  };
+  $('port').oninput = () => { syncPort(); renderHostBox(); };
+  $('hostName').oninput = () => { $('hostName').dataset.touched = '1'; };
+  const dc = config.direct || {};
+  // прямое соединение включено по умолчанию; выключено, только если ты сам снял галочку
+  $('direct').checked = dc.chosen ? !!dc.enabled : true;
+  const DEFAULT_STUN = 'stun:stun.sipnet.ru:3478, stun:stun.fitauto.ru:3478';
+  $('publicHost').value = dc.publicHost || '';
+  $('stunUrl').value = dc.stunUrl || DEFAULT_STUN;
+  $('stunMode').value = dc.stunMode || (dc.publicHost ? 'own' : 'public');
+  const pretty = (s) => (s ? s.replace('CommandOrControl', 'Ctrl') : 'не задано');
+  $('kMute').textContent = pretty(hotkeys.mute);
+  $('kDeaf').textContent = pretty(hotkeys.deaf);
+
+  const isHost = () => $('host').checked;
+  const ACCESS_HINT = { open: 'Зайдёт любой, кто знает твой адрес.', approve: 'Новый гость ждёт у двери, пока ты не нажмёшь «Пустить». Друзья заходят сразу.', friends: 'Зайдут только те, кто у тебя в друзьях (кнопка «Друзья» сверху).' };
+  const curAccess = () => (document.querySelector('input[name=access]:checked') || {}).value || 'open';
+  (document.querySelector(`input[name=access][value="${config.access || 'open'}"]`) || document.querySelector('input[name=access]')).checked = true;
+  const syncAccess = () => { $('accessHint').textContent = ACCESS_HINT[curAccess()]; };
+  document.querySelectorAll('input[name=access]').forEach((r) => (r.onchange = syncAccess));
+  syncAccess();
+  function renderHostBox() {
+    const box = $('hostBox'); box.innerHTML = '';
+    const radmin = addresses.filter((a) => (a.net ? a.net !== 'other' : a.radmin));
+    const head = document.createElement('div'); head.className = 'head';
+    head.textContent = radmin.length > 1 ? 'Кинь друзьям адрес из сети, где вы вместе:' : radmin.length ? 'Кинь друзьям этот адрес:' : 'Твои адреса в сети:';
+    box.appendChild(head);
+    const p = Number($('port').value) || 8443;
+    (radmin.length ? radmin : addresses).forEach((a) => {
+      const row = document.createElement('div'); row.className = 'addr';
+      const full = p === 8443 ? a.address : `${a.address}:${p}`;
+      const c = document.createElement('code'); c.textContent = full;
+      const n = document.createElement('span'); n.className = 'n'; n.textContent = a.label || a.name; n.title = a.name;
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Копировать';
+      b.onclick = () => { A.copy(full); b.textContent = 'Скопировано'; setTimeout(() => (b.textContent = 'Копировать'), 1500); };
+      row.append(c, n, b); box.appendChild(row);
+    });
+    if (!radmin.length) {
+      const w = document.createElement('div'); w.className = 'warn';
+      w.textContent = 'Локальная сеть не найдена. Подключись к сети, где вы с друзьями, и открой Кентовку заново.';
+      box.appendChild(w);
+    }
+  }
+  // ---------- мои серверы ----------
+  let servers = Array.isArray(config.servers) ? config.servers : [];
+  const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const colorOf = (t) => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
+  const ago = (t) => {
+    const m = Math.round((Date.now() - t) / 60000);
+    if (m < 1) return 'только что'; if (m < 60) return m + ' мин назад';
+    const h = Math.round(m / 60); if (h < 24) return h + ' ч назад';
+    const d = Math.round(h / 24); return d === 1 ? 'вчера' : d + ' дн назад';
+  };
+  const SVG = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const I_EDIT = SVG('<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>');
+  const I_DEL = SVG('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>');
+  function renderServers() {
+    renderRail();
+    const box = $('srvList'); box.innerHTML = '';
+    $('srvCnt').hidden = !servers.length; $('srvCnt').textContent = servers.length;
+    if (!servers.length) {
+      box.innerHTML = '<div class="srvempty"><b>Пока пусто</b>Зайди к кому-нибудь по адресу или создай свой сервер — он появится здесь, и в следующий раз хватит одного клика.</div>';
+      return;
+    }
+    for (const sv of servers) {
+      const row = document.createElement('div'); row.className = 'srv'; row.dataset.address = sv.address;
+      const title = sv.name || (sv.host ? 'Мой сервер' : sv.address);
+      const ic = document.createElement('div'); ic.className = 'ic' + (sv.host ? ' mine' : ''); ic.textContent = (title[0] || '?').toUpperCase();
+      if (!sv.host) ic.style.background = colorOf(sv.address);
+      const info = document.createElement('div'); info.className = 'info';
+      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = title;
+      const sub = document.createElement('div'); sub.className = 'sub';
+      const isRun = sv.host && running.includes(ownPort(sv));
+      sub.textContent = (sv.host ? `ты хост · порт ${ownPort(sv)}` + (isRun ? ' · работает' : '') : sv.address) + (sv.last ? ' · ' + ago(sv.last) : '');
+      info.append(nm, sub);
+      const ren = document.createElement('button'); ren.type = 'button'; ren.className = 'ib'; ren.title = 'Переименовать'; ren.innerHTML = I_EDIT;
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'ib del'; del.title = 'Убрать из списка'; del.innerHTML = I_DEL;
+      const go = document.createElement('button'); go.type = 'button'; go.className = 'enter'; go.textContent = sv.host && !isRun ? 'Запустить' : 'Зайти';
+      let stop = null;
+      if (isRun) {
+        stop = document.createElement('button'); stop.type = 'button'; stop.className = 'enter stop'; stop.textContent = 'Остановить';
+        stop.title = 'Выключить сервер — кенты с него выйдут';
+        stop.onclick = async () => { const r = await A.serverStop(ownPort(sv)); if (Array.isArray(r)) running = r; renderServers(); };
+      }
+      ren.onclick = () => {
+        const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'ren'; inp.maxLength = 40; inp.value = sv.name || '';
+        inp.placeholder = sv.host ? 'Мой сервер' : sv.address;
+        nm.replaceWith(inp); inp.focus(); inp.select();
+        let done = false;
+        const save = async (ok) => {
+          if (done) return; done = true;
+          if (ok) servers = await A.serverEdit({ address: sv.address, name: inp.value });
+          renderServers();
+        };
+        inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); save(true); } if (e.key === 'Escape') { e.preventDefault(); save(false); } };
+        inp.onblur = () => save(true);
+      };
+      del.onclick = async () => { servers = await A.serverEdit({ address: sv.address, remove: true }); renderServers(); };
+      go.onclick = () => {
+        if (sv.host) { connectTo({ host: true, port: ownPort(sv), name: sv.name, access: sv.access || curAccess() }, go); return; }
+        connectTo({ address: sv.address, host: false, name: sv.name }, go);
+      };
+      row.ondblclick = (e) => { if (!e.target.closest('button, input')) go.click(); };
+      row.append(ic, info, ren, del, ...(stop ? [stop] : []), go);
+      box.appendChild(row);
+    }
+  }
+  // серверы, которые сами нашлись в локальной сети
+  const ACC_TXT = { open: 'вход свободный', approve: 'по подтверждению', friends: 'только друзья' };
+  async function drawNear() {
+    if (!A.lan) return;
+    const { servers: near } = await A.lan();
+    $('nearBox').hidden = !near.length;
+    const box = $('nearList'); box.innerHTML = '';
+    for (const sv of near) {
+      const b = document.createElement('button'); b.type = 'button';
+      b.innerHTML = '<i></i><span><b></b></span><small></small>';
+      b.querySelector('b').textContent = sv.name;
+      b.querySelector('small').textContent = (sv.owner ? sv.owner + ' · ' : '') + sv.address + ' · ' + (ACC_TXT[sv.access] || '');
+      b.onclick = () => { $('address').value = sv.address; $('srvName').value = sv.name; connectTo({ address: sv.address, host: false, name: sv.name }, b); };
+      box.appendChild(b);
+    }
+  }
+  drawNear(); if (A.lanScan) A.lanScan(); setTimeout(drawNear, 1200); setInterval(drawNear, 4000);
+  if (A.onLan) A.onLan(drawNear);
+
+  async function connectTo(opts, btn) {
+    $('err').textContent = '';
+    const prev = btn.textContent;
+    btn.disabled = true; btn.textContent = opts.host ? 'Запускаю…' : 'Подключаюсь…';
+    const res = await A.connect({ ...opts, port: opts.host ? (opts.port || $('port').value) : 8443,
+      direct: { enabled: $('direct').checked, stunMode: $('stunMode').value, publicHost: $('publicHost').value.trim(), stunUrl: $('stunUrl').value.trim() } });
+    if (res && res.error) { $('err').textContent = res.error; btn.disabled = false; btn.textContent = prev; if (!$('addDlg').open) kSay(res.error, { title: 'Не получилось зайти' }); }
+  }
+  renderServers();
+
+  function sync() {
+    const h = isHost(), sv = $('saved').checked;
+    $('savedCard').hidden = !sv;
+    $('joinCard').hidden = h || sv; $('hostCard').hidden = !h;
+    $('go').hidden = sv; $('advanced').hidden = sv;
+    $('directFields').hidden = !h || !$('direct').checked;
+    $('publicFields').hidden = $('stunMode').value !== 'public';
+    $('ownFields').hidden = $('stunMode').value !== 'own';
+    $('go').textContent = h ? 'Создать и зайти' : 'Зайти';
+    $('err').textContent = '';
+    if (h) syncPort();
+  }
+  $('join').checked = true;
+  renderHostBox();
+  $('join').onchange = $('host').onchange = $('saved').onchange = () => { sync(); if ($('join').checked) $('address').focus(); };
+  $('direct').onchange = sync; $('stunMode').onchange = sync;
+  sync();
+
+  $('form').onsubmit = async (e) => {
+    e.preventDefault();
+    const h = isHost(), own = $('stunMode').value === 'own';
+    if (!h && !$('address').value.trim()) { $('err').textContent = 'Впиши адрес друга, который создал сервер.'; $('address').focus(); return; }
+    if (h && $('direct').checked && (own ? !$('publicHost').value.trim() : !$('stunUrl').value.trim())) {
+      $('advanced').open = true;
+      $('err').textContent = own ? 'Впиши свой внешний IP или выбери публичный STUN.' : 'Впиши адрес STUN-сервера.'; return;
+    }
+    if ($('saved').checked) return;
+    if (h) {
+      const p = Number($('port').value);
+      if (!(p >= 1024 && p <= 65535)) { $('err').textContent = 'Порт — число от 1024 до 65535.'; $('port').focus(); return; }
+      if (p === 8444) { $('err').textContent = 'Порт 8444 занят друзьями и личкой — возьми другой.'; $('port').focus(); return; }
+    }
+    connectTo({ address: $('address').value, host: h, port: h ? Number($('port').value) : undefined, name: h ? $('hostName').value.trim() : $('srvName').value, access: h ? curAccess() : undefined }, $('go'));
+  };
+
+  // ---------- главная страница: полоса серверов, друзья, «+» ----------
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const tipOff = () => {};
+  // подсказки — обычные title: окно друзей справа перекрыло бы свои всплывашки
+  document.querySelectorAll('#rail [data-tip]').forEach((b) => (b.title = b.dataset.tip));
+  let menu = null;
+  const closeMenu = () => { if (menu) { menu.remove(); menu = null; } };
+  document.addEventListener('pointerdown', (e) => { if (menu && !menu.contains(e.target)) closeMenu(); }, true);
+  const fake = () => ({ textContent: '', disabled: false });
+  function goServer(sv, el) {
+    if (el) el.classList.add('busy');
+    const p = sv.host ? connectTo({ host: true, port: ownPort(sv), name: sv.name, access: sv.access || curAccess() }, fake())
+      : connectTo({ address: sv.address, host: false, name: sv.name }, fake());
+    Promise.resolve(p).finally(() => { if (el) el.classList.remove('busy'); });
+  }
+  function serverMenu(sv, x, y) {
+    closeMenu(); tipOff();
+    menu = document.createElement('div'); menu.className = 'rmenu';
+    const title = sv.name || (sv.host ? 'Мой сервер' : sv.address);
+    const isRun = sv.host && running.includes(ownPort(sv));
+    menu.innerHTML = '<div class="t"></div>'; menu.querySelector('.t').textContent = title;
+    const item = (t, fn, cls) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; if (cls) b.className = cls; b.onclick = () => { closeMenu(); fn(); }; menu.appendChild(b); };
+    item(sv.host && !isRun ? 'Запустить и зайти' : 'Зайти', () => goServer(sv));
+    item('Переименовать', async () => {
+      const nm = await askText('Название сервера', 'Как его подписать в полосе слева.', sv.name || '', sv.host ? 'Мой сервер' : sv.address);
+      if (nm == null) return; servers = await A.serverEdit({ address: sv.address, name: nm }); renderServers();
+    });
+    if (!sv.host) item('Копировать адрес', () => A.copy(sv.address));
+    if (isRun) item('Остановить сервер', async () => { const r = await A.serverStop(ownPort(sv)); if (Array.isArray(r)) running = r; renderServers(); }, 'danger');
+    item('Убрать из списка', async () => { servers = await A.serverEdit({ address: sv.address, remove: true }); renderServers(); }, 'danger');
+    document.body.appendChild(menu);
+    menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 8) + 'px'; menu.style.top = Math.min(y, innerHeight - menu.offsetHeight - 8) + 'px';
+  }
+  function askText(title, text, value, placeholder) {
+    return new Promise((resolve) => {
+      const d = document.createElement('dialog'); d.className = 'kdlg';
+      d.innerHTML = '<div class="kd-b"><div class="kd-t"></div><div class="kd-x"></div><input type="text" maxlength="40" style="margin-top:10px"></div><div class="kd-f"><button type="button" class="cancel">Отмена</button><button type="button" class="ok">Сохранить</button></div>';
+      d.querySelector('.kd-t').textContent = title; d.querySelector('.kd-x').textContent = text;
+      const inp = d.querySelector('input'); inp.value = value; inp.placeholder = placeholder || '';
+      let res = null;
+      d.querySelector('.ok').onclick = () => { res = inp.value.trim(); d.close(); };
+      d.querySelector('.cancel').onclick = () => d.close();
+      inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); d.querySelector('.ok').click(); } };
+      d.addEventListener('close', () => { d.remove(); resolve(res); });
+      document.body.appendChild(d); d.showModal(); inp.focus(); inp.select();
+    });
+  }
+  function renderRail() {
+    const box = $('railList'); if (!box) return; box.innerHTML = '';
+    for (const sv of servers) {
+      const title = sv.name || (sv.host ? 'Мой сервер' : sv.address);
+      const b = document.createElement('button'); b.type = 'button';
+      const isRun = sv.host && running.includes(ownPort(sv));
+      b.className = 'rb' + (sv.host ? ' mine' : '') + (isRun ? ' run' : '');
+      b.textContent = (title.trim()[0] || '?').toUpperCase();
+      if (!sv.host) b.style.background = colorOf(sv.address);
+      else b.style.background = 'linear-gradient(135deg, var(--accent), var(--accent2))', b.style.color = 'var(--on-accent)';
+      b.title = sv.host ? `${title} · твой сервер, порт ${ownPort(sv)}${isRun ? ' · работает' : ''}` : `${title} · ${sv.address}`;
+      b.setAttribute('aria-label', title);
+      b.onclick = () => goServer(sv, b);
+      b.oncontextmenu = (e) => { e.preventDefault(); serverMenu(sv, e.clientX, e.clientY); };
+      box.appendChild(b);
+    }
+  }
+  // «+»: создать свой сервер или зайти по адресу (тот же набор, что был на старом стартовом экране)
+  function openAdd(mode) {
+    $(mode === 'host' ? 'host' : 'join').checked = true; sync();
+    if (!$('addDlg').open) $('addDlg').showModal();
+    setTimeout(() => (mode === 'host' ? $('hostName') : $('address')).focus(), 30);
+  }
+  $('railAdd').onclick = () => { tipOff(); openAdd('join'); };
+  $('addClose').onclick = () => $('addDlg').close();
+  $('addDlg').addEventListener('pointerdown', (e) => { if (e.target === $('addDlg')) { const r = $('form').getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) $('addDlg').close(); } });
+  window.kentovkaHome = { openAdd };
+
+  // друзья — основная часть главной страницы (отдельное окно поверх, поэтому под открытыми диалогами его прячем)
+  let regOpen = false;
+  const anyDialog = () => regOpen || !!document.querySelector('dialog[open]') || !!menu;
+  function area() {
+    const m = $('mainArea').getBoundingClientRect(), bn = $('accBanner');
+    const top = bn.hidden ? m.top : bn.getBoundingClientRect().bottom + 10;
+    return { x: m.left, y: top, w: m.width, h: m.bottom - top };
+  }
+  let shown = false;
+  function syncFriends() {
+    const want = !anyDialog();
+    if (want) { A.friendsArea(area()); if (!shown) { shown = true; A.openFriends(); } }
+    else if (shown) { shown = false; A.closeFriends(); }
+  }
+  A.onFriendsShown((v) => { shown = !!v; $('friendsBtn').classList.toggle('on', !!v); if (!v && !anyDialog()) setTimeout(syncFriends, 50); });
+  new MutationObserver(() => setTimeout(syncFriends, 0)).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open', 'hidden'] });
+  addEventListener('resize', () => { if (shown) A.friendsArea(area()); });
+  if (window.ResizeObserver) new ResizeObserver(() => { if (shown) A.friendsArea(area()); }).observe($('accBanner'));
+  $('friendsBtn').onclick = () => { tipOff(); syncFriends(); };
+
+  // ---------- регистрация: ник (и аватарка по желанию) — и сразу на главную ----------
+  let regAvatar = null;
+  async function makeAvatar(file) {
+    const img = await createImageBitmap(file);
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const k = Math.max(128 / img.width, 128 / img.height), w = img.width * k, h = img.height * k;
+    c.getContext('2d').drawImage(img, (128 - w) / 2, (128 - h) / 2, w, h);
+    return c.toDataURL('image/webp', 0.85);
+  }
+  $('regAvaFile').onchange = async () => {
+    const f = $('regAvaFile').files[0]; if (!f) return;
+    try { regAvatar = await makeAvatar(f); $('regAva').style.backgroundImage = `url(${regAvatar})`; $('regAva').firstChild.textContent = ''; $('regAva').classList.add('has'); }
+    catch { $('regErr').textContent = 'Эту картинку не открыть — выбери другую.'; }
+  };
+  $('regForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const name = $('regName').value.trim().slice(0, 24);
+    if (!name) { $('regErr').textContent = 'Впиши ник — по нему тебя узнают кенты.'; $('regName').focus(); return; }
+    $('regGo').disabled = true;
+    await A.setProfile({ name, avatar: regAvatar });
+    regOpen = false; $('reg').hidden = true;
+    syncFriends();
+  };
+  $('regRestore').onclick = () => window.kentovkaRestore && window.kentovkaRestore();
+  const prof = (await A.getProfile().catch(() => null)) || config.profile || {};
+  if (!prof.name) { regOpen = true; $('reg').hidden = false; setTimeout(() => $('regName').focus(), 50); }
+  setTimeout(syncFriends, 0);
+})();
+</script>
+<script src="../public/kselect.js"></script>
+<script>
+// ---------- аккаунт: сохранения, пароль, привязка второго устройства, восстановление после переустановки ----------
+(async () => {
+  const A = window.kentovkaApp; if (!A || !A.account) return;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const when = (t) => new Date(t).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  let info = await A.account.info();
+  if (!info) return;
+
+  function dlg(html) {
+    const d = document.createElement('dialog'); d.className = 'kdlg acc';
+    d.innerHTML = '<div class="kd-b">' + html + '</div><div class="kd-f"><button type="button" class="cancel">Закрыть</button></div>';
+    d.querySelector('.kd-f .cancel').onclick = () => d.close();
+    d.addEventListener('close', () => d.remove());
+    document.body.appendChild(d); d.showModal(); return d;
+  }
+  async function askPassword(title, text, confirm) {
+    return new Promise((resolve) => {
+      const d = dlg('<div class="kd-t">' + esc(title) + '</div><p>' + esc(text) + '</p><input type="password" id="pw1" placeholder="Пароль" autocomplete="new-password">' + (confirm ? '<input type="password" id="pw2" placeholder="Ещё раз" autocomplete="new-password">' : '') + '<div class="note bad" id="pwErr"></div><div class="btns"><button type="button" class="b ok" id="pwOk">Готово</button></div>');
+      let res = null;
+      const ok = () => { const a = d.querySelector('#pw1').value; if (!a) { d.querySelector('#pwErr').textContent = 'Впиши пароль.'; return; } if (confirm && a !== d.querySelector('#pw2').value) { d.querySelector('#pwErr').textContent = 'Пароли не совпали.'; return; } res = a; d.close(); };
+      d.querySelector('#pwOk').onclick = ok; d.querySelectorAll('input').forEach((i) => i.onkeydown = (e) => { if (e.key === 'Enter') ok(); });
+      d.addEventListener('close', () => resolve(res)); setTimeout(() => d.querySelector('#pw1').focus(), 30);
+    });
+  }
+  async function restoreFrom(s) {
+    let pw = null;
+    if (s.enc) { pw = await askPassword('Пароль от сохранения', 'Сохранение «' + (s.name || 'аккаунт') + '» защищено паролем.'); if (pw == null) return false; }
+    const r = await A.account.restore(s.file, pw);
+    if (r && r.error) { await kSay(r.error, { title: 'Не получилось восстановить' }); return false; }
+    await kSay('Аккаунт восстановлен — Кентовка перезапустится.', { title: 'Готово' });
+    return true;
+  }
+
+  window.kentovkaRestore = async () => {
+    const s = await A.account.pickFile(); if (!s) return;
+    if (s.error) { await kSay(s.error, { title: 'Не получилось' }); return; }
+    await restoreFrom(s);
+  };
+  // после переустановки: нашли сохранение в «Документах» — предложим восстановить
+  if (info.fresh && info.saves.length) {
+    const s = info.saves[0];
+    if (await kAsk('Найдено сохранение аккаунта «' + (s.name || 'без ника') + '» от ' + when(s.at) + '. Восстановить? Вернутся ник, друзья, личка, серверы и настройки.', 'Восстановить', { title: 'Аккаунт Кентовки', cancel: 'Начать заново' })) {
+      if (await restoreFrom(s)) return;
+    }
+  }
+  function banner() {
+    const b = $('accBanner');
+    if (info.mode || sessionStorage.getItem('accBannerOff')) { b.hidden = true; return; }
+    b.hidden = false;
+    b.innerHTML = '<span>Аккаунт сохраняется сам в «Документы\\Kentovka\\Сохранения». Поставь пароль — без него любой с доступом к компу сможет забрать аккаунт.</span><button type="button" class="ok" id="bPw">Поставить пароль</button><button type="button" id="bNo">Без пароля</button>';
+    $('bPw').onclick = setPw; $('bNo').onclick = async () => {
+      if (!await kAsk('Без пароля сохранение можно открыть на любом компе — им сможет зайти кто угодно под твоим ником. Точно без пароля?', 'Без пароля', { title: 'Сохранения без пароля', danger: true })) return;
+      await A.account.setPassword(null); info = await A.account.info(); banner();
+    };
+  }
+  async function setPw() {
+    const pw = await askPassword('Пароль для сохранений', 'Задаётся один раз: дальше Кентовка сохраняет сама. Пароль нигде не хранится — если забудешь, сохранения с ним не открыть (сам аккаунт на этом компе останется).', true);
+    if (pw == null) return false;
+    await A.account.setPassword(pw); info = await A.account.info(); banner(); return true;
+  }
+  banner();
+
+  $('accBtn').onclick = async () => {
+    info = await A.account.info();
+    const mode = info.mode === 'password' ? 'с паролем' : info.mode === 'plain' ? 'без пароля' : 'без пароля (пароль не задан)';
+    const d = dlg('<div class="kd-t">Аккаунт' + (info.name ? ' «' + esc(info.name) + '»' : '') + '</div>' +
+      '<p>Аккаунт хранится только на твоих устройствах. Серверы и друзья узнают тебя по ключу, а не по нику — под твоим ником никто не зайдёт.</p>' +
+      '<h3>Сохранения</h3><p>Автоматически ' + mode + ' после изменений и раз в день, последние 5 копий' + (info.lastAutoSave ? ' · последнее: ' + when(info.lastAutoSave) : '') + '.</p>' +
+      '<div class="btns"><button type="button" class="b ok" id="aSave">Сохранить аккаунт…</button><button type="button" class="b" id="aFolder">Открыть папку</button><button type="button" class="b" id="aPw">' + (info.mode === 'password' ? 'Сменить пароль' : 'Поставить пароль') + '</button><button type="button" class="b" id="aRestore">Восстановить из файла…</button></div>' +
+      '<div class="saves" id="aSaves">' + info.saves.map((s, i) => '<div><span>' + esc(s.name || 'аккаунт') + ' · ' + when(s.at) + (s.enc ? ' · 🔒' : '') + '</span><a data-i="' + i + '">восстановить</a></div>').join('') + '</div>' +
+      '<h3>Другие устройства</h3><p>Чтобы зайти тем же аккаунтом с ноутбука или телефона: нажми «Показать код» здесь, а на новом устройстве — «Ввести код». Устройства должны быть в одной локальной сети. Данные идут напрямую, зашифрованно.' + (info.siblings ? ' Привязано устройств: ' + info.siblings + ', сейчас в сети: ' + info.siblingsOnline + '.' : '') + '</p>' +
+      '<div class="btns"><button type="button" class="b" id="aCode">Показать код</button><button type="button" class="b" id="aJoin">Ввести код</button></div><div id="aCodeBox"></div>' +
+      '<h3>Мост на своём VPS</h3><p>Чтобы к тебе заходили не только из локальной сети — с телефона, с мобильного интернета, из любой сети. Мост ставится на VPS (bridge\\install.sh), он печатает ссылку <b>KNTB1.…</b> — вставь её сюда. Кенты, которые хоть раз заходили по локальной сети, дальше сами пойдут через мост, если она не работает. Мост видит только шифрованный поток.</p>' +
+      '<div class="saves" id="aBridges"></div><input type="text" id="aBridgeIn" placeholder="KNTB1.…" spellcheck="false"><div class="btns"><button type="button" class="b" id="aBridgeAdd">Подключить мост</button></div>' +
+      '<div class="note" id="aNote"></div>');
+    const drawBridges = async () => {
+      const box = d.querySelector('#aBridges'); if (!box || !A.bridges) return;
+      const list = await A.bridges();
+      const ST = { up: 'работает', connecting: 'подключаюсь…', down: 'нет связи', error: 'ошибка' };
+      box.innerHTML = list.map((b, i) => '<div><span>' + esc(b.host) + ' — ' + (ST[b.state] || b.state) + (b.error && b.state !== 'up' ? ' (' + esc(b.error) + ')' : '') + (b.state === 'up' ? ' · порты ' + esc(Object.values(b.ports).join(', ')) + (b.turn ? ' · голос через TURN' : '') : '') + '</span><a data-r="' + i + '">убрать</a></div>').join('');
+      box.querySelectorAll('a[data-r]').forEach((a) => a.onclick = async () => { await A.bridgeRemove(list[Number(a.dataset.r)].link); drawBridges(); });
+    };
+    drawBridges(); const bT = setInterval(drawBridges, 3000); d.addEventListener('close', () => clearInterval(bT));
+    d.querySelector('#aBridgeAdd').onclick = async () => {
+      const v = d.querySelector('#aBridgeIn').value.trim(); if (!v) return;
+      note('Подключаюсь к мосту…');
+      const r = await A.bridgeAdd(v);
+      if (r && r.ok) { note('Мост работает. Твои серверы и личка теперь доступны и через него.'); d.querySelector('#aBridgeIn').value = ''; }
+      else note((r && r.error) || 'Не получилось', true);
+      drawBridges();
+    };
+    const note = (t, bad) => { const n = d.querySelector('#aNote'); n.textContent = t; n.classList.toggle('bad', !!bad); };
+    d.querySelector('#aSave').onclick = async () => {
+      let pw = null;
+      if (info.mode === 'password' || await kAsk('Защитить этот файл паролем?', 'С паролем', { cancel: 'Без пароля' })) { pw = await askPassword('Пароль для файла', 'Без него файл не открыть.', true); if (pw == null) return; }
+      const r = await A.account.saveAs(pw); if (r && r.ok) note('Сохранено: ' + r.file); else if (r && r.error) note(r.error, true);
+    };
+    d.querySelector('#aFolder').onclick = () => A.account.openFolder();
+    d.querySelector('#aPw').onclick = async () => { if (await setPw()) note('Пароль задан — следующие сохранения будут с ним.'); };
+    d.querySelector('#aRestore').onclick = async () => {
+      const s = await A.account.pickFile(); if (!s) return; if (s.error) { note(s.error, true); return; }
+      if (!await kAsk('Заменить текущий аккаунт на «' + (s.name || 'аккаунт') + '» от ' + when(s.at) + '?', 'Заменить', { danger: true })) return;
+      await restoreFrom(s);
+    };
+    d.querySelectorAll('#aSaves a').forEach((a) => a.onclick = async () => {
+      const s = info.saves[Number(a.dataset.i)];
+      if (!await kAsk('Восстановить сохранение от ' + when(s.at) + '? Всё, что изменилось после, пропадёт.', 'Восстановить', { danger: true })) return;
+      await restoreFrom(s);
+    });
+    d.querySelector('#aCode').onclick = async () => {
+      const r = await A.account.linkCode(); if (!r) return;
+      d.querySelector('#aCodeBox').innerHTML = '<div class="code">' + (r.qr ? '<img alt="QR-код для привязки" src="' + r.qr + '">' : '') + '<textarea readonly id="aCodeT"></textarea></div>';
+      d.querySelector('#aCodeT').value = r.code;
+      note('Код действует 5 минут. На новом устройстве: Аккаунт → «Ввести код» (или наведи камеру телефона на QR).');
+      A.account.onLinked(() => note('Новое устройство привязано — данные переданы.'));
+    };
+    d.querySelector('#aJoin').onclick = async () => {
+      d.querySelector('#aCodeBox').innerHTML = '<input type="text" id="aCodeIn" placeholder="KNT1.…" spellcheck="false"><div class="btns"><button type="button" class="b ok" id="aCodeGo">Привязать это устройство</button></div>';
+      d.querySelector('#aCodeGo').onclick = async () => {
+        const c = d.querySelector('#aCodeIn').value.trim(); if (!c) return;
+        if (!await kAsk('Аккаунт на этом устройстве заменится аккаунтом со старого. Продолжить?', 'Привязать', { danger: true })) return;
+        note('Подключаюсь к старому устройству…');
+        const r = await A.account.linkJoin(c);
+        if (r && r.ok) note('Готово' + (r.name ? ', ' + r.name : '') + '! Кентовка перезапустится.'); else note((r && r.error) || 'Не получилось', true);
+      };
+      d.querySelector('#aCodeIn').focus();
+    };
+  };
+})();
+</script>
+</body>
+</html>

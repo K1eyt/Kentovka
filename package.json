@@ -1,0 +1,77 @@
+{
+  "name": "kentovka",
+  "version": "1.7.1",
+  "description": "Кентовка — голос, чат и демка экрана для своих",
+  "main": "app/main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js",
+    "dist": "electron-builder --win --x64"
+  },
+  "author": "Kentovka",
+  "license": "MIT",
+  "dependencies": {
+    "@lofcz/deepfilternet-web": "0.1.0",
+    "@sapphi-red/web-noise-suppressor": "^0.4.1",
+    "qrcode": "^1.5.4",
+    "selfsigned": "^2.4.1",
+    "uiohook-napi": "^1.5.5",
+    "ws": "^8.22.0"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "productName": "Kentovka",
+  "build": {
+    "appId": "ru.kentovka.app",
+    "productName": "Kentovka",
+    "files": [
+      "app/**/*",
+      "public/**/*",
+      "server.js",
+      "package.json",
+      "!app/icon-512.png"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "app/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Кентовка",
+      "artifactName": "Kentovka-Setup-${version}.exe",
+      "installerIcon": "app/icon.ico",
+      "uninstallerIcon": "app/icon.ico"
+    },
+    "portable": {
+      "artifactName": "Kentovka-Portable-${version}.exe"
+    },
+    "compression": "normal",
+    "publish": null,
+    "asarUnpack": [
+      "app/native/**",
+      "node_modules/uiohook-napi/**"
+    ],
+    "npmRebuild": false
+  }
+}

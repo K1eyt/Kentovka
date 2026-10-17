@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Что показать?</title>
+<style>
+  :root { --bg:#1a1b1e; --panel2:#232428; --line:#2e3035; --text:#e8e9eb; --dim:#8b8e95; --accent:#22c55e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, "Segoe UI", Roboto, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { padding: 16px 18px 6px; }
+  h2 { margin: 0; font-size: 18px; }
+  .tabs { display: flex; gap: 6px; margin-top: 12px; }
+  .tabs button { background: var(--panel2); color: var(--dim); border: 0; border-radius: 8px; padding: 6px 14px; font: inherit; cursor: pointer; }
+  .tabs button.on { color: var(--text); background: var(--line); }
+  #grid { flex: 1; overflow-y: auto; padding: 12px 18px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; align-content: start; }
+  .src { background: var(--panel2); border: 2px solid transparent; border-radius: 10px; padding: 8px; cursor: pointer; }
+  .src:hover { border-color: var(--line); }
+  .src.sel { border-color: var(--accent); }
+  .src img { width: 100%; aspect-ratio: 16/9; object-fit: contain; background: #000; border-radius: 6px; display: block; }
+  .src div { margin-top: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  footer { padding: 12px 18px 16px; border-top: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  label { display: flex; gap: 8px; align-items: flex-start; flex: 1; min-width: 260px; cursor: pointer; }
+  label input { accent-color: var(--accent); margin-top: 3px; }
+  label small { display: block; color: var(--dim); }
+  .b { border: 0; border-radius: 8px; padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; }
+  .cancel { background: var(--panel2); color: var(--text); }
+  .ok { background: var(--accent); color: #04130a; }
+  .ok:disabled { opacity: .5; cursor: default; }
+</style>
+</head>
+<body>
+<header>
+  <h2>Что показать кентам?</h2>
+  <div class="tabs"><button id="tScreen" class="on">Экраны</button><button id="tWin">Окна</button></div>
+</header>
+<div id="grid"></div>
+<footer>
+  <label><input type="checkbox" id="audio">
+    <span>Со звуком системы
+      <small id="audioHint">Кенты услышат игру, видео, музыку — всё, что играет на компе, кроме голосов из Кентовки.</small></span>
+  </label>
+  <button class="b cancel" id="cancel">Отмена</button>
+  <button class="b ok" id="ok" disabled>Показать</button>
+</footer>
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const A = window.kentovkaApp;
+  const sources = await A.pickerSources();
+  let tab = 'screen', sel = null;
+  function render() {
+    const grid = $('grid'); grid.innerHTML = '';
+    sources.filter((s) => (tab === 'screen') === s.screen).forEach((s) => {
+      const d = document.createElement('div'); d.className = 'src' + (sel === s.id ? ' sel' : '');
+      const img = document.createElement('img'); img.src = s.thumb;
+      const n = document.createElement('div'); n.textContent = s.name;
+      d.append(img, n);
+      d.onclick = () => { sel = s.id; $('ok').disabled = false; render(); };
+      d.ondblclick = () => { sel = s.id; choose(); };
+      grid.appendChild(d);
+    });
+  }
+  const setTab = (t) => {
+    tab = t; $('tScreen').classList.toggle('on', t === 'screen'); $('tWin').classList.toggle('on', t !== 'screen');
+    // окно — только его звук: голоса из Discord и других звонилок в демку не попадут (иначе у кентов голос «двоится»)
+    $('audioHint').textContent = t === 'screen'
+      ? 'Весь звук компа, кроме Кентовки. Если сидишь ещё и в Discord — лучше показывай окно игры, иначе голоса оттуда попадут в демку.'
+      : 'Только звук этого окна — игры, браузера, плеера. Голоса из Discord и других программ в демку не попадут.';
+    render();
+  };
+  $('tScreen').onclick = () => setTab('screen');
+  $('tWin').onclick = () => setTab('window');
+  const choose = () => sel && A.pickerChoose({ id: sel, audio: $('audio').checked });
+  $('ok').onclick = choose;
+  $('cancel').onclick = () => A.pickerChoose(null);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') A.pickerChoose(null); if (e.key === 'Enter') choose(); });
+  const screens = sources.filter((s) => s.screen);
+  if (screens.length === 1) { sel = screens[0].id; $('ok').disabled = false; }
+  setTab('screen');
+})();
+</script>
+</body>
+</html>

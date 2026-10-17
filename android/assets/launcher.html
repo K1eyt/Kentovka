@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Кентовка</title>
+<style>
+  :root {
+    --bg: #0a0b14; --panel: #11131f; --panel2: #171a2a; --panel3: #1e2236; --line: #262a40;
+    --text: #e6e8ff; --dim: #8a8fb3; --faint: #5d6286; --red: #ff4d6d; --yellow: #ffc94d; --green: #3cffa0;
+    --accent: #22e1ff; --accent2: #ff3ec8; --acc-rgb: 34,225,255; --acc2-rgb: 255,62,200; --on-accent: #070812;
+    --font: Roboto, system-ui, sans-serif; --font-display: "Roboto Condensed", Roboto, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font: 16px/1.45 var(--font); }
+  body { padding: max(18px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    background: radial-gradient(520px 340px at 0% -6%, rgba(var(--acc-rgb), .13), transparent 70%), radial-gradient(520px 360px at 100% 106%, rgba(var(--acc2-rgb), .1), transparent 70%), var(--bg); background-attachment: fixed; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  input { width: 100%; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; outline: none; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), .18); }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; margin: 4px 0 18px; }
+  .logo { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; flex: none; font: 800 24px/1 var(--font-display); color: var(--on-accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 22px rgba(var(--acc-rgb), .4); }
+  h1 { margin: 0; font: 700 26px/1.05 var(--font-display); letter-spacing: .01em; }
+  header p { margin: 2px 0 0; color: var(--dim); font-size: 13.5px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font: 700 16px var(--font-display); margin: 0 0 10px; }
+  .hint { color: var(--dim); font-size: 13.5px; margin: 8px 0 0; }
+  .go { width: 100%; margin-top: 12px; padding: 14px; border-radius: 13px; font: 700 16px var(--font-display); color: var(--on-accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .go:disabled { opacity: .6; }
+  .ghost { padding: 11px 14px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); font-weight: 600; font-size: 14.5px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .srv { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 13px 14px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); margin-top: 8px; }
+  .srv:active { border-color: var(--accent); }
+  .srv .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none; font: 700 17px var(--font-display); background: var(--panel3); color: var(--accent); }
+  .srv .t { flex: 1; min-width: 0; }
+  .srv b { display: block; font: 600 15.5px var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srv small { color: var(--dim); font-size: 12.5px; }
+  .srv .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); flex: none; }
+  .srv .x { padding: 8px; color: var(--faint); font-size: 18px; line-height: 1; }
+  .err { color: var(--red); font-size: 14px; margin-top: 10px; min-height: 1.2em; }
+  .ok { color: var(--green); }
+  .net { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px; font-size: 13.5px; margin-bottom: 14px; background: rgba(255, 201, 77, .08); border: 1px solid rgba(255, 201, 77, .35); color: var(--yellow); }
+  .code { font: 700 18px var(--font-display); color: var(--accent); letter-spacing: .04em; }
+  .banner { border-color: rgba(var(--acc-rgb), .5); background: linear-gradient(135deg, rgba(var(--acc-rgb), .08), rgba(var(--acc2-rgb), .06)); }
+  dialog { width: min(420px, calc(100vw - 32px)); border-radius: 18px; border: 1px solid rgba(var(--acc-rgb), .4); background: var(--panel); color: var(--text); padding: 18px; }
+  dialog::backdrop { background: rgba(4,5,12,.65); }
+  dialog h3 { margin: 0 0 8px; font: 700 17px var(--font-display); }
+  dialog p { margin: 0 0 12px; color: var(--dim); font-size: 14px; }
+  dialog .row { justify-content: flex-end; }
+  .muted { color: var(--faint); font-size: 12.5px; margin-top: 18px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="logo">К</div><div><h1>Кентовка</h1><p>Голос и чат своей компании</p></div></header>
+  <div class="net" id="netNote" hidden>Мобильный интернет — экономия трафика включена: голос легче, видео в 480p.</div>
+
+  <div class="card" id="nameCard" hidden>
+    <h2>Как тебя зовут?</h2>
+    <input id="nick" maxlength="24" placeholder="Ник для кентов" autocomplete="off">
+    <button class="go" id="nickGo">Дальше</button>
+    <p class="hint">Уже есть аккаунт на компьютере? Перенеси его — тогда серверы узнают тебя под тем же ником.</p>
+    <div class="row"><button class="ghost" id="restore0">Перенести аккаунт с ПК</button></div>
+  </div>
+
+  <div id="main" hidden>
+    <div class="card banner" id="restoreBanner" hidden>
+      <h2>Есть сохранение аккаунта?</h2>
+      <p class="hint" style="margin-top:0">После переустановки выбери файл .knt из «Документы/Kentovka» (или перекинь его с компа) — вернутся ник и серверы.</p>
+      <div class="row"><button class="ghost" id="restore1">Выбрать сохранение</button><button class="ghost" id="restoreNo">Не надо</button></div>
+    </div>
+
+    <div class="card" id="nearCard" hidden>
+      <h2>Серверы рядом</h2>
+      <div id="near"></div>
+    </div>
+
+    <div class="card" id="savedCard" hidden>
+      <h2>Мои серверы</h2>
+      <div id="saved"></div>
+    </div>
+
+    <div class="card">
+      <h2>Зайти по адресу</h2>
+      <input id="addr" placeholder="например 26.123.45.67 или 95.1.2.3:20001" inputmode="url" autocomplete="off" spellcheck="false">
+      <button class="go" id="goBtn">Зайти</button>
+      <div class="err" id="err" role="alert"></div>
+      <p class="hint">Адрес даёт хост: из локальной сети или адрес моста на VPS. Если хост поставил мост — с телефона можно заходить по нему из любой сети.</p>
+    </div>
+
+    <div class="card">
+      <h2>Аккаунт</h2>
+      <div>Ник: <b id="meName"></b> <button class="ghost" id="rename" style="padding:4px 10px;margin-left:6px;font-size:13px">сменить</button></div>
+      <div style="margin-top:6px">Код Кентовки: <span class="code" id="meCode"></span></div>
+      <div class="row"><button class="ghost" id="saveAcc">Сохранить аккаунт</button><button class="ghost" id="restore2">Восстановить / перенести с ПК</button></div>
+      <div class="hint" id="accNote"></div>
+    </div>
+    <p class="muted">Друзья, личка, группы и свой сервер — пока в Кентовке для ПК. С телефона: серверы, голос, чат, стримы и файлы.</p>
+  </div>
+</div>
+
+<dialog id="dlg"><h3 id="dT"></h3><p id="dP"></p><input id="dI" type="password" hidden><div class="err" id="dE"></div><div class="row"><button class="ghost" id="dNo">Отмена</button><button class="ghost" id="dOk" style="border-color:var(--accent)">OK</button></div></dialog>
+
+<script>
+(() => {
+  const K = window.KentovkaAndroid;
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const J = (s, d) => { try { return JSON.parse(s); } catch { return d; } };
+  if (!K) { document.body.innerHTML = '<p style="padding:20px">Эта страница — часть приложения Кентовка для Android.</p>'; return; }
+  const cfg = () => J(K.config(), {});
+  const acc = () => J(K.account(), {});
+  const ACC_TXT = { open: 'вход свободный', approve: 'по подтверждению', friends: 'только друзья' };
+
+  // окно вопроса / пароля
+  function ask({ title, text, ok = 'OK', cancel = 'Отмена', password = false }) {
+    return new Promise((resolve) => {
+      const d = $('dlg'); $('dT').textContent = title || ''; $('dP').textContent = text || ''; $('dE').textContent = '';
+      $('dI').hidden = !password; $('dI').value = ''; $('dOk').textContent = ok; $('dNo').textContent = cancel; $('dNo').hidden = !cancel;
+      const done = (v) => { d.close(); resolve(v); };
+      $('dOk').onclick = () => done(password ? $('dI').value : true);
+      $('dNo').onclick = () => done(password ? null : false);
+      d.showModal(); if (password) setTimeout(() => $('dI').focus(), 50);
+    });
+  }
+
+  function render() {
+    const c = cfg(), a = acc(), name = (c.profile || {}).name || '';
+    $('nameCard').hidden = !!name; $('main').hidden = !name;
+    if (!name) return;
+    $('meName').textContent = name; $('meCode').textContent = a.code || '';
+    $('netNote').hidden = !a.cellular;
+    $('restoreBanner').hidden = !a.fresh;
+    const list = (c.servers || []).slice().sort((x, y) => (y.last || 0) - (x.last || 0));
+    $('savedCard').hidden = !list.length;
+    $('saved').innerHTML = '';
+    for (const sv of list) {
+      const b = document.createElement('div'); b.className = 'srv'; b.setAttribute('role', 'button');
+      const nm = sv.name || sv.address;
+      const bridge = (sv.alts || []).some((x) => x.net === 'bridge');
+      b.innerHTML = `<span class="ic">${esc(nm.trim()[0] || 'К').toUpperCase()}</span><span class="t"><b>${esc(nm)}</b><small>${esc(sv.address)}${bridge ? ' · есть мост' : ''}</small></span><button class="x" aria-label="Убрать">×</button>`;
+      b.onclick = (e) => { if (e.target.closest('.x')) return; go(sv.address, sv.name, b); };
+      b.querySelector('.x').onclick = async () => {
+        if (!await ask({ title: 'Убрать сервер?', text: nm, ok: 'Убрать' })) return;
+        const cc = cfg(); cc.servers = (cc.servers || []).filter((x) => x.address !== sv.address); K.setConfig(JSON.stringify(cc)); render();
+      };
+      $('saved').appendChild(b);
+    }
+  }
+  function drawNear() {
+    const near = J(K.lan(), []);
+    $('nearCard').hidden = !near.length || $('main').hidden;
+    $('near').innerHTML = '';
+    for (const sv of near) {
+      const b = document.createElement('button'); b.className = 'srv';
+      b.innerHTML = `<span class="dot"></span><span class="t"><b>${esc(sv.name)}</b><small>${esc(sv.owner ? sv.owner + ' · ' : '')}${esc(sv.address)} · ${ACC_TXT[sv.access] || ''}</small></span>`;
+      b.onclick = () => go(sv.address, sv.name, b);
+      $('near').appendChild(b);
+    }
+  }
+  let busy = false;
+  function go(address, name, el) {
+    if (busy) return; busy = true;
+    $('err').textContent = ''; $('goBtn').disabled = true;
+    if (el) el.style.opacity = '.6';
+    K.connect(address, name || '');
+    setTimeout(() => { busy = false; $('goBtn').disabled = false; if (el) el.style.opacity = ''; }, 9000);
+  }
+  window.onConnectError = (msg) => { busy = false; $('goBtn').disabled = false; $('err').textContent = msg; render(); };
+  $('goBtn').onclick = () => { const a = $('addr').value.trim(); if (!a) { $('err').textContent = 'Впиши адрес сервера.'; return; } go(a, ''); };
+  $('addr').onkeydown = (e) => { if (e.key === 'Enter') $('goBtn').click(); };
+
+  // ник
+  const setName = (n) => { const c = cfg(); c.profile = Object.assign({}, c.profile || {}, { name: n }); K.setProfile(JSON.stringify(c.profile)); render(); drawNear(); };
+  $('nickGo').onclick = () => { const n = $('nick').value.trim().slice(0, 24); if (n) setName(n); };
+  $('nick').onkeydown = (e) => { if (e.key === 'Enter') $('nickGo').click(); };
+  $('rename').onclick = async () => {
+    const d = $('dlg'); $('dI').type = 'text';
+    const n = await ask({ title: 'Новый ник', text: 'Если ник уже занят другим аккаунтом на сервере, туда не пустит.', ok: 'Сохранить', password: true });
+    $('dI').type = 'password';
+    if (n && n.trim()) setName(n.trim().slice(0, 24));
+  };
+
+  // сохранения: в «Документы/Kentovka» и восстановление из .knt (в том числе с ПК)
+  $('saveAcc').onclick = async () => {
+    const withPw = await ask({ title: 'Сохранить аккаунт', text: 'Защитить сохранение паролем? Без пароля файлом сможет зайти любой, у кого он окажется.', ok: 'С паролем', cancel: 'Без пароля' });
+    let pw = '';
+    if (withPw) { pw = await ask({ title: 'Пароль для сохранения', text: 'Запомни его: без пароля файл не открыть.', ok: 'Сохранить', password: true }); if (pw == null) return; }
+    $('accNote').textContent = 'Сохраняю…'; K.saveAccount(pw || '');
+  };
+  window.onSaved = (where, err) => { $('accNote').textContent = err ? 'Не получилось: ' + err : 'Сохранено: ' + where; $('accNote').className = 'hint' + (err ? '' : ' ok'); };
+  const pick = () => K.pickSave();
+  $('restore0').onclick = $('restore1').onclick = $('restore2').onclick = pick;
+  $('restoreNo').onclick = () => { K.notFresh(); render(); };
+  window.onSavePicked = async (text, err) => {
+    if (!text) { if (err) await ask({ title: 'Не получилось', text: err, cancel: '' }); return; }
+    const f = J(text, null);
+    if (!f || f.magic !== 'kentovka-account') { await ask({ title: 'Это не сохранение Кентовки', text: 'Нужен файл .knt — его делает «Аккаунт и сеть» → «Сохранить аккаунт».', cancel: '' }); return; }
+    let pw = '';
+    for (;;) {
+      if (f.enc) { pw = await ask({ title: 'Пароль от сохранения', text: `«${f.name || 'аккаунт'}» защищено паролем.`, ok: 'Открыть', password: true }); if (pw == null) return; }
+      else if (!await ask({ title: 'Восстановить аккаунт?', text: `«${f.name || 'аккаунт'}» от ${new Date(f.at).toLocaleString('ru-RU')}. Аккаунт на этом телефоне заменится.`, ok: 'Восстановить' })) return;
+      const r = J(K.restore(text, pw || ''), {});
+      if (r.ok) break;
+      if (r.error === 'Неверный пароль' && f.enc) continue;
+      await ask({ title: 'Не получилось', text: r.error || 'ошибка', cancel: '' }); return;
+    }
+    render(); drawNear();
+    await ask({ title: 'Готово', text: 'Аккаунт перенесён. Серверы узнают тебя по ключу — под тем же ником.', cancel: '' });
+  };
+
+  render(); drawNear();
+  setInterval(drawNear, 2500);
+})();
+</script>
+</body>
+</html>

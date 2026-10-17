@@ -1,0 +1,1341 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Кентовка — друзья</title>
+<style>
+  :root {
+    --bg: #0a0b14; --panel: #11131f; --panel2: #171a2a; --panel3: #1e2236; --line: #262a40;
+    --text: #e6e8ff; --dim: #8a8fb3; --faint: #5d6286; --red: #ff4d6d; --green: #3cffa0; --yellow: #ffc94d;
+    --accent: #22e1ff; --accent2: #ff3ec8; --acc-rgb: 34,225,255; --acc2-rgb: 255,62,200; --on-accent: #070812; --glow: .7;
+    --font: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-display: Bahnschrift, "DIN Alternate", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+    --t: .18s;
+  }
+  [data-motion="off"] { --t: 0s; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 15px/1.45 var(--font); }
+  body { overflow: hidden; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
+  input { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; outline: none; transition: border-color var(--t), box-shadow var(--t); }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), calc(.18 * var(--glow))); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  svg.i { width: 18px; height: 18px; flex: none; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 9px 14px; border-radius: 9px; font: 700 13.5px/1 var(--font-display); letter-spacing: .02em;
+    color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent2)); transition: box-shadow var(--t), filter var(--t); white-space: nowrap; }
+  .btn:hover { box-shadow: 0 0 calc(18px * var(--glow)) rgba(var(--acc-rgb), calc(.5 * var(--glow))); }
+  .btn:disabled { opacity: .6; cursor: default; box-shadow: none; }
+  .btn.ghost { background: var(--panel3); color: var(--text); border: 1px solid var(--line); font-weight: 600; }
+  .btn.ghost:hover { border-color: var(--accent); box-shadow: none; }
+  .btn svg { width: 15px; height: 15px; }
+  .iconbtn { width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 8px; color: var(--dim); flex: none; transition: background var(--t), color var(--t); }
+  .iconbtn:hover { background: var(--panel3); color: var(--text); }
+  .iconbtn svg { width: 17px; height: 17px; }
+  /* ---------- раскладка как в Discord: слева лички, в середине «Друзья» или переписка, справа активные контакты ---------- */
+  #bgfx { position: fixed; inset: 0; z-index: -1; background-size: cover; background-position: center; filter: blur(var(--bg-blur, 0px)); transform: scale(1.04); }
+  #bgfx::after { content: ""; position: absolute; inset: 0; background: rgba(10, 11, 20, var(--bg-dim, .55)); }
+  body.hasbg { background: transparent; }
+  body.hasbg aside, body.hasbg .rpanel { background: color-mix(in srgb, var(--panel) 82%, transparent); }
+  body.hasbg main { background: color-mix(in srgb, var(--bg) 55%, transparent); }
+  .wrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); height: 100%; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .sfind { margin: 10px 10px 6px; }
+  .sfind input { width: 100%; padding: 7px 10px; font-size: 13px; background: var(--bg); }
+  .nav { display: flex; align-items: center; gap: 12px; margin: 2px 8px; padding: 9px 10px; border-radius: 8px; color: var(--dim); font-weight: 600; text-align: left; width: calc(100% - 16px); transition: background var(--t), color var(--t); }
+  .nav:hover { background: var(--panel2); color: var(--text); }
+  .nav.on { background: var(--panel3); color: var(--text); }
+  .nav svg { width: 22px; height: 22px; }
+  .nav .sp { flex: 1; }
+  .sec { padding: 14px 18px 6px; color: var(--faint); font-size: 11.5px; font-weight: 700; letter-spacing: .03em; display: flex; align-items: center; }
+  .sec span { flex: 1; }
+  .sec button { color: var(--faint); width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; } .sec button:hover { color: var(--text); }
+  .sec button svg { width: 16px; height: 16px; }
+  .list { flex: 1; overflow-y: auto; padding: 0 8px 10px; min-height: 0; }
+  .dm { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer; position: relative; color: var(--dim); transition: background var(--t), color var(--t); }
+  .dm:hover { background: var(--panel2); color: var(--text); }
+  .dm.on { background: var(--panel3); color: var(--text); }
+  .dm .who { flex: 1; min-width: 0; }
+  .dm .nm { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dm .st { font-size: 11.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dm.unread .nm { color: var(--text); }
+  .dm .x { width: 22px; height: 22px; display: none; place-items: center; border-radius: 6px; color: var(--faint); flex: none; }
+  .dm .x svg { width: 14px; height: 14px; }
+  .dm:hover .x { display: grid; } .dm .x:hover { color: var(--text); background: var(--line); }
+  .dm:hover .badge { display: none; }
+  .ava { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; flex: none; color: #fff; font: 700 14px/1 var(--font-display); background-size: cover; background-position: center; position: relative; }
+  .ava.big { width: 40px; height: 40px; font-size: 16px; }
+  .ava .dot { position: absolute; right: -2px; bottom: -2px; width: 12px; height: 12px; border-radius: 50%; background: var(--faint); border: 2.5px solid var(--panel); }
+  .ava .dot.online { background: var(--green); box-shadow: 0 0 calc(8px * var(--glow)) var(--green); }
+  .ava .dot.voice { background: var(--accent); box-shadow: 0 0 calc(8px * var(--glow)) var(--accent); }
+  .badge { min-width: 19px; height: 19px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center; font: 700 11px/1 var(--font-display); color: var(--on-accent); flex: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .badge.red { background: var(--red); color: #fff; }
+  /* моя панель внизу слева — как на серверах */
+  .mepanel { display: flex; align-items: center; gap: 2px; padding: 8px; background: var(--bg); border-top: 1px solid var(--line); flex: none; }
+  .mepanel .mebtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 4px 6px; border-radius: 8px; text-align: left; }
+  .mepanel .mebtn:hover { background: var(--panel2); }
+  .mepanel .mebtn b { display: block; font: 700 14px/1.2 var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mepanel .mebtn span { display: block; font-size: 11.5px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mepanel .iconbtn.off { color: var(--red); }
+  /* главная «Друзья» */
+  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
+  .topbar { height: 52px; padding: 0 10px 0 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex: none; min-width: 0; }
+  .topbar .ttl { display: flex; align-items: center; gap: 8px; font: 700 15px var(--font-display); padding-right: 10px; margin-right: 4px; border-right: 1px solid var(--line); }
+  .topbar .ttl svg { width: 20px; height: 20px; color: var(--dim); }
+  .tab { padding: 5px 11px; border-radius: 7px; color: var(--dim); font-weight: 600; font-size: 14px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .tab:hover { background: var(--panel2); color: var(--text); }
+  .tab.on { background: var(--panel3); color: var(--text); }
+  .tab.add { color: var(--on-accent); background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .tab.add.on { background: transparent; color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+  .topbar .sp { flex: 1; }
+  .homebody { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 340px; min-height: 0; }
+  .flist { overflow-y: auto; padding: 14px 18px 18px 22px; min-height: 0; }
+  .flist .search { width: 100%; margin-bottom: 14px; background: var(--bg); }
+  .fcap { font-size: 11.5px; font-weight: 700; letter-spacing: .03em; color: var(--dim); padding: 4px 2px 10px; border-bottom: 1px solid var(--line); }
+  .frow { display: flex; align-items: center; gap: 12px; padding: 10px 8px; margin: 0 -8px; border-radius: 10px; cursor: pointer; border-top: 1px solid transparent; position: relative; }
+  .frow + .frow::before { content: ""; position: absolute; left: 8px; right: 8px; top: -1px; height: 1px; background: var(--line); }
+  .frow:hover { background: var(--panel2); } .frow:hover::before, .frow:hover + .frow::before { opacity: 0; }
+  .frow .who { flex: 1; min-width: 0; }
+  .frow .nm { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+  .frow .nm small { font-weight: 500; color: var(--faint); font-size: 12.5px; display: none; }
+  .frow:hover .nm small { display: inline; }
+  .frow .st { font-size: 13px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .frow .st .hl { color: var(--accent); }
+  .frow .acts { display: flex; gap: 8px; }
+  .rbtn { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--panel2); color: var(--dim); transition: color var(--t), background var(--t); }
+  .frow:hover .rbtn { background: var(--bg); }
+  .rbtn:hover { color: var(--text); } .rbtn.ok:hover { color: var(--green); } .rbtn.no:hover { color: var(--red); }
+  .rbtn svg { width: 18px; height: 18px; }
+  .nobody { margin: 60px auto; text-align: center; color: var(--dim); max-width: 360px; }
+  .nobody .big { width: 72px; height: 72px; margin: 0 auto 14px; border-radius: 22px; display: grid; place-items: center; color: var(--on-accent);
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); box-shadow: 0 0 calc(28px * var(--glow)) rgba(var(--acc-rgb), calc(.45 * var(--glow))); }
+  .nobody .big svg { width: 34px; height: 34px; }
+  .addbox h2 { margin: 6px 0 6px; font: 700 18px var(--font-display); }
+  .addbox p { margin: 0 0 14px; color: var(--dim); font-size: 14px; }
+  .addform { display: flex; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+  .addform:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), calc(.18 * var(--glow))); }
+  .addform input, .addform input:focus { flex: 1; border: 0; background: none; box-shadow: none; padding: 6px 0; min-width: 0; }
+  #addErr { font-size: 13px; margin-top: 8px; color: var(--red); min-height: 18px; }
+  #addErr.ok { color: var(--green); }
+  .mine { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .mine code { font: 600 14px var(--font-display); color: var(--accent); letter-spacing: .03em; padding: 3px 8px; border-radius: 6px; background: var(--panel2); }
+  .mine + .mine { margin-top: 10px; padding-top: 0; border-top: 0; }
+  .mine:empty { display: none; }
+  .near h3 { font: 700 12px var(--font-display); color: var(--dim); margin: 22px 0 8px; letter-spacing: .02em; }
+  .near .nrow { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--panel2); margin-bottom: 6px; }
+  .near .nrow span { flex: 1; min-width: 0; } .near .nrow small { color: var(--dim); margin-left: 6px; }
+  .mine button { font-size: 12.5px; color: var(--dim); text-decoration: underline dotted; } .mine button:hover { color: var(--text); }
+  .rpanel { border-left: 1px solid var(--line); padding: 16px; overflow-y: auto; min-height: 0; }
+  .rpanel h3 { margin: 4px 0 14px; font: 700 18px var(--font-display); }
+  .act { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: border-color var(--t); }
+  .act:hover { border-color: rgba(var(--acc-rgb), .45); }
+  .act .ah { display: flex; align-items: center; gap: 10px; }
+  .act .ah b { display: block; font-weight: 700; } .act .ah span { display: block; font-size: 12.5px; color: var(--dim); }
+  .act .ab { margin-top: 10px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; background: var(--bg); font-size: 13px; }
+  .act .ab svg { width: 20px; height: 20px; color: var(--accent); flex: none; }
+  .act .ab b { display: block; } .act .ab span { color: var(--dim); font-size: 12px; }
+  .ractempty { text-align: center; color: var(--dim); font-size: 13.5px; padding: 16px 6px; }
+  .ractempty b { display: block; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+  @media (max-width: 1100px) { .homebody { grid-template-columns: minmax(0, 1fr); } .rpanel { display: none; } }
+  @media (max-width: 760px) { .topbar .ttl span { display: none; } .tab { padding: 5px 8px; } }
+  /* мини-профиль */
+  .card { position: fixed; z-index: 40; width: 300px; border-radius: 14px; overflow: hidden; background: var(--panel); border: 1px solid var(--line);
+    box-shadow: 0 18px 44px rgba(0,0,0,.55), 0 0 calc(24px * var(--glow)) rgba(var(--acc-rgb), calc(.12 * var(--glow))); animation: cpop .14s ease-out; }
+  @keyframes cpop { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+  [data-motion="off"] .card { animation: none; }
+  .card .ban { height: 70px; }
+  .card .cav { margin: -36px 0 0 14px; width: 76px; height: 76px; font-size: 28px; border: 5px solid var(--panel); box-sizing: content-box; }
+  .card .cav .dot { width: 16px; height: 16px; border-width: 4px; right: 0; bottom: 0; }
+  .card .cb { padding: 8px 16px 16px; }
+  .card .cn { font: 700 20px/1.2 var(--font-display); }
+  .card .cs { font-size: 13px; color: var(--dim); margin-top: 2px; }
+  .card .cbio { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: var(--bg); font-size: 13.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .card .cbio i { display: block; font-style: normal; font-size: 11px; font-weight: 700; color: var(--faint); letter-spacing: .03em; margin-bottom: 4px; }
+  .card .cacts { display: flex; gap: 8px; margin-top: 12px; } .card .cacts .btn { flex: 1; }
+  /* меню «⋮» */
+  .menu { position: fixed; z-index: 45; min-width: 210px; padding: 6px; border-radius: 12px; background: var(--panel); border: 1px solid rgba(var(--acc-rgb), .35);
+    box-shadow: 0 14px 34px rgba(0,0,0,.55); animation: cpop .12s ease-out; }
+  .menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 8px; text-align: left; font-size: 14px; }
+  .menu button:hover { background: var(--panel3); } .menu button svg { width: 16px; height: 16px; color: var(--dim); }
+  .menu button.danger { color: var(--red); } .menu button.danger svg { color: var(--red); }
+  .menu button:disabled { opacity: .45; cursor: default; }
+  .menu hr { border: 0; border-top: 1px solid var(--line); margin: 5px 4px; }
+  #chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  /* группы */
+  .gava { position: relative; background: none !important; }
+  .gava .gsub { position: absolute; width: 70%; height: 70%; font-size: 10px; border: 2px solid var(--panel); }
+  .gava .gsub:first-child { left: 0; top: 0; } .gava .gsub:last-child { right: 0; bottom: 0; }
+  .gbody { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 240px; min-height: 0; }
+  .gcol { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .gmem { border-left: 1px solid var(--line); padding: 14px 10px; overflow-y: auto; min-height: 0; }
+  .gmem .fcap { margin: 0 6px 8px; } .gmem .dm.off { opacity: .55; }
+  @media (max-width: 900px) { .gbody { grid-template-columns: minmax(0, 1fr); } .gmem { display: none; } }
+  .gm { display: flex; gap: 12px; margin-top: 14px; } .gm.cont { margin-top: 2px; }
+  .gm .ava { width: 38px; height: 38px; flex: none; } .gpad { width: 38px; flex: none; }
+  .gb { min-width: 0; } .gh b { font-weight: 700; margin-right: 8px; } .gh span { font-size: 11.5px; color: var(--faint); }
+  .gt { white-space: pre-wrap; overflow-wrap: anywhere; } .gt a { color: var(--accent); }
+  .gcbar { flex: none; display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--line); background: linear-gradient(180deg, rgba(var(--acc-rgb), .12), rgba(var(--acc2-rgb), .05)); }
+  .gcbar .cinfo { flex: 1; min-width: 0; } .gcbar .cinfo b { display: block; font: 700 15px var(--font-display); } .gcbar .cinfo span { font-size: 12.5px; color: var(--dim); }
+  .gcavs { display: flex; } .gcavs .ava { width: 36px; height: 36px; border: 2px solid var(--panel); margin-left: -8px; transition: box-shadow var(--t); } .gcavs .ava:first-child { margin-left: 0; }
+  .gcavs .ava.talking { box-shadow: 0 0 0 2px var(--green), 0 0 calc(12px * var(--glow)) var(--green); z-index: 1; }
+  .gdlg .kd-b { white-space: normal; }
+  .gdlg .gname { width: 100%; margin: 10px 0 4px; }
+  .gdlg .gpick { max-height: 300px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
+  .gdlg .gp { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; cursor: pointer; }
+  .gdlg .gp:hover { background: var(--panel2); } .gdlg .gp input { width: 18px; height: 18px; accent-color: var(--accent); }
+  @media (max-width: 600px) { .wrap { grid-template-columns: minmax(0, 1fr); } .wrap.inchat aside { display: none; } .wrap:not(.inchat) main { display: none; } .wrap.home main { display: flex; } .wrap.home aside { display: none; } .back { display: inline-grid !important; } }
+  .back { display: none; }
+
+
+
+  .chead { height: 60px; padding: 0 12px 0 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 12px; flex: none; }
+  .chead .nm { font: 700 17px/1.1 var(--font-display); }
+  .chead .st { font-size: 12.5px; color: var(--dim); }
+  .chead .sp { flex: 1; }
+  #msgs { flex: 1; overflow-y: auto; padding: 16px 20px 8px; min-height: 0; }
+  .m { display: flex; flex-direction: column; max-width: 72%; margin: 3px 0; }
+  .m .b { padding: 8px 12px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .m.me { margin-left: auto; align-items: flex-end; }
+  .m.me .b { background: linear-gradient(135deg, rgba(var(--acc-rgb), .2), rgba(var(--acc2-rgb), .14)); border-color: rgba(var(--acc-rgb), .35); }
+  .m .t { font-size: 11px; color: var(--faint); margin: 2px 6px 4px; }
+  .m .b a { color: var(--accent); }
+  .day { text-align: center; color: var(--faint); font-size: 12px; margin: 14px 0 6px; }
+  .inv { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--panel2); border: 1px solid rgba(var(--acc-rgb), .5);
+    box-shadow: 0 0 calc(18px * var(--glow)) rgba(var(--acc-rgb), calc(.15 * var(--glow))); }
+  .inv svg { width: 26px; height: 26px; color: var(--accent); }
+  .inv b { display: block; font-family: var(--font-display); }
+  .inv span { color: var(--dim); font-size: 12.5px; }
+  form.send { display: flex; gap: 8px; margin: 8px 16px 16px; padding: 6px 6px 6px 14px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); }
+  form.send:focus-within { border-color: rgba(var(--acc-rgb), .6); box-shadow: 0 0 calc(16px * var(--glow)) rgba(var(--acc-rgb), calc(.15 * var(--glow))); }
+  form.send input, form.send input:focus, form.send input:focus-visible { flex: 1; border: 0; background: none; padding: 8px 0; box-shadow: none; outline: none; min-width: 0; }
+  .hello { margin: auto; text-align: center; color: var(--dim); max-width: 420px; padding: 20px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 18px; padding: 0; margin: 0; border: 0; background: transparent; box-shadow: none; cursor: pointer; --v: 50%; }
+  input[type=range]:focus { box-shadow: none; }
+  input[type=range]::-webkit-slider-runnable-track { height: 5px; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)) 0 0 / var(--v) 100% no-repeat, var(--panel3); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; margin-top: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(var(--acc-rgb), .35); }
+
+  /* звонок 1 на 1 — полоса сверху переписки */
+  #callBar { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, rgba(var(--acc-rgb), .12), rgba(var(--acc2-rgb), .05)); }
+  #callBar .cava { position: relative; }
+  #callBar .cava .ava { width: 48px; height: 48px; font-size: 19px; }
+  #callBar.ringing .cava::after, #callBar.talk .cava::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
+  #callBar.ringing .cava::after { animation: kring 1.2s ease-out infinite; }
+  #callBar.talk .cava::after { opacity: 1; box-shadow: 0 0 calc(14px * var(--glow)) var(--accent); }
+  @keyframes kring { from { transform: scale(.9); opacity: .9; } to { transform: scale(1.35); opacity: 0; } }
+  [data-motion="off"] #callBar .cava::after { animation: none; opacity: .8; }
+  #callBar .cinfo { flex: 1; min-width: 0; }
+  #callBar .cinfo b { display: block; font: 700 16px/1.2 var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #callBar .cinfo span { font-size: 12.5px; color: var(--dim); }
+  #callBar .cvol { display: flex; align-items: center; gap: 6px; color: var(--dim); }
+  #callBar .cvol input { width: 90px; }
+  .cbtn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--panel3); color: var(--text); flex: none; transition: background var(--t), box-shadow var(--t); }
+  .cbtn:hover { background: var(--line); }
+  .cbtn svg { width: 19px; height: 19px; }
+  .cbtn.off { background: rgba(255, 77, 109, .2); color: var(--red); }
+  .cbtn.red { background: var(--red); color: #fff; }
+  .cbtn.red:hover { box-shadow: 0 0 calc(16px * var(--glow)) rgba(255, 77, 109, .6); }
+  .cbtn.green { background: var(--green); color: #04130b; }
+  .cbtn.green:hover { box-shadow: 0 0 calc(16px * var(--glow)) rgba(60, 255, 160, .6); }
+  .callme { color: var(--green) !important; }
+  .callme:disabled { color: var(--faint) !important; cursor: default; }
+  .talking .ava { box-shadow: 0 0 0 2px var(--green), 0 0 calc(12px * var(--glow)) var(--green); }
+  /* «Голос подключён» внизу списка — как в Discord: ты всё ещё в голосовом канале на сервере */
+  #vpanel { border-top: 1px solid var(--line); padding: 10px 10px 12px; background: var(--panel); display: flex; align-items: center; gap: 6px; }
+  #vpanel .vinfo { flex: 1; min-width: 0; text-align: left; padding: 4px 6px; border-radius: 8px; }
+  #vpanel .vinfo:hover { background: var(--panel2); }
+  #vpanel .vinfo b { display: block; color: var(--green); font: 700 13px/1.2 var(--font-display); }
+  #vpanel .vinfo span { display: block; font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #vpanel .iconbtn.off { color: var(--red); }
+  /* файлы в переписке */
+  .fv { display: flex; flex-direction: column; gap: 6px; max-width: min(420px, 100%); margin: 2px 0; }
+  .m.me .fv { align-self: flex-end; }
+  .fimg { max-width: 100%; max-height: 320px; border-radius: 10px; cursor: zoom-in; border: 1px solid var(--line); object-fit: contain; background: var(--panel2); }
+  .fvid { max-width: 100%; max-height: 320px; border-radius: 10px; background: #000; }
+  .faud { width: 100%; }
+  .fcard { position: relative; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); min-width: 240px; overflow: hidden; }
+  .fcard .fic svg { width: 26px; height: 26px; color: var(--accent); }
+  .fcard .fnm { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .fcard .fnm b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fcard .fnm small { color: var(--dim); font-size: 12px; }
+  .fcard .fbar { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--panel3); }
+  .fcard .fbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .3s; }
+  .send .attach { flex: none; }
+  .drop { outline: 2px dashed var(--accent); outline-offset: -6px; }
+</style>
+</head>
+<body>
+<div id="bgfx" hidden></div>
+<div class="wrap home" id="wrap">
+  <aside>
+    <div class="sfind"><input id="dmFind" placeholder="Найти беседу" spellcheck="false" aria-label="Найти беседу"></div>
+    <button class="nav on" id="navHome" type="button"><span class="ic"></span><span>Друзья</span><span class="sp"></span><span class="badge red" id="navBadge" hidden></span></button>
+    <div class="sec"><span>ЛИЧНЫЕ СООБЩЕНИЯ</span><button type="button" id="newGroup" title="Создать группу из друзей"></button></div>
+    <div class="list" id="list"></div>
+    <div id="vpanel" hidden></div>
+    <div class="mepanel" id="mePanel"></div>
+  </aside>
+  <main><div id="callBar" hidden></div><div id="chat"></div></main>
+</div>
+<script>var atHome = false; (function () { var h = function () { try { window.kentovkaApp.friends.isHome().then(function (v) { if (atHome !== !!v) { atHome = !!v; var c = document.getElementById('closeBtn'); if (c) c.hidden = atHome; } }).catch(function () {}); } catch (e) {} }; window.__homeCheck = h; h(); try { window.kentovkaApp.friends.onShown(function () { h(); }); } catch (e) {} })();</script>
+<script>var myIce = []; (function upd() { try { window.kentovkaApp.friends.ice().then(function (l) { myIce = l || []; }).catch(function () {}); } catch (e) {} setTimeout(upd, 60000); })();</script>
+<script>
+(async () => {
+  const $ = (id) => document.getElementById(id);
+  const A = window.kentovkaApp;
+  const F = A.friends;
+  const P = (d) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const I = {
+    users: P('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'),
+    send: P('<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>'),
+    invite: P('<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>'),
+    trash: P('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>'),
+    server: P('<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>'),
+    phone: P('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>'),
+    hang: P('<path d="M10.7 13.3a16 16 0 0 0 3.4 2.4l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 4.2 2 2 0 0 1 5.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L9 9.8"/><path d="M22 2L2 22"/>'),
+    mic: P('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/>'),
+    micOff: P('<path d="M2 2l20 20M9 9v1a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.7"/><path d="M17 16.9A7 7 0 0 1 5 12v-2m14 0v2c0 .8-.1 1.5-.4 2.2M12 19v3"/>'),
+    head: P('<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/>'),
+    headOff: P('<path d="M2 2l20 20"/><path d="M3 18v-6a9 9 0 0 1 14.6-7M21 12v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-4M3 19a2 2 0 0 0 2 2h1v-6H3z"/>'),
+    vol: P('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>'),
+    x: P('<path d="M18 6L6 18M6 6l12 12"/>'),
+    clip: P('<path d="M21.4 11.1l-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5"/>'),
+    file: P('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'),
+    down: P('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'),
+    screen: P('<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>'),
+    stop: P('<rect x="6" y="6" width="12" height="12" rx="2"/>'),
+    full: P('<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>'),
+    left: P('<path d="M15 18l-6-6 6-6"/>'),
+    chat: P('<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'),
+    more: P('<circle cx="12" cy="5" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="19" r="1.4" fill="currentColor"/>'),
+    check: P('<path d="M20 6L9 17l-5-5"/>'),
+    user: P('<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/>'),
+    speaker: P('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>'),
+    copy: P('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
+  };
+  // ---------- файлы и скрины в переписке ----------
+  const fsize = (n) => (n < 1024 ? n + ' Б' : n < 1048576 ? (n / 1024).toFixed(0) + ' КБ' : n < 1073741824 ? (n / 1048576).toFixed(1) + ' МБ' : (n / 1073741824).toFixed(2) + ' ГБ');
+  const fileUrl = (id) => 'kapp://app/dmfile/' + id;
+  function fileView(file) {
+    const box = document.createElement('div'); box.className = 'fv';
+    const isImg = /^image\//.test(file.mime || ''), isVid = /^video\//.test(file.mime || ''), isAud = /^audio\//.test(file.mime || '');
+    let t = null, last = '';
+    const draw = (info) => {
+      const k = JSON.stringify(info); if (k === last) return; last = k;
+      box.innerHTML = '';
+      if (info && info.done && isImg) {
+        const img = document.createElement('img'); img.className = 'fimg'; img.src = fileUrl(file.id); img.alt = file.name; img.title = file.name + ' — открыть';
+        img.onclick = () => F.fileOpen(file.id); img.onload = () => { const m = document.getElementById('msgs'); if (m && m.scrollHeight - m.scrollTop - m.clientHeight < 400) m.scrollTop = m.scrollHeight; };
+        box.appendChild(img);
+      } else if (info && info.done && (isVid || isAud)) {
+        const v = document.createElement(isVid ? 'video' : 'audio'); v.controls = true; v.preload = 'metadata'; v.src = fileUrl(file.id); v.className = isVid ? 'fvid' : 'faud';
+        box.appendChild(v);
+      }
+      const card = document.createElement('div'); card.className = 'fcard';
+      const ic = document.createElement('span'); ic.className = 'fic'; ic.innerHTML = I.file;
+      const nm = document.createElement('div'); nm.className = 'fnm'; nm.innerHTML = '<b></b><small></small>';
+      nm.firstChild.textContent = file.name; nm.firstChild.title = file.name;
+      const sub = !info ? 'нет данных' : info.done ? fsize(file.size) + (info.mine ? ' · у тебя' : '')
+        : info.loading ? 'качаю… ' + Math.round(info.progress * 100) + '%' : info.offline ? fsize(file.size) + ' · отправителя нет в сети' : fsize(file.size);
+      nm.lastChild.textContent = sub;
+      card.append(ic, nm);
+      const bt = (ic2, title, fn) => { const b = document.createElement('button'); b.className = 'iconbtn'; b.innerHTML = ic2; b.title = title; b.onclick = fn; card.appendChild(b); };
+      if (info && info.done) { bt(I.down, 'Сохранить…', () => F.fileSave(file.id)); if (!isImg) bt(I.invite, 'Открыть', () => F.fileOpen(file.id)); }
+      else if (info && !info.loading) bt(I.down, 'Скачать', async () => { await F.fileFetch(file.id); poll(); });
+      if (info && info.loading) { const bar = document.createElement('div'); bar.className = 'fbar'; bar.innerHTML = '<i></i>'; bar.firstChild.style.width = Math.round(info.progress * 100) + '%'; card.appendChild(bar); }
+      if (!(info && info.done && isImg)) box.appendChild(card);
+    };
+    const poll = async () => {
+      clearTimeout(t);
+      if (!box.isConnected && last) return;
+      const info = await F.fileInfo(file.id).catch(() => null);
+      draw(info);
+      if (info && !info.done) t = setTimeout(poll, info.loading ? 400 : 2500);
+    };
+    poll();
+    return box;
+  }
+  // скрепка, Ctrl+V скрина и перетаскивание файла в беседу
+  function attachTo(form, inp, target, dropZone) {
+    const fi = document.createElement('input'); fi.type = 'file'; fi.multiple = true; fi.hidden = true;
+    const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'iconbtn attach'; ab.innerHTML = I.clip; ab.title = 'Прикрепить файл или скрин (можно Ctrl+V или перетащить)';
+    ab.onclick = () => fi.click();
+    const sendFiles = async (files) => {
+      for (const file of files) {
+        if (!file) continue;
+        const r = await F.sendFile(target, file, '').catch((e) => ({ error: e.message }));
+        if (r && r.error) kSay(r.error);
+      }
+      lastRendered = ''; refresh();
+    };
+    fi.onchange = () => { const l = [...fi.files]; fi.value = ''; sendFiles(l); };
+    inp.addEventListener('paste', (e) => { const files = [...(e.clipboardData && e.clipboardData.files || [])]; if (files.length) { e.preventDefault(); sendFiles(files); } });
+    const z = dropZone || form;
+    z.addEventListener('dragover', (e) => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); z.classList.add('drop'); } });
+    z.addEventListener('dragleave', (e) => { if (e.target === z) z.classList.remove('drop'); });
+    z.addEventListener('drop', (e) => { z.classList.remove('drop'); const files = [...(e.dataTransfer && e.dataTransfer.files || [])]; if (files.length) { e.preventDefault(); sendFiles(files); } });
+    form.prepend(ab, fi);
+  }
+  // ---------- вид — тот же, что в приложении (цвета, свечение, свой фон) ----------
+  const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  function applyTheme(th) {
+    th = Object.assign({ accent: '#22e1ff', accent2: '#ff3ec8', glow: 0.7, motion: true, bgDim: 0.55, bgBlur: 0 }, th || {});
+    const hex = (h, d) => (/^#[0-9a-f]{6}$/i.test(h || '') ? h : d);
+    const a1 = hex(th.accent, '#22e1ff'), a2 = hex(th.accent2, '#ff3ec8'), r = document.documentElement.style;
+    r.setProperty('--accent', a1); r.setProperty('--accent2', a2); r.setProperty('--acc-rgb', hexRgb(a1).join(',')); r.setProperty('--acc2-rgb', hexRgb(a2).join(','));
+    r.setProperty('--glow', String(Number.isFinite(+th.glow) ? +th.glow : 0.7));
+    const [R, G, B] = hexRgb(a1); r.setProperty('--on-accent', (0.299 * R + 0.587 * G + 0.114 * B) / 255 > 0.55 ? '#070812' : '#ffffff');
+    r.setProperty('--bg-dim', String(th.bgDim)); r.setProperty('--bg-blur', (th.bgBlur || 0) + 'px');
+    document.documentElement.dataset.motion = th.motion === false ? 'off' : 'on';
+    lookBg = th.bg === 'custom';
+    syncBg();
+  }
+  let lookBg = false, bgUrl = null;
+  function syncBg() { const on = lookBg && !!bgUrl; $('bgfx').hidden = !on; document.body.classList.toggle('hasbg', on); if (on) $('bgfx').style.backgroundImage = `url("${bgUrl}")`; }
+  async function loadBg() { const b = await A.getBg().catch(() => null); if (bgUrl) URL.revokeObjectURL(bgUrl); bgUrl = b && b.data ? URL.createObjectURL(new Blob([b.data], { type: b.mime })) : null; syncBg(); }
+  applyTheme(await A.getTheme().catch(() => null));
+  loadBg();
+  A.onTheme && A.onTheme((t) => applyTheme(t));
+  A.onBg && A.onBg(() => loadBg());
+
+  const COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899'];
+  const colorOf = (t) => { let h = 0; for (const c of t || '?') h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
+  const ava = (f, withDot, cls) => {
+    const d = document.createElement('div'); d.className = 'ava' + (cls ? ' ' + cls : '');
+    if (f.avatar) d.style.backgroundImage = `url("${f.avatar}")`; else { d.style.background = colorOf(f.name); d.textContent = (f.name || '?')[0].toUpperCase(); }
+    if (withDot) { const dot = document.createElement('i'); dot.className = 'dot' + (f.online ? (f.presence && (f.presence.voice || f.presence.call) ? ' voice' : ' online') : ''); d.appendChild(dot); }
+    return d;
+  };
+  const seen = (t) => {
+    if (!t) return 'не в сети';
+    const m = Math.round((Date.now() - t) / 60000);
+    return m < 2 ? 'был только что' : m < 60 ? `был ${m} мин назад` : m < 1440 ? `был ${Math.round(m / 60)} ч назад` : `был ${Math.round(m / 1440)} дн назад`;
+  };
+  const ago = (t) => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 1 ? 'только что' : m < 60 ? `${m} мин.` : `${Math.floor(m / 60)} ч. ${m % 60 ? (m % 60) + ' мин.' : ''}`.trim(); };
+  // чем занят друг: на сервере, в голосе, в звонке
+  const doing = (f) => {
+    if (!f.online) return seen(f.seen);
+    const p = f.presence;
+    if (!p) return 'в сети';
+    if (p.call) return 'в звонке';
+    if (p.voice) return `в голосе «${p.voice}»` + (p.server ? ` · ${p.server}` : '');
+    if (p.server) return `на сервере «${p.server}»`;
+    return 'в сети';
+  };
+
+  const me = await F.me();
+  let list = [], groups = [], cur = new URLSearchParams(location.search).get('focus');
+  let gcall = null; // звонок в группе: { gid, cid, parts:Set, peers:Map(id -> { pc, audio, pend }), mic, muted, deaf, t0 }
+  const gcalls = new Map(); // gid -> { cid, parts:Set } — звонки, которые идут в группах (даже если я не в них)
+  let gLast = '';
+  let call = null; // звонок 1 на 1 (см. ниже)
+  let shown = false; // друзья сейчас на экране (страница живёт и спрятанной — ради входящих звонков)
+  let tab = 'online'; // В сети / Все / Ожидание / Добавить
+  let homeFind = '', dmFind = '';
+  const addNote = { text: '', ok: false, draft: '' }; // «Заявка отправлена…» не пропадает при обновлении списка
+  // открытые лички (слева) — можно закрыть крестиком, как в Discord
+  const ls = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+  let openDms = ls.get('openDms', []);
+  const saveOpen = () => ls.set('openDms', openDms);
+  const openDm = (id) => {
+    if (!openDms.includes(id)) { openDms.unshift(id); saveOpen(); }
+    cur = id;
+    if (groups.some((g) => g.id === id)) { F.groupRead(id); F.groupCall(id, { k: 'who', cid: '' }); } else F.read(id); // группа: узнаём, не идёт ли там звонок
+    render();
+  };
+  const closeDm = (id) => { openDms = openDms.filter((x) => x !== id); saveOpen(); if (cur === id) cur = null; render(); };
+  const goHome = () => { cur = null; render(); };
+  async function refresh() {
+    [list, groups] = await Promise.all([F.list(), F.groups()]);
+    for (const f of list) if (f.status === 'friend' && f.unread && !openDms.includes(f.id)) openDms.unshift(f.id); // новое сообщение — личка сама появляется слева
+    for (const g of groups) if ((g.unread || !ls.get('seenGroups', []).includes(g.id)) && !openDms.includes(g.id)) openDms.unshift(g.id);
+    ls.set('seenGroups', groups.map((g) => g.id));
+    openDms = openDms.filter((id) => list.some((f) => f.id === id && f.status === 'friend') || groups.some((g) => g.id === id));
+    saveOpen();
+    if (cur && !list.find((f) => f.id === cur && f.status === 'friend') && !groups.some((g) => g.id === cur)) cur = null;
+    render();
+  }
+  function render() { renderSide(); renderMain(); }
+  function renderSide() {
+    const pend = list.filter((f) => f.status === 'incoming').length;
+    $('navBadge').hidden = !pend; $('navBadge').textContent = pend;
+    $('navHome').classList.toggle('on', !cur);
+    $('wrap').classList.toggle('home', !cur); $('wrap').classList.toggle('inchat', !!cur);
+    const box = $('list'); box.innerHTML = '';
+    const q = dmFind.toLowerCase();
+    const dms = openDms.map((id) => list.find((f) => f.id === id) || groups.find((g) => g.id === id)).filter(Boolean).filter((f) => !q || (f.members ? gTitle(f) : f.name).toLowerCase().includes(q));
+    if (!dms.length) box.insertAdjacentHTML('beforeend', `<div class="ractempty" style="padding:12px 6px">${q ? 'Ничего не нашлось' : 'Тут появятся беседы. Нажми на друга, чтобы написать.'}</div>`);
+    for (const f of dms) {
+      if (f.members) { box.appendChild(groupRow(f)); continue; }
+      const row = document.createElement('div'); row.className = 'dm' + (cur === f.id ? ' on' : '') + (f.unread ? ' unread' : ''); row.dataset.id = f.id;
+      const who = document.createElement('div'); who.className = 'who';
+      who.innerHTML = '<div class="nm"></div><div class="st"></div>';
+      who.firstChild.textContent = f.name; who.lastChild.textContent = call && call.id === f.id ? 'звонок' : f.online ? doing(f) : '';
+      if (!who.lastChild.textContent) who.lastChild.remove();
+      row.append(ava(f, true), who);
+      if (f.unread) { const b = document.createElement('span'); b.className = 'badge red'; b.textContent = f.unread > 99 ? '99+' : f.unread; row.appendChild(b); }
+      const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.title = 'Закрыть беседу'; x.innerHTML = I.x;
+      x.onclick = (e) => { e.stopPropagation(); closeDm(f.id); };
+      row.appendChild(x);
+      row.onclick = () => openDm(f.id);
+      row.oncontextmenu = (e) => { e.preventDefault(); friendMenu(f, { left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY }); };
+      box.appendChild(row);
+    }
+  }
+  function groupRow(g) {
+    const row = document.createElement('div'); row.className = 'dm grp' + (cur === g.id ? ' on' : '') + (g.unread ? ' unread' : ''); row.dataset.id = g.id;
+    const who = document.createElement('div'); who.className = 'who'; who.innerHTML = '<div class="nm"></div><div class="st"></div>';
+    who.firstChild.textContent = gTitle(g);
+    const live = gcalls.get(g.id);
+    who.lastChild.textContent = live ? `звонок · ${live.parts.size}` : `${g.members.length} участник${g.members.length < 5 ? 'а' : 'ов'}`;
+    row.append(gIcon(g), who);
+    if (g.unread) { const b = document.createElement('span'); b.className = 'badge red'; b.textContent = g.unread > 99 ? '99+' : g.unread; row.appendChild(b); }
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.title = 'Закрыть беседу'; x.innerHTML = I.x;
+    x.onclick = (e) => { e.stopPropagation(); closeDm(g.id); };
+    row.appendChild(x);
+    row.onclick = () => openDm(g.id);
+    row.oncontextmenu = (e) => { e.preventDefault(); groupMenu(g, { left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY }); };
+    return row;
+  }
+  let lastRendered = '';
+  async function renderMain() {
+    if (!cur) { lastRendered = ''; gLast = ''; renderHome(); return; }
+    const g = groups.find((x) => x.id === cur);
+    if (g) return renderGroup(g);
+    gLast = '';
+    return renderDm();
+  }
+  // ---------- главная «Друзья»: В сети / Все / Ожидание / Добавить в друзья ----------
+  function renderHome() {
+    const main = $('chat');
+    const keepFocus = document.activeElement && document.activeElement.id;
+    main.innerHTML = '';
+    const top = document.createElement('div'); top.className = 'topbar';
+    top.innerHTML = `<span class="ttl">${I.users}<span>Друзья</span></span>`;
+    const pend = list.filter((f) => f.status === 'incoming' || f.status === 'outgoing').length;
+    for (const [id, label] of [['online', 'В сети'], ['all', 'Все'], ['pending', 'Ожидание'], ['add', 'Добавить в друзья']]) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'tab' + (id === 'add' ? ' add' : '') + (tab === id ? ' on' : ''); b.dataset.tab = id;
+      b.textContent = label;
+      if (id === 'pending' && list.some((f) => f.status === 'incoming')) { const n = document.createElement('span'); n.className = 'badge red'; n.textContent = list.filter((f) => f.status === 'incoming').length; b.appendChild(n); }
+      else if (id === 'pending' && !pend) b.hidden = true;
+      b.onclick = () => { tab = id; renderHome(); if (id === 'add') setTimeout(() => $('addIp') && $('addIp').focus(), 0); };
+      top.appendChild(b);
+    }
+    const sp = document.createElement('span'); sp.className = 'sp'; top.appendChild(sp);
+    const close = document.createElement('button'); close.className = 'iconbtn'; close.id = 'closeBtn'; close.title = 'Закрыть друзей (Esc) — обратно на сервер'; close.innerHTML = I.x;
+    close.onclick = () => F.close();
+    close.hidden = atHome; // на главной друзья — сама страница, закрывать нечего
+    top.appendChild(close);
+    const body = document.createElement('div'); body.className = 'homebody';
+    const left = document.createElement('div'); left.className = 'flist';
+    body.append(left, renderActive());
+    main.append(top, body);
+    if (tab === 'add') { renderAdd(left); return; }
+    const s = document.createElement('input'); s.className = 'search'; s.id = 'homeFind'; s.placeholder = 'Поиск'; s.value = homeFind; s.spellcheck = false;
+    s.oninput = () => { homeFind = s.value; const pos = s.selectionStart; renderHome(); const n = $('homeFind'); if (n) { n.focus(); n.setSelectionRange(pos, pos); } };
+    left.appendChild(s);
+    const q = homeFind.toLowerCase();
+    let rows = tab === 'pending' ? list.filter((f) => f.status === 'incoming' || f.status === 'outgoing') : list.filter((f) => f.status === 'friend' && (tab === 'all' || f.online));
+    rows = rows.filter((f) => !q || f.name.toLowerCase().includes(q));
+    rows.sort((a, b) => (b.status === 'incoming') - (a.status === 'incoming') || b.online - a.online || a.name.localeCompare(b.name));
+    const cap = document.createElement('div'); cap.className = 'fcap';
+    cap.textContent = (tab === 'online' ? 'В СЕТИ' : tab === 'all' ? 'ВСЕ ДРУЗЬЯ' : 'ОЖИДАНИЕ') + ' — ' + rows.length;
+    left.appendChild(cap);
+    if (!rows.length) {
+      const e = document.createElement('div'); e.className = 'nobody';
+      const friends = list.filter((f) => f.status === 'friend').length;
+      e.innerHTML = `<div class="big">${I.users}</div><div></div>`;
+      e.lastChild.textContent = q ? 'Никого не нашлось.' : tab === 'online' ? (friends ? 'Сейчас никого из друзей нет в сети.' : 'Пока никого нет. Добавь друга — вкладка «Добавить в друзья».') : tab === 'all' ? 'Пока никого нет. Добавь друга по его адресу.' : 'Заявок нет.';
+      left.appendChild(e);
+    }
+    for (const f of rows) left.appendChild(friendRow(f));
+    if (keepFocus === 'homeFind') { const n = $('homeFind'); if (n) n.focus(); }
+  }
+  function friendRow(f) {
+    const row = document.createElement('div'); row.className = 'frow'; row.dataset.id = f.id;
+    const av = ava(f, f.status === 'friend', 'big');
+    av.onclick = (e) => { e.stopPropagation(); openCard(f, av); };
+    const who = document.createElement('div'); who.className = 'who';
+    who.innerHTML = '<div class="nm"><span></span><small></small></div><div class="st"></div>';
+    who.querySelector('.nm span').textContent = f.name;
+    who.querySelector('.nm small').textContent = f.ip || '';
+    const st = who.querySelector('.st');
+    if (f.status === 'incoming') st.textContent = 'Входящая заявка в друзья';
+    else if (f.status === 'outgoing') st.textContent = 'Исходящая заявка — ждём, пока примет';
+    else st.textContent = doing(f);
+    who.querySelector('.nm span').onclick = (e) => { e.stopPropagation(); openCard(f, av); };
+    const acts = document.createElement('div'); acts.className = 'acts';
+    const btn = (cls, ic, title, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'rbtn ' + cls; b.innerHTML = ic; b.title = title; b.onclick = (e) => { e.stopPropagation(); fn(b); }; acts.appendChild(b); return b; };
+    if (f.status === 'incoming') {
+      btn('ok', I.check, 'Принять', async () => { await F.respond(f.id, true); await refresh(); openDm(f.id); });
+      btn('no', I.x, 'Отклонить', async () => { await F.respond(f.id, false); refresh(); });
+    } else if (f.status === 'outgoing') {
+      btn('no', I.x, 'Отменить заявку', async () => { await F.remove(f.id); refresh(); });
+    } else {
+      btn('', I.chat, 'Написать', () => openDm(f.id));
+      btn('', I.more, 'Ещё', (b) => friendMenu(f, b.getBoundingClientRect()));
+    }
+    row.append(av, who, acts);
+    row.onclick = () => { if (f.status === 'friend') openDm(f.id); };
+    row.oncontextmenu = (e) => { e.preventDefault(); if (f.status === 'friend') friendMenu(f, { left: e.clientX, top: e.clientY, right: e.clientX, bottom: e.clientY }); };
+    return row;
+  }
+  function renderAdd(box) {
+    const d = document.createElement('div'); d.className = 'addbox';
+    d.innerHTML = `<h2>Добавить в друзья</h2><p>Впиши код Кентовки друга (<b>KNT-4F7A2C</b>) или его адрес в локальной сети. Можно с портом: <b>26.12.34.56:8444</b>.</p>
+      <form class="addform" id="addForm" autocomplete="off"><input id="addIp" placeholder="Код KNT-… или адрес, например 26.12.34.56" spellcheck="false" aria-label="Код или адрес друга"><button class="btn" id="addBtn" type="submit">Отправить заявку</button></form>
+      <div id="addErr"></div><div class="mine" id="myCode"></div><div class="mine" id="mine"></div><div class="near" id="near"></div>`;
+    box.appendChild(d);
+    const err0 = d.querySelector('#addErr'); err0.textContent = addNote.text; err0.className = addNote.ok ? 'ok' : '';
+    d.querySelector('#addIp').value = addNote.draft || '';
+    d.querySelector('#addIp').oninput = (e) => { addNote.draft = e.target.value; };
+    if (A.onLan && !window.__nearHook) { window.__nearHook = true; A.onLan(() => { if (window.__nearRedraw) window.__nearRedraw(); }); }
+    if (me.code) {
+      const mc = d.querySelector('#myCode'); mc.append('Твой код Кентовки:');
+      const c = document.createElement('code'); c.textContent = me.code;
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = 'копировать';
+      b.onclick = () => { A.copy(me.code); b.textContent = 'скопировано'; setTimeout(() => (b.textContent = 'копировать'), 1500); };
+      mc.append(c, b);
+    }
+    // кто рядом в локальной сети — добавить в один клик
+    const near = d.querySelector('#near');
+    const drawNear = async () => {
+      if (!near.isConnected || !A.lan) return;
+      const { peers } = await A.lan();
+      const known = new Set(list.map((f) => f.id));
+      const fresh = peers.filter((p) => !known.has(p.id));
+      near.innerHTML = '';
+      if (!fresh.length) return;
+      const h = document.createElement('h3'); h.textContent = 'Рядом в сети'; near.appendChild(h);
+      for (const p of fresh) {
+        const r = document.createElement('div'); r.className = 'nrow';
+        const n = document.createElement('span'); n.innerHTML = '<b></b> <small></small>'; n.querySelector('b').textContent = p.name || 'Кент'; n.querySelector('small').textContent = p.code + ' · ' + p.ip;
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = 'Добавить';
+        b.onclick = async () => { b.disabled = true; const res = await F.add(p.code); b.textContent = res.error ? 'Не вышло' : res.accepted ? 'Друзья!' : 'Заявка ушла'; if (res.error) { addNote.text = res.error; const e = $('addErr'); if (e) e.textContent = res.error; } list = await F.list(); renderSide(); };
+        r.append(n, b); near.appendChild(r);
+      }
+    };
+    drawNear(); window.__nearRedraw = drawNear; if (A.lanScan) A.lanScan(); setTimeout(drawNear, 1500);
+    const mine = d.querySelector('#mine');
+    const addrs = (me.addresses && me.addresses.length ? me.addresses : me.all || []).slice(0, 3);
+    if (addrs.length) {
+      mine.append('Твой адрес для друзей:');
+      for (const a of addrs) {
+        const c = document.createElement('code'); c.textContent = a;
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = 'копировать';
+        b.onclick = () => { A.copy(a); b.textContent = 'скопировано'; setTimeout(() => (b.textContent = 'копировать'), 1500); };
+        mine.append(c, b);
+      }
+    } else mine.textContent = 'Локальная сеть не найдена. Подключись к сети, где вы с друзьями, и открой друзей заново.';
+    d.querySelector('#addForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const ip = $('addIp').value.trim(); if (!ip) return;
+      const say = (text, ok) => { addNote.text = text; addNote.ok = ok; const err = $('addErr'); if (err) { err.textContent = text; err.className = ok ? 'ok' : ''; } };
+      say('Стучимся…', false);
+      $('addBtn').disabled = true;
+      const r = await F.add(ip);
+      if ($('addBtn')) $('addBtn').disabled = false;
+      if (r.error) { say(r.error, false); return; }
+      say(r.already ? 'Вы уже друзья.' : r.accepted ? 'Теперь вы друзья!' : `Заявка отправлена ${r.name || ''}. Ждём, пока примет.`, true);
+      addNote.draft = ''; if ($('addIp')) $('addIp').value = '';
+      list = await F.list(); renderSide();
+    };
+  }
+  // ---------- «Активные контакты»: кто из друзей на сервере, в голосе, в звонке ----------
+  function renderActive() {
+    const p = document.createElement('div'); p.className = 'rpanel';
+    p.innerHTML = '<h3>Активные контакты</h3>';
+    const act = list.filter((f) => f.status === 'friend' && f.online && f.presence && (f.presence.server || f.presence.voice || f.presence.call));
+    if (!act.length) {
+      p.insertAdjacentHTML('beforeend', '<div class="ractempty"><b>Пока что тут тихо…</b>Когда друзья зайдут на сервер или в голосовой канал, это будет видно здесь.</div>');
+      return p;
+    }
+    for (const f of act) {
+      const c = document.createElement('div'); c.className = 'act';
+      const h = document.createElement('div'); h.className = 'ah';
+      const w = document.createElement('div'); w.innerHTML = '<b></b><span></span>';
+      w.firstChild.textContent = f.name;
+      w.lastChild.textContent = (f.presence.call ? 'В звонке' : f.presence.voice ? 'В голосе' : 'На сервере') + (f.presence.since ? ' — ' + ago(f.presence.since) : '');
+      const av = ava(f, true); h.append(av, w);
+      c.appendChild(h);
+      if (f.presence.server || f.presence.voice) {
+        const b = document.createElement('div'); b.className = 'ab';
+        b.innerHTML = (f.presence.voice ? I.speaker : I.server) + '<div><b></b><span></span></div>';
+        b.querySelector('b').textContent = f.presence.voice ? `«${f.presence.voice}»` : `«${f.presence.server}»`;
+        b.querySelector('span').textContent = f.presence.voice ? (f.presence.server ? 'голосовой канал · ' + f.presence.server : 'голосовой канал') : 'сервер';
+        c.appendChild(b);
+      }
+      c.onclick = () => openCard(f, av);
+      p.appendChild(c);
+    }
+    return p;
+  }
+  // ---------- мини-профиль друга: открывается отовсюду (список, лички, переписка, активные контакты) ----------
+  function closeFloat() { document.querySelectorAll('.card, .menu').forEach((x) => x.remove()); }
+  function place(el, r) {
+    document.body.appendChild(el);
+    const w = el.offsetWidth, h = el.offsetHeight;
+    let x = r.right + 10; if (x + w > innerWidth - 8) x = Math.max(8, r.left - w - 10);
+    let y = r.top; if (y + h > innerHeight - 8) y = Math.max(8, innerHeight - h - 8);
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+  }
+  function openCard(f, anchor) {
+    closeFloat();
+    const c = document.createElement('div'); c.className = 'card';
+    const ban = document.createElement('div'); ban.className = 'ban';
+    const c1 = f.color || colorOf(f.name), c2 = f.color2 || c1;
+    ban.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+    const av = ava(f, f.status === 'friend', 'cav');
+    const b = document.createElement('div'); b.className = 'cb';
+    b.innerHTML = '<div class="cn"></div><div class="cs"></div>';
+    b.querySelector('.cn').textContent = f.name;
+    b.querySelector('.cs').textContent = (f.status === 'friend' ? doing(f) : f.status === 'incoming' ? 'хочет в друзья' : 'заявка отправлена') + (f.ip ? ' · ' + f.ip : '');
+    if (f.bio) { const bio = document.createElement('div'); bio.className = 'cbio'; bio.innerHTML = '<i>О СЕБЕ</i>'; bio.append(f.bio); b.appendChild(bio); }
+    if (f.status === 'friend') {
+      const acts = document.createElement('div'); acts.className = 'cacts';
+      const w = document.createElement('button'); w.className = 'btn'; w.innerHTML = I.chat + '<span>Написать</span>'; w.onclick = () => { closeFloat(); openDm(f.id); };
+      const cl = document.createElement('button'); cl.className = 'btn ghost'; cl.innerHTML = I.phone + '<span>Позвонить</span>'; cl.disabled = !f.online || !!call;
+      cl.onclick = () => { closeFloat(); openDm(f.id); startCall(f); };
+      acts.append(w, cl); b.appendChild(acts);
+    }
+    c.append(ban, av, b);
+    place(c, anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor);
+  }
+  function friendMenu(f, r) {
+    closeFloat();
+    const m = document.createElement('div'); m.className = 'menu';
+    const item = (ic, label, fn, cls, dis) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = ic + '<span></span>'; b.lastChild.textContent = label; if (cls) b.className = cls; b.disabled = !!dis; b.onclick = () => { closeFloat(); fn(); }; m.appendChild(b); };
+    item(I.user, 'Профиль', () => openCard(f, r));
+    item(I.chat, 'Написать', () => openDm(f.id));
+    item(I.phone, 'Позвонить', () => { openDm(f.id); startCall(f); }, '', !f.online || !!call);
+    item(I.invite, 'Позвать на сервер', async () => { const r2 = await F.invite(f.id); if (r2 && r2.error) kSay(r2.error); else flash('Приглашение отправлено'); });
+    if (f.ip) item(I.copy, 'Копировать адрес', () => { A.copy(f.ip); flash('Адрес скопирован'); });
+    if (openDms.includes(f.id)) item(I.x, 'Закрыть беседу', () => closeDm(f.id));
+    m.appendChild(document.createElement('hr'));
+    item(I.trash, 'Удалить из друзей', async () => { if (await kAsk(`Удалить ${f.name} из друзей? Переписка тоже удалится.`, 'Удалить', { danger: true })) { await F.remove(f.id); if (cur === f.id) cur = null; closeDm(f.id); refresh(); } }, 'danger');
+    place(m, r);
+  }
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.card, .menu, .rbtn, .ava, .nm span')) closeFloat(); });
+  // ---------- переписка с другом ----------
+  async function renderDm() {
+    const main = $('chat');
+    const f = list.find((x) => x.id === cur && x.status === 'friend');
+    if (!f) { cur = null; return renderHome(); }
+    const msgs = await F.messages(f.id);
+    if (f.unread && shown) F.read(f.id); // спрятаны — не отмечаем прочитанным, пусть горит значок
+    const meNow = await F.me();
+    const key = f.id + ':' + msgs.length + ':' + msgs.filter((m) => m.delivered).length + ':' + f.online + ':' + JSON.stringify(f.presence) + ':' + (meNow.server ? meNow.server.address : '') + ':' + (call ? call.id + call.state : '');
+    if (key === lastRendered) return;
+    const keepInput = main.querySelector('#msgInput') && main.querySelector('#msgInput').value;
+    const sameFriend = lastRendered.startsWith(f.id + ':');
+    lastRendered = key;
+    main.innerHTML = '';
+    const head = document.createElement('div'); head.className = 'chead';
+    const who = document.createElement('div'); who.style.cursor = 'pointer'; who.title = 'Профиль';
+    who.innerHTML = '<div class="nm"></div><div class="st"></div>';
+    who.firstChild.textContent = f.name; who.lastChild.textContent = f.online ? doing(f) : seen(f.seen) + ' — сообщения дойдут, когда появится';
+    const sp = document.createElement('span'); sp.className = 'sp';
+    const inv = document.createElement('button'); inv.className = 'btn ghost'; inv.innerHTML = I.invite + '<span>Позвать на сервер</span>';
+    inv.disabled = !meNow.server;
+    inv.title = meNow.server ? `Позвать на «${meNow.server.name}»` : 'Сначала зайди на сервер или создай свой';
+    inv.onclick = async () => { const r = await F.invite(f.id); if (r && r.error) kSay(r.error); };
+    const back = document.createElement('button'); back.className = 'iconbtn back'; back.title = 'К друзьям'; back.innerHTML = I.left;
+    back.onclick = goHome;
+    const cb = document.createElement('button'); cb.className = 'iconbtn callme'; cb.innerHTML = I.phone;
+    cb.disabled = !f.online || !!call;
+    cb.title = call ? 'Ты уже в звонке' : f.online ? `Позвонить ${f.name}` : 'Друг не в сети — позвонить не выйдет';
+    cb.onclick = () => startCall(f);
+    const pr = document.createElement('button'); pr.className = 'iconbtn'; pr.title = 'Профиль'; pr.innerHTML = I.user;
+    const mo = document.createElement('button'); mo.className = 'iconbtn'; mo.title = 'Ещё'; mo.innerHTML = I.more;
+    mo.onclick = () => friendMenu(f, mo.getBoundingClientRect());
+    const cl = document.createElement('button'); cl.className = 'iconbtn'; cl.title = 'Закрыть беседу'; cl.innerHTML = I.x;
+    cl.onclick = () => closeDm(f.id);
+    const hav = ava(f, true);
+    pr.onclick = () => openCard(f, pr); who.onclick = () => openCard(f, hav); hav.style.cursor = 'pointer'; hav.onclick = () => openCard(f, hav);
+    head.append(back, hav, who, sp, cb, inv, pr, mo, cl);
+    const box = document.createElement('div'); box.id = 'msgs';
+    let lastDay = '';
+    for (const m of msgs) {
+      const day = new Date(m.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      if (day !== lastDay) { lastDay = day; const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.appendChild(d); }
+      const row = document.createElement('div'); row.className = 'm' + (m.from === 'me' ? ' me' : '');
+      if (m.invite) {
+        const c = document.createElement('div'); c.className = 'inv';
+        const t = document.createElement('div'); t.style.flex = '1';
+        t.innerHTML = '<b></b><span></span>';
+        t.firstChild.textContent = m.from === 'me' ? `Ты позвал на «${m.invite.name || m.invite.address}»` : `Зовёт на «${m.invite.name || m.invite.address}»`;
+        t.lastChild.textContent = m.invite.address;
+        c.insertAdjacentHTML('beforeend', I.server); c.appendChild(t);
+        if (m.from !== 'me') {
+          const go = document.createElement('button'); go.className = 'btn'; go.textContent = 'Зайти';
+          go.onclick = async () => { go.disabled = true; go.textContent = 'Подключаюсь…'; const r = await F.join(m.invite.address, m.invite.name); if (r && r.error) { kSay(r.error); } go.disabled = false; go.textContent = 'Зайти'; };
+          c.appendChild(go);
+        }
+        row.appendChild(c);
+      } else {
+        if (m.file) row.appendChild(fileView(m.file));
+        if (m.text) {
+          const b = document.createElement('div'); b.className = 'b';
+          m.text.split(/(https?:\/\/\S+)/g).forEach((part, i) => {
+            if (i % 2) { const a = document.createElement('a'); a.href = part; a.textContent = part; a.target = '_blank'; b.appendChild(a); } else b.appendChild(document.createTextNode(part));
+          });
+          row.appendChild(b);
+        }
+      }
+      const t = document.createElement('div'); t.className = 't';
+      t.textContent = new Date(m.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + (m.from === 'me' ? (m.delivered ? ' · доставлено' : ' · ждёт друга') : '');
+      row.appendChild(t);
+      box.appendChild(row);
+    }
+    if (!msgs.length) box.innerHTML = `<div class="ractempty" style="margin:auto">Это начало вашей переписки с ${f.name.replace(/[<>&]/g, '')}.<br>Напиши первым — или позови на сервер.</div>`;
+    const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
+    const inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать ${f.name}`;
+    const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
+    form.append(inp, sb);
+    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; await F.send(f.id, v); refresh(); };
+    attachTo(form, inp, { id: f.id }, main);
+    main.append(head, box, form);
+    box.scrollTop = box.scrollHeight;
+    if (sameFriend && keepInput) inp.value = keepInput;
+    if (shown) inp.focus();
+  }
+  // ---------- моя панель внизу слева ----------
+  let myProf = await A.getProfile().catch(() => null) || {};
+  function renderMe() {
+    const p = $('mePanel'); p.innerHTML = '';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mebtn'; b.title = 'Мой профиль';
+    const av = ava({ name: myProf.name || 'Я', avatar: myProf.avatar }, false);
+    const w = document.createElement('div'); w.style.minWidth = '0'; w.innerHTML = '<b></b><span></span>';
+    w.firstChild.textContent = myProf.name || 'Я';
+    w.lastChild.textContent = gcall ? 'в звонке группы' : call && call.state === 'live' ? 'в звонке' : voice ? 'в голосе' : 'в сети';
+    b.append(av, w);
+    b.onclick = () => openCard({ name: myProf.name || 'Я', avatar: myProf.avatar, bio: myProf.bio, color: myProf.color, color2: myProf.color2, status: 'me', online: true }, b);
+    const st = gcall ? { muted: gcall.muted, deaf: gcall.deaf } : call && call.state !== 'ringing' ? { muted: call.muted, deaf: call.deaf } : voice ? { muted: voice.muted, deaf: voice.deaf } : null;
+    const m = document.createElement('button'); m.className = 'iconbtn' + (st && st.muted ? ' off' : ''); m.innerHTML = st && st.muted ? I.micOff : I.mic; m.title = st ? (st.muted ? 'Включить микрофон' : 'Выключить микрофон') : 'Микрофон (когда ты в голосе или в звонке)';
+    m.onclick = () => { if (gcall) gMute(!gcall.muted); else if (call && call.state !== 'ringing') setMuted(!call.muted); else if (voice) F.voiceCmd('mute'); };
+    const d = document.createElement('button'); d.className = 'iconbtn' + (st && st.deaf ? ' off' : ''); d.innerHTML = st && st.deaf ? I.headOff : I.head; d.title = st ? (st.deaf ? 'Включить звук' : 'Выключить звук') : 'Звук (когда ты в голосе или в звонке)';
+    d.onclick = () => { if (gcall) gDeaf(!gcall.deaf); else if (call && call.state !== 'ringing') setDeaf(!call.deaf); else if (voice) F.voiceCmd('deaf'); };
+    p.append(b, m, d);
+  }
+
+  $('navHome').querySelector('.ic').innerHTML = I.users;
+  $('navHome').onclick = goHome;
+  $('newGroup').innerHTML = P('<path d="M12 5v14M5 12h14"/>'); $('newGroup').onclick = () => groupDialog(null);
+  $('dmFind').oninput = () => { dmFind = $('dmFind').value; renderSide(); };
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('dialog[open]')) return;
+    if (document.querySelector('.card, .menu')) { closeFloat(); return; }
+    if (!atHome) F.close();
+  });
+
+
+  // ---------- «Голос подключён»: ты в голосовом канале на сервере, пока смотришь друзей ----------
+  let voice = await F.voice();
+  function renderVoice() {
+    const box = $('vpanel');
+    box.hidden = !voice;
+    if (!voice) return;
+    box.innerHTML = '';
+    const info = document.createElement('button'); info.className = 'vinfo'; info.title = 'Вернуться в звонок';
+    info.innerHTML = '<b>Голос подключён</b><span></span>';
+    info.lastChild.textContent = [voice.ch, voice.server].filter(Boolean).join(' · ');
+    info.onclick = () => F.voiceCmd('open');
+    const m = document.createElement('button'); m.className = 'iconbtn' + (voice.muted ? ' off' : ''); m.innerHTML = voice.muted ? I.micOff : I.mic; m.title = voice.muted ? 'Включить микрофон' : 'Выключить микрофон';
+    m.onclick = () => F.voiceCmd('mute');
+    const d = document.createElement('button'); d.className = 'iconbtn' + (voice.deaf ? ' off' : ''); d.innerHTML = voice.deaf ? I.headOff : I.head; d.title = voice.deaf ? 'Включить звук' : 'Выключить звук';
+    d.onclick = () => F.voiceCmd('deaf');
+    const l = document.createElement('button'); l.className = 'iconbtn'; l.innerHTML = I.hang; l.title = 'Выйти из голосового канала'; l.style.color = 'var(--red)';
+    l.onclick = () => F.voiceCmd('leave');
+    box.append(info, m, d, l);
+  }
+  F.onVoice((v) => { voice = v; renderVoice(); renderMe(); });
+  renderVoice(); renderMe();
+
+  // ---------- звонок 1 на 1 ----------
+  // сигналы идут через связь с другом (порт 8444), звук — напрямую между вашими компами (WebRTC, по локальной сети)
+  const VS = Object.assign({ nsMode: 'ultra', nsStrength: 80, ec: true, agc: true, micGain: 1, masterVol: 1, gate: false, gateDb: -50 }, (await A.voiceSettings().catch(() => null)) || {});
+  const cid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
+  let actx = null;
+  const ctx = () => { if (!actx || actx.state === 'closed') actx = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' }); if (actx.state !== 'running') actx.resume().catch(() => {}); return actx; };
+  // гудки: исходящий — длинные, входящий — двойной звонок
+  let toneT = null;
+  function tone(kind) {
+    clearInterval(toneT); toneT = null;
+    if (!kind) return;
+    const beep = (f, dur, at = 0) => { const c = ctx(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = f; g.gain.value = 0;
+      g.gain.setTargetAtTime(0.08, c.currentTime + at, 0.01); g.gain.setTargetAtTime(0, c.currentTime + at + dur, 0.02); o.connect(g).connect(c.destination); o.start(c.currentTime + at); o.stop(c.currentTime + at + dur + 0.2); };
+    const play = kind === 'out' ? () => beep(425, 1) : () => { beep(660, 0.25); beep(880, 0.25, 0.32); };
+    play(); toneT = setInterval(play, kind === 'out' ? 4000 : 2000);
+  }
+  const report = () => F.callState(call ? { id: call.id, name: call.name, state: call.state } : null);
+  const fmt = (ms) => { const t = Math.floor(ms / 1000); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  let tickT = null;
+  function renderCall() {
+    const bar = $('callBar');
+    bar.hidden = !call;
+    clearInterval(tickT);
+    renderMe(); renderSide();
+    if (!call) { bar.innerHTML = ''; bar.className = ''; return; }
+    const f = list.find((x) => x.id === call.id) || { name: call.name };
+    bar.className = call.state === 'live' ? 'talk' : 'ringing';
+    bar.innerHTML = '';
+    const av = document.createElement('div'); av.className = 'cava'; av.appendChild(ava(f));
+    const info = document.createElement('div'); info.className = 'cinfo';
+    info.innerHTML = '<b></b><span></span>';
+    info.firstChild.textContent = f.name;
+    const st = info.lastChild;
+    const setSt = () => { st.textContent = call.state === 'live' ? 'В звонке · ' + fmt(Date.now() - call.t0) + (call.remote && call.remote.muted ? ' · у друга выключен микрофон' : '')
+      : call.state === 'connecting' ? 'Соединяемся…' : call.dir === 'out' ? 'Звоним…' : 'Звонит тебе'; };
+    setSt(); if (call.state === 'live') tickT = setInterval(() => call && setSt(), 1000);
+    bar.append(av, info);
+    const btn = (cls, ic, title, fn) => { const b = document.createElement('button'); b.className = 'cbtn ' + cls; b.innerHTML = ic; b.title = title; b.onclick = fn; bar.appendChild(b); return b; };
+    if (call.dir === 'in' && call.state === 'ringing') {
+      btn('green', I.phone, 'Принять', () => acceptCall());
+      btn('red', I.hang, 'Отклонить', () => endCall('decline'));
+      return;
+    }
+    if (call.state === 'live' || call.state === 'connecting') {
+      const vol = document.createElement('label'); vol.className = 'cvol'; vol.title = 'Громкость друга';
+      vol.innerHTML = I.vol; const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 100; r.step = 5; r.value = Math.round((call.vol ?? 1) * 100);
+      const fill = () => r.style.setProperty('--v', r.value + '%'); fill();
+      r.oninput = () => { fill(); call.vol = r.value / 100; if (call.audio) call.audio.volume = Math.min(1, call.vol * (VS.masterVol ?? 1)); };
+      vol.appendChild(r); bar.appendChild(vol);
+      btn(call.muted ? 'off' : '', call.muted ? I.micOff : I.mic, call.muted ? 'Включить микрофон' : 'Выключить микрофон', () => setMuted(!call.muted));
+      btn(call.deaf ? 'off' : '', call.deaf ? I.headOff : I.head, call.deaf ? 'Включить звук' : 'Выключить звук', () => setDeaf(!call.deaf));
+    }
+    btn('red', I.hang, call.state === 'ringing' ? 'Отменить звонок' : 'Завершить звонок', () => endCall(call.state === 'ringing' && call.dir === 'out' ? 'cancel' : 'end'));
+  }
+  const say = (id, k, data, cidOverride) => F.call(id, { k, cid: cidOverride || (call ? call.cid : ''), data });
+  function setState(st) { if (!call) return; call.state = st; if (st === 'live') { call.t0 = call.t0 || Date.now(); tone(null); } report(); renderCall(); lastRendered = ''; renderMain(); }
+  async function leaveVoiceIfNeeded() {
+    if (!voice) return true;
+    if (!(await kAsk(`Ты в голосовом канале «${voice.ch || 'голос'}». Выйти из него, чтобы созвониться?`, 'Выйти и позвонить'))) return false;
+    F.voiceCmd('leave'); voice = null; renderVoice();
+    return true;
+  }
+  async function startCall(f) {
+    if (call) return;
+    if (gcall) { kSay('Сначала выйди из звонка в группе.'); return; }
+    if (!(await leaveVoiceIfNeeded())) return;
+    call = { id: f.id, name: f.name, cid: cid(), dir: 'out', state: 'ringing', muted: false, deaf: false, vol: 1 };
+    if (!(await say(f.id, 'ring'))) { call = null; kSay(`${f.name} не в сети — позвонить не получится.`); return; }
+    tone('out'); report(); renderCall(); lastRendered = ''; renderMain();
+    const my = call;
+    call.timer = setTimeout(() => { if (call === my && call.state === 'ringing') endCall('cancel', 'Не ответил'); }, 45000);
+  }
+  async function acceptCall() {
+    if (!call || call.dir !== 'in' || call.state !== 'ringing') return;
+    if (voice) { F.voiceCmd('leave'); voice = null; renderVoice(); } // принял звонок — выходим из голосового канала
+    clearTimeout(call.timer);
+    setState('connecting');
+    try { await openPc(false); } catch (e) { endCall('end', 'Микрофон не включился: ' + e.message); return; }
+    say(call.id, 'accept');
+  }
+  function endCall(kind = 'end', note) {
+    if (!call) return;
+    const c = call; call = null;
+    tone(null); clearTimeout(c.timer);
+    if (kind) say(c.id, kind === 'cancel' ? 'end' : kind, null, c.cid);
+    try { c.pc && c.pc.close(); } catch {}
+    if (c.audio) { c.audio.srcObject = null; c.audio.remove(); }
+    if (c.mic) teardown(c.mic);
+    report(); renderCall(); lastRendered = ''; renderMain();
+    if (note) flash(note);
+    if (c.state === 'live') { tone(null); beepEnd(); }
+  }
+  const beepEnd = () => { try { const c = ctx(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 480; g.gain.value = 0.06; g.gain.setTargetAtTime(0, c.currentTime + 0.25, 0.03); o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime + 0.5); } catch {} };
+  function flash(t) {
+    const d = document.createElement('div'); d.textContent = t;
+    Object.assign(d.style, { position: 'fixed', left: '50%', bottom: '24px', transform: 'translateX(-50%)', background: 'var(--panel3)', border: '1px solid var(--line)', padding: '10px 16px', borderRadius: '10px', zIndex: 50, maxWidth: '90%' });
+    document.body.appendChild(d); setTimeout(() => d.remove(), 3500);
+  }
+  function setMuted(v) { if (!call) return; call.muted = v; applyMic(); say(call.id, 'state', { muted: call.muted || call.deaf }); renderCall(); }
+  function setDeaf(v) { if (!call) return; call.deaf = v; if (call.audio) call.audio.muted = v; applyMic(); say(call.id, 'state', { muted: call.muted || call.deaf }); renderCall(); }
+  const applyMic = () => { if (call && call.mic) call.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !call.muted && !call.deaf)); };
+
+  // микрофон с тем же шумодавом, что на серверах (настройки голоса общие)
+  async function openMic() {
+    const devs = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+    const mic = VS.micLabel ? (devs.find((d) => d.kind === 'audioinput' && d.label === VS.micLabel) || {}).deviceId : undefined;
+    const c = { channelCount: 1, sampleRate: 48000, autoGainControl: VS.agc !== false, noiseSuppression: VS.nsMode === 'browser', deviceId: mic ? { exact: mic } : undefined };
+    let raw;
+    try { raw = await navigator.mediaDevices.getUserMedia({ audio: { ...c, echoCancellation: VS.ec !== false ? 'all' : false } }); }
+    catch (e) { if (e.name !== 'TypeError' && e.name !== 'OverconstrainedError') throw e; raw = await navigator.mediaDevices.getUserMedia({ audio: { ...c, echoCancellation: VS.ec !== false, deviceId: undefined } }); }
+    const x = ctx(), nodes = [];
+    const mono = () => { const g = x.createGain(); g.channelCount = 1; g.channelCountMode = 'explicit'; g.channelInterpretation = 'discrete'; nodes.push(g); return g; };
+    let last = x.createMediaStreamSource(raw); nodes.push(last);
+    const m0 = mono(); last.connect(m0); last = m0;
+    const TUNE = { rnnoise: { delay: 992, lo: 0.12, hi: 0.4 }, gtcrn: { delay: 1530, lo: 0.45, hi: 0.8 }, dfn: { delay: 1952, lo: 0.3, hi: 0.6 }, ultra: { delay: 2944, lo: 0.3, hi: 0.6 } };
+    if (TUNE[VS.nsMode]) {
+      try {
+        const lib = await import('/ns/index.js');
+        const rn = async () => { const bin = await lib.loadRnnoise({ url: '/ns/rnnoise.wasm', simdUrl: '/ns/rnnoise_simd.wasm' }); await x.audioWorklet.addModule('/ns/rnnoise/workletProcessor.js'); return new lib.RnnoiseWorkletNode(x, { wasmBinary: bin, maxChannels: 1 }); };
+        const df = async () => { const mod = await WebAssembly.compile(await (await fetch('/df/df_bg.wasm')).arrayBuffer()); await x.audioWorklet.addModule('/df-shim.js'); await x.audioWorklet.addModule('/df/worklet.js');
+          return new AudioWorkletNode(x, 'deepfilternet-processor', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 1, channelCountMode: 'explicit', channelInterpretation: 'discrete', processorOptions: { wasmModule: mod, attenuationLimit: 100 } }); };
+        const gt = async () => { const bin = await lib.loadGtcrn({ url: '/ns/gtcrn.wasm' }); await x.audioWorklet.addModule('/ns/gtcrn/workletProcessor.js'); return new lib.GtcrnWorkletNode(x, { wasmBinary: bin, maxChannels: 1 }); };
+        let n;
+        if (VS.nsMode === 'ultra') { const a = await df(), b = await rn(); last.connect(a); a.connect(b); nodes.push(a, b); n = b; }
+        else { n = await ({ rnnoise: rn, dfn: df, gtcrn: gt })[VS.nsMode](); last.connect(n); nodes.push(n); }
+        await x.audioWorklet.addModule('/voice-fx.js');
+        const T = TUNE[VS.nsMode];
+        const keep = Math.min(0.9, Math.max(0, (100 - (VS.nsStrength ?? 80)) / 100 * 2.5));
+        const bl = new AudioWorkletNode(x, 'k-blend', { numberOfInputs: 2, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 1, channelCountMode: 'explicit', processorOptions: { delay: T.delay, lo: T.lo, hi: T.hi, keep } });
+        n.connect(bl, 0, 0); last.connect(bl, 0, 1); nodes.push(bl); last = bl;
+      } catch (e) { console.error('шумодав в звонке не запустился', e); }
+    }
+    const g = mono(); g.gain.value = VS.micGain ?? 1; last.connect(g); last = g;
+    if (VS.gate) { try { await x.audioWorklet.addModule('/voice-fx.js'); const gg = new AudioWorkletNode(x, 'k-gate', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 1, channelCountMode: 'explicit', processorOptions: { threshold: VS.gateDb } }); last.connect(gg); last = gg; nodes.push(gg); } catch {} }
+    const an = x.createAnalyser(); an.fftSize = 1024; last.connect(an); nodes.push(an);
+    const dst = x.createMediaStreamDestination(); dst.channelCount = 1; last.connect(dst); nodes.push(dst);
+    return { raw, stream: dst.stream, nodes, an };
+  }
+  function teardown(m) { for (const n of m.nodes) { try { n.disconnect(); } catch {} } m.stream.getTracks().forEach((t) => t.stop()); m.raw.getTracks().forEach((t) => t.stop()); }
+  const tuneSdp = (sdp) => sdp.replace(/a=fmtp:(\d+) (.*useinbandfec=1.*)/g, (m, pt, rest) => `a=fmtp:${pt} ${rest.replace(/;?maxaveragebitrate=\d+/, '')};maxaveragebitrate=128000`);
+  async function openPc(offerer) {
+    const c = call;
+    c.mic = await openMic();
+    if (call !== c) { teardown(c.mic); return; }
+    applyMic();
+    const pc = c.pc = new RTCPeerConnection({ iceServers: myIce, bundlePolicy: 'max-bundle' });
+    c.mic.stream.getTracks().forEach((t) => pc.addTrack(t, c.mic.stream));
+    pc.onicecandidate = (e) => e.candidate && say(c.id, 'signal', { candidate: e.candidate.toJSON() });
+    pc.ontrack = (e) => {
+      const a = c.audio || (c.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
+      a.volume = Math.min(1, (c.vol ?? 1) * (VS.masterVol ?? 1));
+      (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
+      a.play().catch(() => {});
+      watchTalk(e.track);
+    };
+    pc.onconnectionstatechange = () => {
+      if (call !== c) return;
+      if (pc.connectionState === 'connected') setState('live');
+      if (pc.connectionState === 'failed') endCall('end', 'Не получилось соединиться. Вы оба в одной локальной сети?');
+    };
+    // сигналы, пришедшие раньше, чем открылся микрофон, — догоняем
+    for (const d of c.early || []) await onSig(d);
+    c.early = [];
+    if (offerer) {
+      const o = await pc.createOffer();
+      await pc.setLocalDescription({ type: 'offer', sdp: tuneSdp(o.sdp) });
+      say(c.id, 'signal', { sdp: { type: 'offer', sdp: pc.localDescription.sdp } });
+    }
+  }
+  // подсветка аватарки, когда друг говорит
+  function watchTalk(track) {
+    const x = ctx(), src = x.createMediaStreamSource(new MediaStream([track])), an = x.createAnalyser(); an.fftSize = 512; src.connect(an);
+    const buf = new Float32Array(an.fftSize); const c = call;
+    const t = setInterval(() => {
+      if (call !== c) { clearInterval(t); try { src.disconnect(); } catch {} return; }
+      an.getFloatTimeDomainData(buf); let v = 0; for (const s of buf) v += s * s;
+      const on = Math.sqrt(v / buf.length) > 0.015; const el = document.querySelector('#callBar .cava'); if (el) el.classList.toggle('talking', on);
+    }, 150);
+  }
+  F.onCall(async (m) => {
+    if (m.k === 'gone') { if (call && call.id === m.id) endCall(null, 'Связь с другом пропала'); return; }
+    if (m.k === 'ring') {
+      if (call) { F.call(m.id, { k: 'busy', cid: m.cid }); return; }
+      call = { id: m.id, name: m.name, cid: m.cid, dir: 'in', state: 'ringing', muted: false, deaf: false, vol: 1 };
+      tone('in'); report(); renderCall(); lastRendered = ''; renderMain();
+      const my = call; call.timer = setTimeout(() => { if (call === my && call.state === 'ringing') endCall('decline'); }, 45000);
+      return;
+    }
+    if (!call || call.id !== m.id || call.cid !== m.cid) return;
+    if (m.k === 'accept' && call.dir === 'out' && call.state === 'ringing') {
+      clearTimeout(call.timer); setState('connecting');
+      try { await openPc(true); } catch (e) { endCall('end', 'Микрофон не включился: ' + e.message); }
+      return;
+    }
+    if (m.k === 'decline') return endCall(null, `${call.name} не может говорить`);
+    if (m.k === 'busy') return endCall(null, `${call.name} сейчас в другом звонке`);
+    if (m.k === 'end') return endCall(null, call.state === 'live' ? 'Звонок завершён' : call.dir === 'in' ? 'Пропущенный звонок' : null);
+    if (m.k === 'state' && m.data) { call.remote = { muted: !!m.data.muted }; renderCall(); return; }
+    if (m.k === 'signal' && m.data) { if (call.pc) await onSig(m.data); else (call.early = call.early || []).push(m.data); }
+  });
+  async function onSig(d) {
+    if (!call || !call.pc) return;
+    {
+      if (d.sdp && (d.sdp.type === 'offer' || d.sdp.type === 'answer')) {
+        await call.pc.setRemoteDescription({ type: d.sdp.type, sdp: tuneSdp(String(d.sdp.sdp)) });
+        for (const c of call.pend || []) await call.pc.addIceCandidate(c).catch(() => {});
+        call.pend = [];
+        if (d.sdp.type === 'offer') { const a = await call.pc.createAnswer(); await call.pc.setLocalDescription({ type: 'answer', sdp: tuneSdp(a.sdp) }); say(call.id, 'signal', { sdp: { type: 'answer', sdp: call.pc.localDescription.sdp } }); }
+      } else if (d.candidate) {
+        if (call.pc.remoteDescription) await call.pc.addIceCandidate(d.candidate).catch(() => {}); else (call.pend = call.pend || []).push(d.candidate);
+      }
+    }
+  }
+  // ================= группы в личке (как в Discord): чат и звонок на всех =================
+  const gOf = (id) => groups.find((g) => g.id === id);
+  const gIcon = (g, cls) => {
+    const d = document.createElement('div'); d.className = 'ava gava' + (cls ? ' ' + cls : '');
+    const others = g.members.filter((m) => m.id !== me.id).slice(0, 2);
+    if (others.length < 2) { const o = others[0] || g.members[0] || { name: g.name }; return ava({ name: g.name || o.name, avatar: null }, false, cls); }
+    for (const o of others) { const a = ava(o, false); a.classList.add('gsub'); d.appendChild(a); }
+    return d;
+  };
+  const gTitle = (g) => g.name || g.members.filter((m) => m.id !== me.id).map((m) => m.name).join(', ') || 'Группа';
+  // окно «Новая группа»: выбрать друзей и название
+  function groupDialog(g) {
+    closeFloat();
+    const d = document.createElement('dialog'); d.className = 'kdlg gdlg';
+    const fr = list.filter((f) => f.status === 'friend' && !(g && g.members.some((m) => m.id === f.id)));
+    d.innerHTML = `<div class="kd-b"><div class="kd-t">${g ? 'Добавить в группу' : 'Новая группа'}</div><div class="kd-x"></div>
+      ${g ? '' : '<input class="gname" placeholder="Название (необязательно)" maxlength="40">'}<div class="gpick"></div></div><div class="kd-f"><button type="button" class="cancel">Отмена</button><button type="button" class="ok">${g ? 'Добавить' : 'Создать группу'}</button></div>`;
+    d.querySelector('.kd-x').textContent = fr.length ? 'Выбери друзей (до 9). В группе — общий чат и звонок на всех.' : 'Некого добавить: сначала добавь друзей.';
+    const pick = d.querySelector('.gpick');
+    for (const f of fr) {
+      const l = document.createElement('label'); l.className = 'gp';
+      const c = document.createElement('input'); c.type = 'checkbox'; c.value = f.id;
+      const n = document.createElement('span'); n.textContent = f.name;
+      l.append(c, ava(f, true), n); pick.appendChild(l);
+    }
+    d.querySelector('.cancel').onclick = () => d.close();
+    d.querySelector('.ok').onclick = async () => {
+      const ids = [...pick.querySelectorAll('input:checked')].map((x) => x.value);
+      if (!ids.length) { d.querySelector('.kd-x').textContent = 'Отметь хотя бы одного друга.'; return; }
+      if (g) await F.groupUpdate(g.id, { add: ids });
+      else { const r = await F.groupCreate(d.querySelector('.gname').value.trim(), ids); if (r && r.id) { d.close(); await refresh(); openDm(r.id); return; } }
+      d.close(); refresh();
+    };
+    d.addEventListener('close', () => d.remove());
+    document.body.appendChild(d); d.showModal();
+  }
+  async function renameGroup(g) {
+    const d = document.createElement('dialog'); d.className = 'kdlg';
+    d.innerHTML = '<div class="kd-b"><div class="kd-t">Название группы</div><input class="gname" maxlength="40" style="width:100%;margin-top:6px"></div><div class="kd-f"><button type="button" class="cancel">Отмена</button><button type="button" class="ok">Сохранить</button></div>';
+    const inp = d.querySelector('input'); inp.value = g.name || '';
+    d.querySelector('.cancel').onclick = () => d.close();
+    const save = async () => { await F.groupUpdate(g.id, { name: inp.value.trim() }); d.close(); refresh(); };
+    d.querySelector('.ok').onclick = save; inp.onkeydown = (e) => { if (e.key === 'Enter') save(); };
+    d.addEventListener('close', () => d.remove());
+    document.body.appendChild(d); d.showModal(); inp.focus(); inp.select();
+  }
+  function groupMenu(g, r) {
+    closeFloat();
+    const m = document.createElement('div'); m.className = 'menu';
+    const item = (ic, label, fn, cls) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = ic + '<span></span>'; b.lastChild.textContent = label; if (cls) b.className = cls; b.onclick = () => { closeFloat(); fn(); }; m.appendChild(b); };
+    item(I.users, 'Добавить друзей', () => groupDialog(g));
+    item(I.user, 'Переименовать', () => renameGroup(g));
+    if (openDms.includes(g.id)) item(I.x, 'Закрыть беседу', () => closeDm(g.id));
+    m.appendChild(document.createElement('hr'));
+    item(I.invite, 'Выйти из группы', async () => { if (await kAsk(`Выйти из «${gTitle(g)}»? Переписка у тебя удалится.`, 'Выйти', { danger: true })) { if (gcall && gcall.gid === g.id) gLeave(); await F.groupLeave(g.id); closeDm(g.id); refresh(); } }, 'danger');
+    place(m, r);
+  }
+  async function renderGroup(g) {
+    const main = $('chat');
+    const msgs = await F.groupMessages(g.id);
+    if (g.unread && shown) F.groupRead(g.id);
+    const key = g.id + ':' + msgs.length + ':' + JSON.stringify(g.members.map((m) => m.id + m.online)) + g.name + ':' + gcallKey(g.id);
+    if (key === gLast) return;
+    const keep = main.querySelector('#msgInput') && main.querySelector('#msgInput').value;
+    const same = gLast.startsWith(g.id + ':');
+    gLast = key; lastRendered = '';
+    main.innerHTML = '';
+    const head = document.createElement('div'); head.className = 'chead';
+    const who = document.createElement('div'); who.innerHTML = '<div class="nm"></div><div class="st"></div>';
+    who.firstChild.textContent = gTitle(g);
+    who.lastChild.textContent = `${g.members.length} участн. · в сети ${g.members.filter((m) => m.online).length}`;
+    const sp = document.createElement('span'); sp.className = 'sp';
+    const back = document.createElement('button'); back.className = 'iconbtn back'; back.title = 'К друзьям'; back.innerHTML = I.left; back.onclick = goHome;
+    const cb = document.createElement('button'); cb.className = 'iconbtn callme'; cb.innerHTML = I.phone;
+    const known = gcalls.get(g.id);
+    cb.title = gcall && gcall.gid === g.id ? 'Ты в звонке' : known ? 'Присоединиться к звонку' : 'Начать звонок в группе';
+    cb.disabled = !!(gcall && gcall.gid === g.id) || !!call;
+    cb.onclick = () => gJoin(g);
+    const add = document.createElement('button'); add.className = 'iconbtn'; add.title = 'Добавить друзей'; add.innerHTML = I.users; add.onclick = () => groupDialog(g);
+    const mo = document.createElement('button'); mo.className = 'iconbtn'; mo.title = 'Ещё'; mo.innerHTML = I.more; mo.onclick = () => groupMenu(g, mo.getBoundingClientRect());
+    const cl = document.createElement('button'); cl.className = 'iconbtn'; cl.title = 'Закрыть беседу'; cl.innerHTML = I.x; cl.onclick = () => closeDm(g.id);
+    head.append(back, gIcon(g), who, sp, cb, add, mo, cl);
+    const body = document.createElement('div'); body.className = 'gbody';
+    const col = document.createElement('div'); col.className = 'gcol';
+    const banner = renderGcallBar(g); if (banner) col.appendChild(banner);
+    const box = document.createElement('div'); box.id = 'msgs';
+    let lastDay = '', lastFrom = '', lastTs = 0;
+    for (const m of msgs) {
+      const day = new Date(m.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+      if (day !== lastDay) { lastDay = day; lastFrom = ''; const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.appendChild(d); }
+      const cont = lastFrom === m.from && m.ts - lastTs < 5 * 60000; lastFrom = m.from; lastTs = m.ts;
+      const row = document.createElement('div'); row.className = 'gm' + (cont ? ' cont' : '');
+      const mb = g.members.find((x) => x.id === m.from) || { name: m.name };
+      const av = ava({ name: mb.name || m.name, avatar: mb.avatar }, false);
+      if (!cont) { av.style.cursor = 'pointer'; av.onclick = () => { const f = list.find((x) => x.id === m.from); if (f) openCard(f, av); }; }
+      const b = document.createElement('div'); b.className = 'gb';
+      if (!cont) { const h = document.createElement('div'); h.className = 'gh'; h.innerHTML = '<b></b><span></span>'; h.firstChild.textContent = m.from === me.id ? (myProf.name || 'Я') : (mb.name || m.name); h.lastChild.textContent = new Date(m.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); b.appendChild(h); }
+      if (m.file) b.appendChild(fileView(m.file));
+      if (m.text) {
+        const t = document.createElement('div'); t.className = 'gt';
+        m.text.split(/(https?:\/\/\S+)/g).forEach((part, i) => { if (i % 2) { const a = document.createElement('a'); a.href = part; a.textContent = part; a.target = '_blank'; t.appendChild(a); } else t.appendChild(document.createTextNode(part)); });
+        b.appendChild(t);
+      }
+      row.append(cont ? Object.assign(document.createElement('div'), { className: 'gpad' }) : av, b);
+      box.appendChild(row);
+    }
+    if (!msgs.length) box.innerHTML = `<div class="ractempty" style="margin:auto">Это начало группы «${gTitle(g).replace(/[<>&]/g, '')}».<br>Пиши — сообщение увидят все участники.</div>`;
+    const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
+    const inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать в «${gTitle(g)}»`;
+    const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
+    form.append(inp, sb);
+    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; await F.groupSend(g.id, v); refresh(); };
+    attachTo(form, inp, { gid: g.id }, main);
+    col.append(box, form);
+    // участники справа
+    const mem = document.createElement('div'); mem.className = 'gmem';
+    mem.innerHTML = `<div class="fcap">УЧАСТНИКИ — ${g.members.length}</div>`;
+    for (const m of g.members.slice().sort((a, b) => b.online - a.online)) {
+      const r = document.createElement('div'); r.className = 'dm' + (m.online ? '' : ' off');
+      const f = list.find((x) => x.id === m.id);
+      const a = ava({ ...m, presence: f && f.presence }, true);
+      const w = document.createElement('div'); w.className = 'who'; w.innerHTML = '<div class="nm"></div>';
+      w.firstChild.textContent = m.id === me.id ? (myProf.name || m.name) + ' (ты)' : m.name + (g.owner === m.id ? ' 👑' : '');
+      if (gcall && gcall.gid === g.id && gcall.parts.has(m.id)) { const s2 = document.createElement('div'); s2.className = 'st'; s2.textContent = 'в звонке'; w.appendChild(s2); }
+      r.append(a, w);
+      r.onclick = () => { if (f) openCard(f, a); };
+      mem.appendChild(r);
+    }
+    body.append(col, mem);
+    main.append(head, body);
+    box.scrollTop = box.scrollHeight;
+    if (same && keep) inp.value = keep;
+    if (shown) inp.focus();
+  }
+
+  // ---------- звонок в группе: каждый с каждым (WebRTC), сигналы — через связи участников ----------
+
+  const gcallKey = (gid) => { const k = gcalls.get(gid); return (k ? k.cid + [...k.parts].join(',') : '') + (gcall && gcall.gid === gid ? 'J' + (gcall.muted ? 'm' : '') + (gcall.deaf ? 'd' : '') : ''); };
+  const gsay = (gid, k, data, to) => F.groupCall(gid, { k, cid: (gcall && gcall.gid === gid ? gcall.cid : (gcalls.get(gid) || {}).cid) || '', data, to });
+  function renderGcallBar(g) {
+    const known = gcalls.get(g.id);
+    if (!known && !(gcall && gcall.gid === g.id)) return null;
+    const bar = document.createElement('div'); bar.className = 'gcbar';
+    const parts = gcall && gcall.gid === g.id ? gcall.parts : known.parts;
+    const avs = document.createElement('div'); avs.className = 'gcavs';
+    for (const id of parts) { const m = g.members.find((x) => x.id === id) || { name: '?' }; const a = ava(m, false); a.dataset.id = id; avs.appendChild(a); }
+    const info = document.createElement('div'); info.className = 'cinfo'; info.innerHTML = '<b></b><span></span>';
+    const joined = gcall && gcall.gid === g.id;
+    info.firstChild.textContent = joined ? 'Звонок в группе' : 'Идёт звонок';
+    info.lastChild.textContent = `${parts.size} в звонке` + (joined && gcall.t0 ? ' · ' + fmt(Date.now() - gcall.t0) : '');
+    bar.append(avs, info);
+    const btn = (cls, ic, title, fn) => { const b = document.createElement('button'); b.className = 'cbtn ' + cls; b.innerHTML = ic; b.title = title; b.onclick = fn; bar.appendChild(b); return b; };
+    if (!joined) btn('green', I.phone, 'Присоединиться', () => gJoin(g));
+    else {
+      btn(gcall.muted ? 'off' : '', gcall.muted ? I.micOff : I.mic, gcall.muted ? 'Включить микрофон' : 'Выключить микрофон', () => gMute(!gcall.muted));
+      btn(gcall.deaf ? 'off' : '', gcall.deaf ? I.headOff : I.head, gcall.deaf ? 'Включить звук' : 'Выключить звук', () => gDeaf(!gcall.deaf));
+      btn('red', I.hang, 'Выйти из звонка', () => gLeave());
+    }
+    return bar;
+  }
+  const gReport = () => F.callState(gcall ? { id: gcall.gid, name: gTitle(gOf(gcall.gid) || { members: [] }), state: 'live', group: true } : null);
+  function gRerender() { gLast = ''; render(); renderMe(); }
+  async function gJoin(g) {
+    if (gcall && gcall.gid === g.id) return;
+    if (call) { kSay('Сначала заверши звонок 1 на 1.'); return; }
+    if (gcall) gLeave();
+    if (!(await leaveVoiceIfNeeded())) return;
+    const known = gcalls.get(g.id);
+    gcall = { gid: g.id, cid: known ? known.cid : cid(), parts: new Set([me.id, ...(known ? known.parts : [])]), peers: new Map(), muted: false, deaf: false, t0: Date.now() };
+    let micDone; gcall.micWait = new Promise((r) => (micDone = r));
+    const gc0 = gcall;
+    try { gcall.mic = await openMic(); } catch (e) { gcall = null; micDone(); kSay('Микрофон не включился: ' + e.message); return; }
+    if (gcall !== gc0) { teardown(gc0.mic); micDone(); return; }
+    gcalls.set(g.id, { cid: gcall.cid, parts: gcall.parts });
+    gsay(g.id, known ? 'join' : 'start', null);
+    // соединяемся с теми, кто уже в звонке: предлагает тот, у кого id меньше
+    for (const id of gcall.parts) if (id !== me.id && me.id < id) gPeer(id, true);
+    micDone();
+    gReport(); gRerender();
+    gcall.tick = setInterval(() => { if (gcall && cur === gcall.gid) { gLast = ''; renderMain(); } }, 1000 * 15);
+  }
+  function gLeave() {
+    if (!gcall) return;
+    const c = gcall; gcall = null;
+    clearInterval(c.tick);
+    F.groupCall(c.gid, { k: 'leave', cid: c.cid });
+    for (const p of c.peers.values()) { try { p.pc.close(); } catch {} if (p.audio) { p.audio.srcObject = null; p.audio.remove(); } }
+    if (c.mic) teardown(c.mic);
+    const k = gcalls.get(c.gid); if (k) { k.parts.delete(me.id); if (!k.parts.size) gcalls.delete(c.gid); }
+    gReport(); gRerender(); beepEnd();
+  }
+  function gApplyMic() { if (gcall && gcall.mic) gcall.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !gcall.muted && !gcall.deaf)); }
+  function gMute(v) { if (!gcall) return; gcall.muted = v; gApplyMic(); gsay(gcall.gid, 'state', { muted: gcall.muted || gcall.deaf }); gRerender(); }
+  function gDeaf(v) { if (!gcall) return; gcall.deaf = v; for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = v; gApplyMic(); gsay(gcall.gid, 'state', { muted: gcall.muted || gcall.deaf }); gRerender(); }
+  function gPeer(id, offerer) {
+    const c = gcall; if (!c || c.peers.has(id)) return c && c.peers.get(id);
+    const pc = new RTCPeerConnection({ iceServers: myIce, bundlePolicy: 'max-bundle' });
+    const p = { pc, audio: null, pend: [] };
+    c.peers.set(id, p);
+    c.mic.stream.getTracks().forEach((t) => pc.addTrack(t, c.mic.stream));
+    pc.onicecandidate = (e) => e.candidate && gsay(c.gid, 'signal', { candidate: e.candidate.toJSON() }, id);
+    pc.ontrack = (e) => {
+      const a = p.audio || (p.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
+      a.volume = Math.min(1, VS.masterVol ?? 1);
+      (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
+      a.play().catch(() => {});
+      gTalk(id, e.track);
+    };
+    pc.onconnectionstatechange = () => { if (gcall === c && cur === c.gid) { gLast = ''; renderMain(); } };
+    if (offerer) (async () => { const o = await pc.createOffer(); await pc.setLocalDescription({ type: 'offer', sdp: tuneSdp(o.sdp) }); gsay(c.gid, 'signal', { sdp: { type: 'offer', sdp: pc.localDescription.sdp } }, id); })();
+    return p;
+  }
+  function gTalk(id, track) {
+    const x = ctx(), src = x.createMediaStreamSource(new MediaStream([track])), an = x.createAnalyser(); an.fftSize = 512; src.connect(an);
+    const buf = new Float32Array(an.fftSize); const c = gcall;
+    const t = setInterval(() => {
+      if (gcall !== c) { clearInterval(t); try { src.disconnect(); } catch {} return; }
+      an.getFloatTimeDomainData(buf); let v = 0; for (const s of buf) v += s * s;
+      const on = Math.sqrt(v / buf.length) > 0.015;
+      document.querySelectorAll(`.gcavs .ava[data-id="${id}"]`).forEach((el) => el.classList.toggle('talking', on));
+    }, 150);
+  }
+  F.onGroupCall(async function onG(m) {
+    // микрофон ещё включается — сигналы этого звонка обработаем, когда он будет готов
+    if (gcall && gcall.gid === m.gid && !gcall.mic && gcall.micWait && (m.k === 'signal' || m.k === 'join' || m.k === 'start' || m.k === 'here')) { gcall.micWait.then(() => onG(m)); return; }
+    const g = gOf(m.gid); if (!g) return;
+    let k = gcalls.get(m.gid);
+    if (m.k === 'start' || m.k === 'join' || m.k === 'here') {
+      if (!k || (m.k === 'start' && k.cid !== m.cid && !(gcall && gcall.gid === m.gid))) { k = { cid: m.cid, parts: new Set() }; gcalls.set(m.gid, k); }
+      k.parts.add(m.from);
+      if (gcall && gcall.gid === m.gid) { gcall.parts.add(m.from); if (m.k !== 'here' && me.id < m.from) gPeer(m.from, true); }
+      if (m.k === 'start' && !(gcall && gcall.gid === m.gid)) { tone('in'); setTimeout(() => tone(null), 4000); flash(`Звонок в «${gTitle(g)}» — нажми трубку, чтобы присоединиться`); if (!openDms.includes(g.id)) { openDms.unshift(g.id); saveOpen(); } }
+      gRerender(); return;
+    }
+    if (m.k === 'who') { if (gcall && gcall.gid === m.gid) F.groupCall(m.gid, { k: 'here', cid: gcall.cid, to: m.from }); return; }
+    if (m.k === 'leave') {
+      if (k) { k.parts.delete(m.from); if (!k.parts.size) gcalls.delete(m.gid); }
+      if (gcall && gcall.gid === m.gid) { gcall.parts.delete(m.from); const p = gcall.peers.get(m.from); if (p) { try { p.pc.close(); } catch {} if (p.audio) p.audio.srcObject = null; gcall.peers.delete(m.from); } }
+      gRerender(); return;
+    }
+    if (!gcall || gcall.gid !== m.gid || !m.data) return;
+    if (m.k === 'signal') {
+      const d = m.data;
+      let p = gcall.peers.get(m.from);
+      if (d.sdp && d.sdp.type === 'offer') { if (!p) p = gPeer(m.from, false); }
+      if (!p) return;
+      if (d.sdp) {
+        await p.pc.setRemoteDescription({ type: d.sdp.type, sdp: tuneSdp(String(d.sdp.sdp)) });
+        for (const c2 of p.pend) await p.pc.addIceCandidate(c2).catch(() => {}); p.pend = [];
+        if (d.sdp.type === 'offer') { const a = await p.pc.createAnswer(); await p.pc.setLocalDescription({ type: 'answer', sdp: tuneSdp(a.sdp) }); gsay(gcall.gid, 'signal', { sdp: { type: 'answer', sdp: p.pc.localDescription.sdp } }, m.from); }
+      } else if (d.candidate) { if (p.pc.remoteDescription) await p.pc.addIceCandidate(d.candidate).catch(() => {}); else p.pend.push(d.candidate); }
+    }
+  });
+  window.kgcall = () => gcall && { gid: gcall.gid, parts: [...gcall.parts], peers: [...gcall.peers.entries()].map(([id, p]) => ({ id, state: p.pc.connectionState, audio: !!(p.audio && p.audio.srcObject) })) };
+
+  F.onCallCmd((c) => { if (c === 'accept') acceptCall(); if (c === 'decline' && call && call.state === 'ringing' && call.dir === 'in') endCall('decline'); if (c === 'hangup') { if (gcall) gLeave(); else endCall('end'); } if (c === 'open' && gcall) openDm(gcall.gid); });
+  F.onHotkey((a) => {
+    if (gcall) { if (a === 'mute') gMute(!gcall.muted); if (a === 'deaf') gDeaf(!gcall.deaf); return; }
+    if (!call || call.state === 'ringing') return; if (a === 'mute') setMuted(!call.muted); if (a === 'deaf') setDeaf(!call.deaf);
+  });
+  window.addEventListener('beforeunload', () => { if (call) endCall('end'); });
+  F.onChanged(() => refresh());
+  F.onFocus((id) => { if (id) openDm(id); else goHome(); });
+  if (F.isShown) shown = !!(await F.isShown());
+  F.onShown((v) => { shown = v; if (v) { lastRendered = ''; gLast = ''; refresh().then(() => { const i = document.getElementById('msgInput'); if (i) i.focus(); }); } });
+  setInterval(() => { if (shown) { if (!cur) render(); else renderSide(); } }, 30000);
+  window.kcall = () => call && { state: call.state, dir: call.dir, id: call.id, muted: call.muted, deaf: call.deaf, hasAudio: !!(call.audio && call.audio.srcObject), ns: VS.nsMode };
+  refresh();
+})();
+</script>
+<script src="/kselect.js"></script>
+</body>
+</html>

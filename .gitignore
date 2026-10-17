@@ -1,0 +1,6 @@
+node_modules/
+dist/
+cert/
+android/build/
+android/keys/
+*.knt
