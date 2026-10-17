@@ -3188,7 +3188,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
         n.connect(blendNode, 0, 0); last.connect(blendNode, 0, 1); nodes.push(blendNode);
         last = blendNode;
         }
-      } catch (e) { console.error(e); sys('Шумодав не запустился, микрофон идёт без него. Попробуй другой режим в настройках.'); }
+      } catch (e) { console.error(e); sys('Шумодав не запустился, микрофон идёт без него. Попробуй другой режим в настройках. (' + String(e && e.message || e).slice(0, 120) + ')'); }
     }
     const gain = mono(); gain.gain.value = settings.micGain; last.connect(gain); last = gain;
     if (settings.gate) {
