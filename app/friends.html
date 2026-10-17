@@ -224,6 +224,14 @@
   .rq b { color: var(--text); font-weight: 700; flex: none; } .rq span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .rq:hover { background: rgba(var(--acc-rgb), .13); }
   .m.me .rq { align-self: flex-end; }
+  .ftray { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 16px -4px; padding: 8px; border-radius: 10px 10px 0 0; background: var(--panel2); border: 1px solid var(--line); border-bottom: 0; }
+  .ftray[hidden] { display: none; }
+  .fti { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 92px; padding: 6px; border-radius: 10px; background: var(--panel3); border: 1px solid var(--line); }
+  .fti img { width: 80px; height: 64px; object-fit: cover; border-radius: 6px; }
+  .fti .ftic { width: 80px; height: 64px; display: grid; place-items: center; color: var(--accent); } .fti .ftic svg { width: 28px; height: 28px; }
+  .fti .ftn { font-size: 11.5px; color: var(--dim); max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fti .ftx { position: absolute; top: -7px; right: -7px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--red); color: #fff; border: 2px solid var(--panel2); }
+  .fti .ftx svg { width: 11px; height: 11px; }
   .replybar { display: flex; align-items: center; gap: 8px; margin: 0 16px -4px; padding: 6px 6px 6px 12px; border-radius: 10px 10px 0 0; background: var(--panel2); border: 1px solid var(--line); border-bottom: 0; font-size: 13px; color: var(--dim); }
   .replybar span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .replybar b { color: var(--text); } .replybar i { font-style: normal; }
   .flash { animation: kflash 1.4s ease-out; } @keyframes kflash { 0%, 40% { background: rgba(var(--acc-rgb), .18); border-radius: 10px; } 100% { background: transparent; } }
@@ -486,10 +494,13 @@
   // скрепка, Ctrl+V скрина и перетаскивание файла в беседу
   function attachTo(form, inp0, target, dropZone) {
     let inp = inp0;
+    if (inp0 && !inp0.dataset.ph0) inp0.dataset.ph0 = inp0.placeholder;
     const fi = document.createElement('input'); fi.type = 'file'; fi.multiple = true; fi.hidden = true;
     const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'iconbtn attach'; ab.innerHTML = I.clip; ab.title = 'Прикрепить файл или скрин (можно Ctrl+V или перетащить)';
     ab.onclick = () => fi.click();
-    const sendFiles = async (files) => {
+    // отправка файлов (подпись — к первому)
+    const uploadNow = async (files, caption) => {
+      let first = true;
       for (const file of files) {
         if (!file) continue;
         let r;
@@ -497,15 +508,46 @@
           const p = F.filePath ? F.filePath(file) : '';
           const src = p ? { path: p, name: file.name, mime: file.type } : { bytes: await file.arrayBuffer(), name: file.name || 'скрин.png', mime: file.type };
           if (!p && file.size > 200 * 1024 * 1024) throw new Error('файл больше 200 МБ — перетащи его из папки');
-          r = await F.sendFile(target, src, '');
+          r = await F.sendFile(target, src, first ? (caption || '') : '');
+          first = false;
         } catch (e) { r = { error: 'Не получилось отправить: ' + e.message }; }
         if (r && r.error) kSay(r.error);
       }
-      lastRendered = ''; refresh();
+      lastRendered = ''; gLast = ''; refresh();
+    };
+    // как на сервере: файлы и скрины сначала встают над полем — можно убрать или добавить подпись, уходят по Enter
+    const key = target.id || target.gid;
+    const pend = pendingFiles.get(key) || []; pendingFiles.set(key, pend);
+    const tray = document.createElement('div'); tray.className = 'ftray';
+    const drawTray = () => {
+      tray.innerHTML = ''; tray.hidden = !pend.length;
+      for (const it of pend) {
+        const c = document.createElement('div'); c.className = 'fti';
+        if (it.url) { const im = document.createElement('img'); im.src = it.url; c.appendChild(im); }
+        else { const ic = document.createElement('span'); ic.className = 'ftic'; ic.innerHTML = I.file; c.appendChild(ic); }
+        const nm = document.createElement('span'); nm.className = 'ftn'; nm.textContent = it.file.name || 'файл'; c.appendChild(nm);
+        const x = document.createElement('button'); x.type = 'button'; x.className = 'ftx'; x.title = 'Убрать'; x.innerHTML = I.x;
+        x.onclick = () => { const i = pend.indexOf(it); if (i >= 0) pend.splice(i, 1); if (it.url) URL.revokeObjectURL(it.url); drawTray(); };
+        c.appendChild(x); tray.appendChild(c);
+      }
+      const i2 = document.getElementById('msgInput'); if (i2) i2.placeholder = pend.length ? 'Добавь подпись или просто нажми Enter' : i2.dataset.ph0 || i2.placeholder;
+    };
+    const sendFiles = (files) => {
+      for (const file of files) { if (!file) continue; if (pend.length >= 10) { kSay('За раз можно прикрепить до 10 файлов.'); break; } pend.push({ file, url: /^image\//.test(file.type || '') ? URL.createObjectURL(file) : null }); }
+      drawTray(); const i2 = document.getElementById('msgInput'); if (i2) i2.focus();
+    };
+    setTimeout(() => { if (form.parentNode) form.parentNode.insertBefore(tray, form); drawTray(); }, 0);
+    const origSubmit = form.onsubmit;
+    form.onsubmit = async (e) => {
+      if (!pend.length) return origSubmit && origSubmit(e);
+      e.preventDefault();
+      const cap = inp.value.trim(); inp.value = '';
+      const files = pend.map((x) => x.file); for (const x of pend) if (x.url) URL.revokeObjectURL(x.url); pend.length = 0; drawTray();
+      await uploadNow(files, cap);
     };
     fi.onchange = () => { const l = [...fi.files]; fi.value = ''; sendFiles(l); };
     // телефон: поле, куда клавиатура разрешает вставить скрин из своего буфера
-    if (window.kEditable && window.kPhone) inp = window.kEditable(inp, (files) => sendFiles(files));
+    if (window.kEditable && window.kPhone) { inp = window.kEditable(inp, (files) => sendFiles(files)); if (inp.dataset) inp.dataset.ph0 = inp0.dataset.ph0 || ''; }
     // картинка, которую вставила клавиатура телефона, — в эту беседу
     window.__kPasteImage = async (d) => { if (!document.getElementById('msgInput')) return; try { const b = await (await fetch(d)).blob(); sendFiles([new File([b], 'скрин.' + ((b.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: b.type || 'image/png' })]); } catch {} };
     inp.addEventListener('paste', (e) => { const files = [...(e.clipboardData && e.clipboardData.files || [])]; if (files.length) { e.preventDefault(); sendFiles(files); } });
@@ -938,6 +980,7 @@
   }
   // ---------- ответ на сообщение (цитата), как на сервере ----------
   let replyTo = null; // { key, mid, from, text }
+  const pendingFiles = new Map(); // беседа → файлы, ждущие отправки
   const snip = (m) => (m.text ? m.text.slice(0, 140) : m.file ? '📎 ' + m.file.name : '');
   function setReply(key, m, who) {
     replyTo = { key, mid: m.mid, from: who || '', text: snip(m) };

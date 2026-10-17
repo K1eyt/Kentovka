@@ -44,6 +44,9 @@ const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.
     const W = "document.getElementById('friendsFrame').contentWindow";
     // картинка «с клавиатуры» (так её передаёт приложение) — уходит в открытую беседу
     await ev("window.__kPasteImage('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEklEQVR4nGNgYGD4z8DAwMAAAA0AAf3+3dgAAAAASUVORK5CYII=')");
+    await sleep(1200);
+    console.log('скрин встал над полем', await ev(`${W}.document.querySelectorAll('.ftray .fti').length`));
+    await ev(`${W}.document.querySelector('form.send').requestSubmit()`);
     await sleep(3000);
     console.log('скрин с клавиатуры ушёл', await ev(`${F}.messages('${fid}').then((m) => JSON.stringify(m.filter((x) => x.from === 'me' && x.file).map((x) => x.file.name)))`));
     console.log('картинка видна', await ev(`(() => { const i = ${W}.document.querySelector('#msgs img'); return i ? i.naturalWidth + 'x' + i.naturalHeight + ' ' + i.src : 'нет img'; })()`));
