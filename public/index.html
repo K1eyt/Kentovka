@@ -1160,6 +1160,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   const $ = (id) => document.getElementById(id);
   // телефон: поле ввода, куда клавиатура разрешает вставлять скрины из своего буфера (заменяем до того, как к нему привяжутся обработчики)
   if (window.kEditable) window.kEditable(document.getElementById('chatInput'), (files) => addPending(files));
+  // картинка, которую вставила клавиатура телефона (приложение передаёт её сюда)
+  window.__kPasteImage = async (d) => { try { const b = await (await fetch(d)).blob(); addPending([new File([b], 'image.' + ((b.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: b.type || 'image/png' })]); } catch {} };
   const COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#3b82f6','#8b5cf6','#ec4899'];
   const colorOf = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
   // ---------- иконки (тонкие линии, как в Discord) ----------

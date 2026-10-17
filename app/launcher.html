@@ -718,6 +718,14 @@
     try { const w = $('friendsFrame').contentWindow; if (w.kentovkaBack && w.kentovkaBack()) return true; } catch {}
     return false;
   };
+  // картинка с клавиатуры телефона (скрин из её буфера) → в открытый сейчас чат: сервер или личка
+  window.__kPasteImage = (d) => {
+    const role = shell.tab ? (shell.roles || {})[shell.tab] : null;
+    const f = role ? (window.__frames || new Map()).get(role) : $('friendsFrame');
+    if (!f) return;
+    try { if (!role && f.contentWindow.__kPasteImage) { f.contentWindow.__kPasteImage(d); return; } } catch {}
+    try { f.contentWindow.postMessage({ k: 'kpaste', d }, '*'); } catch {}
+  };
   // запись экрана (демка с телефона): приложение отвечает главной странице — передаём во все фреймы
   window.__kScreen = (ok, w, h) => { for (const f of document.querySelectorAll('iframe')) { try { f.contentWindow.postMessage({ k: 'kscreen', ok, w, h }, '*'); } catch {} } };
   window.__kScreenEnd = () => { for (const f of document.querySelectorAll('iframe')) { try { f.contentWindow.postMessage({ k: 'kscreen-end' }, '*'); } catch {} } };

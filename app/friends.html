@@ -506,6 +506,8 @@
     fi.onchange = () => { const l = [...fi.files]; fi.value = ''; sendFiles(l); };
     // телефон: поле, куда клавиатура разрешает вставить скрин из своего буфера
     if (window.kEditable && window.kPhone) inp = window.kEditable(inp, (files) => sendFiles(files));
+    // картинка, которую вставила клавиатура телефона, — в эту беседу
+    window.__kPasteImage = async (d) => { if (!document.getElementById('msgInput')) return; try { const b = await (await fetch(d)).blob(); sendFiles([new File([b], 'скрин.' + ((b.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: b.type || 'image/png' })]); } catch {} };
     inp.addEventListener('paste', (e) => { const files = [...(e.clipboardData && e.clipboardData.files || [])]; if (files.length) { e.preventDefault(); sendFiles(files); } });
     // область чата живёт между перерисовками — обработчики ставим ОДИН раз (иначе файл уходил столько раз, сколько было перерисовок)
     const z = dropZone || form;

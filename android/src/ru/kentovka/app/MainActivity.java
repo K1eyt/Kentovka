@@ -67,7 +67,7 @@ import javax.net.ssl.X509TrustManager;
 public class MainActivity extends Activity {
     static final String LAUNCHER = "file:///android_asset/launcher.html";
     static final int DEFAULT_PORT = 8443;
-    private WebView web;
+    private KWebView web;
     private SharedPreferences prefs;
     private final Handler ui = new Handler(Looper.getMainLooper());
     private Discovery discovery;
@@ -93,7 +93,26 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
         getWindow().setStatusBarColor(0xFF0A0B14);
         getWindow().setNavigationBarColor(0xFF0A0B14);
-        web = new WebView(this);
+        web = new KWebView(this);
+        // картинка с клавиатуры (скрин из её буфера) → в открытый чат как вложение
+        web.onImage = new KWebView.OnImage() { public void image(final android.view.inputmethod.InputContentInfo info) {
+            new Thread(new Runnable() { public void run() {
+                try {
+                    String mime = info.getDescription().getMimeTypeCount() > 0 ? info.getDescription().getMimeType(0) : "image/png";
+                    if (mime == null || mime.contains("*")) mime = getContentResolver().getType(info.getContentUri());
+                    if (mime == null || mime.contains("*")) mime = "image/png";
+                    byte[] data;
+                    try (InputStream in = getContentResolver().openInputStream(info.getContentUri())) {
+                        ByteArrayOutputStream bo = new ByteArrayOutputStream(); byte[] b = new byte[65536]; int n; long tot = 0;
+                        while ((n = in.read(b)) > 0) { bo.write(b, 0, n); tot += n; if (tot > 25L * 1024 * 1024) return; }
+                        data = bo.toByteArray();
+                    }
+                    final String url = "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(data);
+                    js("window.__kPasteImage && window.__kPasteImage(" + JSONObject.quote(url) + ")");
+                } catch (Exception e) { android.util.Log.w("kentovka", "картинка с клавиатуры", e); }
+                finally { try { info.releasePermission(); } catch (Exception ignored) {} }
+            } }).start();
+        } };
         web.setBackgroundColor(0xFF0A0B14);
         setContentView(web);
         WebSettings s = web.getSettings();
@@ -102,7 +121,7 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(true);
-        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.8.2");
+        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.8.3");
         web.addJavascriptInterface(new Bridge(), "KentovkaAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());

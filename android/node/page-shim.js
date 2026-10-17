@@ -97,6 +97,7 @@
       if (d.k === 'kscreen-end' && window.__kScreenEnd) window.__kScreenEnd();
       if (d.k === 'kback') { var h = false; try { h = !!(window.kentovkaBack && window.kentovkaBack()); } catch (x) {} try { e.source.postMessage({ k: 'kback-r', id: d.id, handled: h }, '*'); } catch (x) {} }
       if (d.k === 'kshown' && window.kentovkaShown) { try { window.kentovkaShown(!!d.on); } catch (x) {} }
+      if (d.k === 'kpaste' && typeof d.d === 'string' && window.__kPasteImage) { try { window.__kPasteImage(d.d); } catch (x) {} }
     });
   }
   window.__kentovkaLocal = true; // для preload: это страница приложения (как file:// на ПК)
