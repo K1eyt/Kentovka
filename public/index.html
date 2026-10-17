@@ -1349,6 +1349,9 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   const volumes = store.get('volumes', {});
   const settings = Object.assign({ mic: '', out: '', nsMode: window.kAndroid ? 'off' : 'smart', nsStrength: 80, gate: false, gateDb: -50, ec: true, agc: true, quality: '1080_30', economy: 'auto', micGain: 1, masterVol: 1, sounds: true, soundVol: 1 }, store.get('settings', {}));
   if (!['smart', 'dfn', 'ultra', 'rnnoise', 'gtcrn', 'browser', 'off'].includes(settings.nsMode)) settings.nsMode = 'smart';
+  if (window.kAndroid) for (const v of ['smart', 'dfn', 'ultra', 'gtcrn']) { const o = document.querySelector(`#nsMode option[value="${v}"]`); if (o) o.remove(); }
+  // телефон: тяжёлые нейросети (Умный, DeepFilter, ИИ-Максимум) там не тянут — только лёгкие режимы
+  if (window.kAndroid && ['smart', 'dfn', 'ultra', 'gtcrn'].includes(settings.nsMode)) settings.nsMode = 'off';
   // 1.6.1: по умолчанию «ИИ-Максимум» на 80% — замерено: клавиатура в паузах глушится до −107 дБ, щелчки поверх речи −33 дБ,
   // а шёпот проходит (на 100% шёпот режется целиком, обрывается и обычная речь). Один раз переключаем всех
   if (settings.nsVer !== 5 && settings.nsVer !== 6) { settings.nsVer = 5; settings.nsMode = window.kAndroid ? 'off' : 'ultra'; settings.nsStrength = 80; store.set('settings', settings); }
@@ -2406,6 +2409,22 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   const PENDING_MAX = 10;
   let pendingSeq = 0;
 
+  // телефон: кнопка «Вставить скрин из буфера» (клавиатура Android картинку в поле не вставляет)
+  async function pasteFromPhone() {
+    const K = window.KentovkaAndroid; if (!K || !K.clipImage) return;
+    const d = K.clipImage();
+    if (d === 'big') { toast('Картинка в буфере больше 25 МБ'); return; }
+    if (!d) { toast('В буфере нет картинки — сначала скопируй скрин'); return; }
+    const blob = await (await fetch(d)).blob();
+    const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+    addPending([new File([blob], 'image.' + ext, { type: blob.type })]);
+  }
+  if (window.KentovkaAndroid && window.KentovkaAndroid.clipImage) {
+    const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'iconbtn attach'; pb.id = 'pasteBtn'; pb.title = 'Вставить скрин из буфера';
+    pb.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>';
+    pb.onclick = () => pasteFromPhone();
+    $('attachBtn').after(pb);
+  }
   function addPending(list) {
     const stamp = () => new Date().toLocaleTimeString('ru-RU').replace(/:/g, '-');
     for (const f of list) {
@@ -2639,7 +2658,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     const p = document.createElement('div'); p.id = 'vbPop';
     if (kind === 'ns') {
       p.innerHTML = '<h4>Шумодав</h4><div class="seg" id="vbModes"></div><div id="vbStr"><label>Сила: <b id="vbStrVal"></b></label><input type="range" id="vbStrength" min="40" max="100" step="5"></div><p class="hint">Меньше — слышно шёпот и окончания слов. 100% — режет всё, что похоже на шум.</p>';
-      const modes = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Макс'], ['browser', 'Встроенный'], ['off', 'Выкл']];
+      const modes = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Макс'], ['browser', 'Встроенный'], ['off', 'Выкл']].filter(([v]) => !window.kAndroid || !['smart', 'dfn', 'ultra'].includes(v));
       for (const [v, t] of modes) {
         const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.classList.toggle('on', settings.nsMode === v);
         b.onclick = () => { $('nsMode').value = v; $('nsMode').dispatchEvent(new Event('change')); p.querySelectorAll('#vbModes button').forEach((x) => x.classList.toggle('on', x === b)); syncVb(); syncVoiceTools(); };
@@ -4186,7 +4205,15 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   };
 
   // ---------- настройки ----------
+  // телефон: устройства переключает само приложение (динамик, разговорный, проводные и блютуз-наушники)
+  const nativeAudio = () => (window.kAndroid && window.kAndroid.audioDevices ? window.kAndroid.audioDevices() : null);
   async function fillDevices() {
+    const nat = nativeAudio();
+    if (nat) {
+      const fillN = (sel, arr, cur) => { sel.innerHTML = ''; for (const d of arr || []) { const o = document.createElement('option'); o.value = 'n:' + d.id; o.textContent = d.name; sel.appendChild(o); } sel.value = 'n:' + cur; sel.disabled = false; try { window.kSelectSync && window.kSelectSync(sel); } catch {} };
+      fillN($('micSelect'), nat.inputs, nat.curIn); fillN($('outSelect'), nat.outputs, nat.curOut);
+      return;
+    }
     try {
       const devs = await navigator.mediaDevices.enumerateDevices();
       const fill = (sel, kind, cur) => {
@@ -4508,7 +4535,11 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     watchSpeaking(localStream, () => myId);
   }
 
-  $('micSelect').onchange = () => { settings.mic = $('micSelect').value; restartMic(); };
+  $('micSelect').onchange = () => {
+    const v = $('micSelect').value;
+    if (v.startsWith('n:')) { window.kAndroid.setAudioDevice('in', v.slice(2)); setTimeout(fillDevices, 400); return; }
+    settings.mic = v; restartMic();
+  };
   const syncGateUi = () => {
     $('gateBox').style.display = settings.gate ? '' : 'none';
     $('gateVal').textContent = settings.gateDb;
@@ -4538,6 +4569,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   $('ecCheck').onchange = () => { settings.ec = $('ecCheck').checked; restartMic(); };
   $('agcCheck').onchange = () => { settings.agc = $('agcCheck').checked; restartMic(); };
   $('outSelect').onchange = () => {
+    if ($('outSelect').value.startsWith('n:')) { window.kAndroid.setAudioDevice('out', $('outSelect').value.slice(2)); setTimeout(fillDevices, 400); return; }
     settings.out = $('outSelect').value; store.set('settings', settings);
     for (const p of peers.values()) { p.audio.setSinkId?.(settings.out).catch(() => {}); p.screenAudio.setSinkId?.(settings.out).catch(() => {}); }
     if (procCtx && procCtx.setSinkId) procCtx.setSinkId(settings.out).catch(() => {});
@@ -4547,7 +4579,10 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     if (v && (typeof v.muted === 'boolean' || typeof v.deaf === 'boolean')) { if (!!v.deaf !== deaf) setDeaf(!!v.deaf, true); if (!!v.muted !== muted) setMute(!!v.muted, true, true); }
     if (!v || v.v !== 5) { shareVoice(settings); return; }
     let changed = false;
-    for (const k of ['nsMode', 'nsStrength', 'gate', 'gateDb', 'ec', 'agc', 'micGain', 'masterVol']) if (k in v && v[k] !== undefined && settings[k] !== v[k]) { settings[k] = v[k]; changed = true; }
+    for (const k of ['nsMode', 'nsStrength', 'gate', 'gateDb', 'ec', 'agc', 'micGain', 'masterVol']) {
+      if (k === 'nsMode' && window.kAndroid && ['smart', 'dfn', 'ultra', 'gtcrn'].includes(v[k])) continue; // настройки с компа: тяжёлый шумодав на телефон не переносим
+      if (k in v && v[k] !== undefined && settings[k] !== v[k]) { settings[k] = v[k]; changed = true; }
+    }
     try {
       const devs = await navigator.mediaDevices.enumerateDevices();
       const byLab = (lab, kind) => (lab ? (devs.find((x) => x.kind === kind && x.label === lab) || {}).deviceId : '') || '';

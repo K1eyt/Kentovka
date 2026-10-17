@@ -620,6 +620,21 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void stopScreen() { ScreenService.stop(MainActivity.this); }
         @JavascriptInterface public String audioDevices() { return audio.json(); }
+        // картинка (скрин) из буфера обмена телефона → data:… для чата (клавиатура вставляет только текст)
+        @JavascriptInterface public String clipImage() {
+            try {
+                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData c = cm.getPrimaryClip(); if (c == null || c.getItemCount() == 0) return "";
+                Uri u = c.getItemAt(0).getUri(); if (u == null) return "";
+                String mime = getContentResolver().getType(u); if (mime == null) mime = "image/png";
+                if (!mime.startsWith("image/") && !mime.startsWith("video/")) return "";
+                try (java.io.InputStream in = getContentResolver().openInputStream(u)) {
+                    java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); byte[] b = new byte[65536]; int n; long tot = 0;
+                    while ((n = in.read(b)) > 0) { bo.write(b, 0, n); tot += n; if (tot > 25L * 1024 * 1024) return "big"; }
+                    return "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bo.toByteArray());
+                }
+            } catch (Exception e) { return ""; }
+        }
         @JavascriptInterface public void setAudioDevice(String kind, String id) { if ("in".equals(kind)) audio.setIn(id); else audio.setOut(id); }
         @JavascriptInterface public String lan() { return discovery == null ? "[]" : discovery.servers().toString(); }
         @JavascriptInterface public String account() {

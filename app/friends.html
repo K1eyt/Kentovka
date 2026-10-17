@@ -437,6 +437,7 @@
     user: P('<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/>'),
     speaker: P('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>'),
     reply: P('<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 6 6v5"/>'),
+    clipboard: P('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>'),
     smile: P('<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/>'),
     copy: P('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
   };
@@ -513,6 +514,18 @@
       z.addEventListener('drop', (e) => { z.classList.remove('drop'); const files = [...(e.dataTransfer && e.dataTransfer.files || [])]; if (files.length) { e.preventDefault(); e.stopPropagation(); z.__send(files); } });
     }
     form.prepend(ab, fi);
+    // телефон: «вставить скрин из буфера» (клавиатура Android картинку в поле не вставляет)
+    if (window.KentovkaAndroid && window.KentovkaAndroid.clipImage) {
+      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'iconbtn attach'; pb.title = 'Вставить скрин из буфера'; pb.innerHTML = I.clipboard;
+      pb.onclick = async () => {
+        const d = window.KentovkaAndroid.clipImage();
+        if (d === 'big') { kSay('Картинка в буфере больше 25 МБ.'); return; }
+        if (!d) { flash('В буфере нет картинки — сначала скопируй скрин'); return; }
+        const blob = await (await fetch(d)).blob();
+        sendFiles([new File([blob], 'скрин.' + ((blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: blob.type })]);
+      };
+      ab.after(pb);
+    }
   }
   // ---------- вид — тот же, что в приложении (цвета, свечение, свой фон) ----------
   const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -565,6 +578,7 @@
   // общие настройки голоса (те же, что на серверах); на телефоне шумодав по умолчанию выключен
   const VS = Object.assign({ nsMode: A.android ? 'off' : 'smart', nsStrength: 80, ec: true, agc: true, micGain: 1, masterVol: 1, gate: false, gateDb: -50 }, (await A.voiceSettings().catch(() => null)) || {});
   // микрофон и звук можно выключить заранее — так и зайдёшь в звонок
+  if (A.android && ['smart', 'dfn', 'ultra', 'gtcrn'].includes(VS.nsMode)) VS.nsMode = 'off'; // телефон: тяжёлые нейросети не тянет
   const pref = { muted: !!VS.muted, deaf: !!VS.deaf };
   const savePref = () => { VS.muted = pref.muted; VS.deaf = pref.deaf; A.saveVoiceSettings({ muted: pref.muted, deaf: pref.deaf }); };
   const saveVS = (o) => { Object.assign(VS, o); A.saveVoiceSettings(o); };
@@ -1220,7 +1234,7 @@
   // ---------- настройки голоса (общие с серверами) ----------
   function voiceDialog() {
     const dl = document.createElement('dialog'); dl.className = 'kdlg vdlg';
-    const NS = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Максимум'], ['browser', 'Встроенный'], ['off', 'Выключен']];
+    const NS = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Максимум'], ['browser', 'Встроенный'], ['off', 'Выключен']].filter(([v]) => !A.android || !['smart', 'dfn', 'ultra'].includes(v));
     dl.innerHTML = `<div class="kd-b"><div class="kd-t">Настройки голоса</div><div class="kd-x">Общие для звонков в личке, группах и на серверах.</div>
       <label class="vl">Шумодав</label><div class="seg" id="vdNs"></div>
       <label class="vl">Сила шумодава: <b id="vdStrV"></b></label><input type="range" id="vdStr" min="40" max="100" step="5">
