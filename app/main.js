@@ -86,9 +86,9 @@ ipcMain.on('kvid:res', (e, { rid, data, size, mime, error }) => {
 function kvidAsk(id, start, end) {
   const rid = ++kvidSeq;
   return new Promise((resolve) => {
-    if (!win || win.isDestroyed()) return resolve({ error: 'closed' });
     kvidWait.set(rid, resolve);
-    win.webContents.send('kvid:req', { rid, id, start, end });
+    const w = tabWC(shellTab) || tabWC(lastTab); if (!w) return resolve({ error: 'closed' });
+    w.send('kvid:req', { rid, id, start, end });
     setTimeout(() => { if (kvidWait.delete(rid)) resolve({ error: 'timeout' }); }, 60000);
   });
 }
@@ -189,8 +189,19 @@ function registerHotkeys() {
 }
 
 let win = null;
-// горячие клавиши — и странице сервера (голосовой канал), и странице друзей (звонок из лички)
-function sendHotkey(action) { if (win && !win.isDestroyed()) win.webContents.send('hotkey', action); if (fv()) fv().send('hotkey', action); }
+// ---------- вкладки серверов: каждый сервер — своя страница внутри окна, переключение не рвёт голос ----------
+const tabs = new Map(); // ключ («host», «host:8450», «26.1.2.3:8443») → { key, view, url, realKey, name, host, port, hs, tempNote, viaAlt, at }
+let shellTab = null;     // какая вкладка видна: null — главная (друзья)
+let lastTab = null;      // последняя открытая вкладка сервера (для приглашений с главной)
+let shellCover = false;  // на главной открыт диалог или меню — страницы прячем, чтобы не перекрывали
+let voiceTabKey = null;  // на каком сервере я в голосовом канале
+const shellPayload = () => ({ tab: shellTab, url: shellTab && tabs.get(shellTab) ? tabs.get(shellTab).url : null, open: [...tabs.keys()], voice: voiceTabKey, roles: Object.fromEntries([...tabs].map(([k, t]) => [k, (t.view && t.view.webContents.role) || ''])) }); // roles — на телефоне: какой фрейм чей
+const tabOf = (wc) => { if (!wc) return null; for (const t of tabs.values()) if (!t.view.webContents.isDestroyed() && t.view.webContents === wc) return t; return null; };
+const tabWC = (key) => { const t = key && tabs.get(key); return t && !t.view.webContents.isDestroyed() ? t.view.webContents : null; };
+const allTabWC = () => [...tabs.values()].map((t) => t.view.webContents).filter((w) => !w.isDestroyed());
+function toPages(ch, ...args) { for (const w of [win && !win.isDestroyed() && win.webContents, fv(), ...allTabWC()]) if (w) { try { w.send(ch, ...args); } catch {} } }
+// горячие клавиши — странице сервера, где я в голосе (или открытой), и странице друзей (звонок из лички)
+function sendHotkey(action) { const w = tabWC(voiceTabKey) || tabWC(shellTab); if (w) w.send('hotkey', action); if (fv()) fv().send('hotkey', action); }
 let tray = null;
 let hostServer = null; // свой сервер, на котором я сейчас (или null)
 // свои серверы: можно держать несколько, каждый на своём порту и со своими каналами и чатом
@@ -240,8 +251,6 @@ function createWindow() {
   const sendState = () => { if (win && !win.isDestroyed()) win.webContents.send('win:state', winState()); };
   for (const ev of ['maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen', 'focus', 'blur', 'restore']) win.on(ev, sendState);
   for (const ev of ['resize', 'enter-full-screen', 'leave-full-screen', 'maximize', 'unmaximize']) win.on(ev, () => setTimeout(layoutFriends, 0));
-  // переход на другой сервер или в меню — друзья закрываются, область пересчитает новая страница
-  win.webContents.on('did-start-navigation', (d) => { if (d.isMainFrame && !d.isSameDocument) { friendsArea = null; closeFriends(); voiceState = null; if (fv()) fv().send('voice:state', null); } });
   // звонок из лички живёт в странице друзей — создаём её сразу, чтобы входящие звонки доходили
   win.webContents.once('did-finish-load', () => ensureFriendsView());
   win.loadFile(path.join(__dirname, 'launcher.html'));
@@ -252,11 +261,11 @@ function createWindow() {
   });
   win.webContents.on('will-navigate', (e, url) => {
     // внутри окна разрешаем только наш стартовый экран и сервер Кентовки
-    if (!url.startsWith('file:') && !url.startsWith(currentServerUrl || '\u0000')) e.preventDefault();
+    if (!url.startsWith('file:')) e.preventDefault();
   });
   // закрытие во время разговора — сворачиваемся в трей, чтобы голос не обрывался
   win.on('close', (e) => {
-    if (quitting || !connected) return;
+    if (quitting || !tabs.size) return;
     e.preventDefault();
     win.hide();
     if (!trayHintShown && Notification.isSupported()) {
@@ -293,37 +302,72 @@ function ensureFriendsView() {
   friendsView.webContents.on('render-process-gone', () => { friendsView = null; if (friendsShown) { friendsShown = false; tellShown(); } });
   return friendsView;
 }
-function layoutFriends() {
-  if (!friendsShown || !win || win.isDestroyed() || !friendsView) return;
+function contentRect() {
   const [W, H] = win.getContentSize();
   const z = win.webContents.getZoomFactor ? win.webContents.getZoomFactor() : 1;
   const tb = win.isFullScreen() ? 0 : 32;
   const a = friendsArea || { x: 0, y: tb, w: W, h: H - tb };
   const r = { x: Math.round(a.x * z), y: Math.round(a.y * z), width: Math.max(1, Math.round(a.w * z)), height: Math.max(1, Math.round(a.h * z)) };
   r.width = Math.min(r.width, W - r.x); r.height = Math.min(r.height, H - r.y);
-  friendsView.setBounds(r);
+  return r;
+}
+// какая страница видна в области справа от полосы серверов: друзья (главная) или вкладка сервера
+function layoutFriends() {
+  if (!win || win.isDestroyed()) return;
+  const r = contentRect();
+  const wantFriends = shellTab === null && !shellCover;
+  if (wantFriends) {
+    const v = ensureFriendsView();
+    if (!friendsShown) { win.contentView.addChildView(v); friendsShown = true; tellShown(); }
+    v.setBounds(r);
+  } else if (friendsShown) { friendsShown = false; try { win.contentView.removeChildView(friendsView); } catch {} tellShown(); }
+  for (const t of tabs.values()) {
+    const on = t.key === shellTab && !shellCover;
+    if (on) { if (!t.shown) { win.contentView.addChildView(t.view); t.shown = true; } t.view.setBounds(r); }
+    else if (t.shown) { t.shown = false; try { win.contentView.removeChildView(t.view); } catch {} }
+  }
 }
 function tellShown() {
   if (win && !win.isDestroyed()) win.webContents.send('friends:shown', friendsShown);
   if (friendsView && !friendsView.webContents.isDestroyed()) friendsView.webContents.send('friends:shown', friendsShown);
 }
+function showTab(key) {
+  if (key && !tabs.has(key)) key = null;
+  shellTab = key;
+  if (key) { const t = tabs.get(key); t.at = Date.now(); lastTab = key; useTab(t); }
+  layoutFriends();
+  if (win && !win.isDestroyed()) win.webContents.send('shell:tab', shellPayload());
+  const w = key ? tabWC(key) : fv(); if (w && !shellCover) w.focus();
+  presenceChanged();
+}
+// «текущий сервер» для приглашений, мостов и подписи — последняя открытая вкладка
+function useTab(t) {
+  currentServerUrl = t.url; currentServerName = t.name; currentServerKey = t.realKey; hostServer = t.hs || null; tempNote = t.tempNote || null; viaAlt = t.viaAlt || null; connected = true;
+}
+function closeTab(key) {
+  const t = tabs.get(key); if (!t) return;
+  tabs.delete(key);
+  try { if (t.shown) win.contentView.removeChildView(t.view); } catch {}
+  try { t.view.webContents.close(); } catch {}
+  if (voiceTabKey === key) { voiceTabKey = null; voiceState = null; if (fv()) fv().send('voice:state', null); }
+  if (lastTab === key) { const next = [...tabs.values()].sort((a, b) => b.at - a.at)[0]; lastTab = next ? next.key : null; if (next) useTab(next); else { connected = false; currentServerUrl = null; hostServer = null; } }
+  if (shellTab === key) showTab(null); else showTab(shellTab);
+  setTimeout(friendsChanged, 0);
+}
 function openFriends(focusId) {
   if (!win || win.isDestroyed()) return;
   if (win.isMinimized()) win.restore();
   win.show(); win.focus();
-  const v = ensureFriendsView();
-  if (!friendsShown) { win.contentView.addChildView(v); friendsShown = true; tellShown(); }
-  layoutFriends();
-  v.webContents.focus();
-  if (focusId) v.webContents.send('friends:focus', focusId);
+  ensureFriendsView();
+  showTab(null);
+  const v = fv(); if (v) { v.focus(); if (focusId) v.send('friends:focus', focusId); }
 }
-function closeFriends() {
-  if (!friendsShown) return;
-  friendsShown = false;
-  try { win.contentView.removeChildView(friendsView); } catch {}
-  tellShown();
-  if (win && !win.isDestroyed()) win.webContents.focus();
-}
+function closeFriends() { if (shellTab === null && lastTab && tabs.has(lastTab)) showTab(lastTab); }
+ipcMain.on('shell:cover', (e, on) => { if (!win || e.sender !== win.webContents) return; shellCover = !!on; layoutFriends(); });
+ipcMain.handle('shell:show', (e, key) => { if (!win || e.sender !== win.webContents) return; showTab(key || null); return true; });
+ipcMain.handle('shell:close', (e, key) => { if (!win || e.sender !== win.webContents) return; if (voiceTabKey === key) return { error: 'voice' }; closeTab(String(key)); return true; });
+ipcMain.handle('shell:state', () => (shellPayload()));
+ipcMain.on('app:is-tab', (e) => { e.returnValue = !!tabOf(e.sender); });
 ipcMain.on('friends:area', (e, a) => {
   if (!win || e.sender !== win.webContents || !a) return;
   const n = (v) => (Number.isFinite(+v) ? +v : 0);
@@ -333,13 +377,14 @@ ipcMain.on('friends:area', (e, a) => {
 ipcMain.on('friends:close', () => closeFriends());
 ipcMain.handle('friends:is-shown', () => friendsShown);
 // главная страница приложения (не сервер): друзья там — основная часть окна
-const atHome = () => !!(win && !win.isDestroyed() && win.webContents.getURL().startsWith('file:'));
+const atHome = () => shellTab === null;
 ipcMain.handle('friends:is-home', () => atHome());
 const fv = () => (friendsView && !friendsView.webContents.isDestroyed() ? friendsView.webContents : null);
 function friendsChanged() {
   if (account) { try { scheduleAutoSave(); } catch {} }
   const n = friends ? friends.unreadTotal() : 0;
   if (win && !win.isDestroyed()) win.webContents.send('friends:badge', n);
+  for (const w of allTabWC()) w.send('friends:badge', n);
   if (fv()) fv().send('friends:changed');
   if (process.platform === 'win32' && win && !win.isDestroyed()) win.setOverlayIcon(n ? nativeImage.createFromPath(ICON).resize({ width: 16, height: 16 }) : null, n ? `${n} новых` : '');
 }
@@ -360,11 +405,12 @@ ipcMain.on('call:state', (e, st) => {
   dmCall = st && st.state ? { id: String(st.id || ''), name: String(st.name || '').slice(0, 40), state: String(st.state), group: !!st.group } : null;
   presenceChanged();
   if (win && !win.isDestroyed()) win.webContents.send('call:state', dmCall);
+  for (const w of allTabWC()) w.send('call:state', dmCall);
 });
 ipcMain.handle('call:get', () => dmCall);
 // со страницы сервера: принять / отклонить входящий, сбросить (зашёл в голосовой канал)
 ipcMain.on('call:cmd', (e, cmd) => {
-  if (!win || e.sender !== win.webContents || !fv()) return;
+  if (!tabOf(e.sender) || !fv()) return;
   if (!['accept', 'decline', 'hangup', 'open'].includes(cmd)) return;
   if (cmd === 'open' || cmd === 'accept') openFriends(dmCall && dmCall.id);
   fv().send('call:cmd', cmd);
@@ -372,28 +418,44 @@ ipcMain.on('call:cmd', (e, cmd) => {
 // состояние голосового канала со страницы сервера → страница друзей (панель «Голос подключён» внизу)
 let voiceState = null;
 ipcMain.on('voice:state', (e, st) => {
-  if (!win || e.sender !== win.webContents) return;
-  voiceState = st && st.inVoice ? { inVoice: true, ch: String(st.ch || '').slice(0, 60), server: currentServerName, muted: !!st.muted, deaf: !!st.deaf } : null;
+  const t = tabOf(e.sender); if (!t) return;
+  if (st && st.inVoice) { voiceTabKey = t.key; voiceState = { inVoice: true, ch: String(st.ch || '').slice(0, 60), server: t.name, muted: !!st.muted, deaf: !!st.deaf }; }
+  else if (voiceTabKey === t.key) { voiceTabKey = null; voiceState = null; }
+  else return;
   presenceChanged();
   if (fv()) fv().send('voice:state', voiceState);
+  if (win && !win.isDestroyed()) win.webContents.send('shell:tab', shellPayload());
+});
+// заходишь в голосовой на другом сервере: спросить, а потом выйти из старого
+ipcMain.handle('voice:claim', (e) => {
+  const t = tabOf(e.sender); if (!t) return { ok: true };
+  if (voiceTabKey && voiceTabKey !== t.key && tabs.has(voiceTabKey)) return { busy: tabs.get(voiceTabKey).name || 'другом сервере', ch: voiceState && voiceState.ch };
+  return { ok: true };
+});
+ipcMain.handle('voice:take', (e) => {
+  const t = tabOf(e.sender); if (!t) return;
+  const w = voiceTabKey && voiceTabKey !== t.key ? tabWC(voiceTabKey) : null;
+  if (w) w.send('voice:cmd', 'leave');
+  return true;
 });
 ipcMain.handle('voice:get', () => voiceState);
 ipcMain.on('voice:cmd', (e, cmd) => {
   if (!fv() || e.sender !== fv() || !['mute', 'deaf', 'leave', 'open'].includes(cmd)) return;
-  if (cmd === 'open') { closeFriends(); win.webContents.send('voice:cmd', 'open'); return; }
-  win.webContents.send(cmd === 'leave' ? 'voice:cmd' : 'hotkey', cmd);
+  const w = tabWC(voiceTabKey); if (!w) return;
+  if (cmd === 'open') { showTab(voiceTabKey); w.send('voice:cmd', 'open'); return; }
+  w.send(cmd === 'leave' ? 'voice:cmd' : 'hotkey', cmd);
 });
 // общие настройки голоса (шумодав, громкость, эхо) — одни и те же на всех серверах и в звонках из лички
 ipcMain.handle('voice:settings-get', () => loadConfig().voice || null);
 ipcMain.on('voice:settings-set', (e, v) => {
   if (!v || typeof v !== 'object') return;
   const pick = {};
-  for (const k of ['micLabel', 'outLabel', 'nsMode', 'nsStrength', 'gate', 'gateDb', 'ec', 'agc', 'micGain', 'masterVol']) if (k in v && ['string', 'number', 'boolean'].includes(typeof v[k])) pick[k] = typeof v[k] === 'string' ? v[k].slice(0, 120) : v[k];
+  for (const k of ['micLabel', 'outLabel', 'nsMode', 'nsStrength', 'gate', 'gateDb', 'ec', 'agc', 'micGain', 'masterVol', 'muted', 'deaf']) if (k in v && ['string', 'number', 'boolean'].includes(typeof v[k])) pick[k] = typeof v[k] === 'string' ? v[k].slice(0, 120) : v[k];
   const c = loadConfig(); c.voice = Object.assign(c.voice || {}, pick); saveConfig(c);
 });
 const myAddrs = () => lanAddresses().filter((a) => a.radmin).map((a) => a.address);
 ipcMain.handle('friends:open', (e, id) => openFriends(id));
-ipcMain.handle('friends:toggle', () => (friendsShown ? closeFriends() : openFriends()));
+ipcMain.handle('friends:toggle', () => (shellTab === null ? closeFriends() : openFriends()));
 ipcMain.handle('friends:badge', () => (friends ? friends.unreadTotal() : 0));
 ipcMain.handle('friends:me', () => ({ id: friends && friends.myId, code: friends && friendCode(friends.myId), addresses: myAddrs(), all: lanAddresses().map((a) => a.address), port: friends && friends.port,
   profile: loadConfig().profile || null, server: connected ? { name: currentServerName, address: currentInviteAddress() } : null }));
@@ -454,10 +516,29 @@ ipcMain.handle('friends:remove', (e, id) => friends && friends.remove(id));
 ipcMain.handle('friends:messages', (e, id) => (friends ? friends.messages(id) : []));
 ipcMain.handle('friends:read', (e, id) => friends && friends.read(id));
 ipcMain.handle('friends:send', (e, id, text) => friends && friends.send(id, text));
-ipcMain.handle('friends:invite', (e, id) => {
-  const a = currentInviteAddress();
-  if (!friends || !a) return { error: 'Сначала зайди на сервер или создай свой' };
-  friends.invite(id, a, currentServerName); return { ok: true };
+ipcMain.handle('friends:react', (e, target, mid, emoji) => friends && friends.react(target && typeof target === 'object' ? { id: target.id ? String(target.id) : undefined, gid: target.gid ? String(target.gid) : undefined } : null, String(mid || ''), String(emoji || '')));
+// «Позвать на сервер»: список серверов, где ты состоишь
+function inviteTargets() {
+  const c = loadConfig(), out = [];
+  const lan = myAddrs()[0] || (lanAddresses()[0] || {}).address;
+  const cur = currentInviteAddress();
+  for (const x of Array.isArray(c.servers) ? c.servers : []) {
+    if (!x || !x.address) continue;
+    if (x.host) {
+      const port = hostPortOf(x), on = hostServers.has(port);
+      out.push({ key: x.address, name: x.name || 'Мой сервер', address: on && lan ? `${lan}:${port}` : null, mine: true, note: on ? '' : 'не запущен' });
+    } else out.push({ key: x.address, name: x.name || x.address, address: x.address, mine: false, note: '' });
+  }
+  if (cur && !out.some((x) => x.address === cur)) out.unshift({ key: cur, name: currentServerName || cur, address: cur, mine: false, note: '' });
+  for (const x of out) x.current = !!cur && x.address === cur;
+  return out;
+}
+ipcMain.handle('friends:invite-list', () => inviteTargets());
+ipcMain.handle('friends:invite', (e, id, key) => {
+  if (!friends) return { error: 'Друзья ещё не готовы' };
+  const t = key ? inviteTargets().find((x) => x.key === key) : inviteTargets().find((x) => x.current);
+  if (!t || !t.address) return { error: key ? 'Этот сервер сейчас не запущен — включи его, тогда позовёшь' : 'Сначала зайди на сервер или создай свой' };
+  friends.invite(id, t.address, t.name); return { ok: true, name: t.name };
 });
 ipcMain.handle('friends:join', async (e, address, name) => {
   if (win.isMinimized()) win.restore(); win.show(); win.focus();
@@ -472,13 +553,16 @@ function currentInviteAddress() {
 }
 ipcMain.handle('app:set-access', (e, a) => {
   if (!ACCESS.includes(a)) return;
+  const tb = tabOf(e.sender); const hostServer = tb ? tb.hs : null;
   const c = loadConfig(); c.access = a;
   if (hostServer) { const x = (c.servers || []).find((v) => v && v.address === hostKey(hostServer.port)); if (x) x.access = a; }
   saveConfig(c);
   if (hostServer && hostServer.setAccess) hostServer.setAccess(a);
 });
 // полоса серверов в приложении: список и переход
-ipcMain.handle('app:servers', () => {
+ipcMain.handle('app:servers', (e) => {
+  const tb = tabOf(e.sender);
+  if (tb) { const c = loadConfig(); const list = (Array.isArray(c.servers) ? c.servers : []).map((x) => ({ ...x, port: x.host ? hostPortOf(x) : undefined, running: !!(x.host && hostServers.has(hostPortOf(x))) })); return { list, current: tb.key }; }
   const c = loadConfig();
   const list = (Array.isArray(c.servers) ? c.servers : []).map((x) => ({ ...x, port: x.host ? hostPortOf(x) : undefined, running: !!(x.host && hostServers.has(hostPortOf(x))) }));
   let current = null;
@@ -632,7 +716,7 @@ ipcMain.handle('sysaudio:start', (e) => {
 const fromFile = (e) => e.senderFrame && e.senderFrame.url.startsWith('file:');
 
 let currentServerName = '';
-ipcMain.handle('app:server-name', () => currentServerName);
+ipcMain.handle('app:server-name', (e) => { const t = tabOf(e.sender); return t ? t.name : currentServerName; });
 // «Мои серверы»: переименовать / убрать из списка
 ipcMain.handle('launcher:server-edit', (e, { address, name, remove }) => {
   if (!fromFile(e)) return null;
@@ -651,12 +735,30 @@ ipcMain.handle('launcher:server-stop', async (e, port) => {
   if (!fromFile(e)) return null;
   port = Number(port);
   const s = hostServers.get(port); if (!s) return [...hostServers.keys()];
-  if (hostServer === s && connected) return { error: 'Ты сейчас на этом сервере' };
+  { const t = tabs.get(hostKey(port)); if (t) { if (voiceTabKey === t.key) return { error: 'Ты в голосовом канале на этом сервере — сначала выйди из него' }; closeTab(t.key); } }
   hostServers.delete(port); if (hostServer === s) hostServer = null;
   try { await s.close(); } catch {}
   return [...hostServers.keys()];
 });
 
+// удалить свой сервер: остановить и стереть историю, каналы, профили (сертификат и аккаунт остаются)
+ipcMain.handle('launcher:server-delete', async (e, port) => {
+  if (!fromFile(e)) return null;
+  port = Number(port);
+  const s = hostServers.get(port);
+  { const t = tabs.get(hostKey(port)); if (t) { if (voiceTabKey === t.key) return { error: 'Ты в голосовом канале на этом сервере — сначала выйди из него' }; closeTab(t.key); } }
+  if (s) { hostServers.delete(port); if (hostServer === s) hostServer = null; try { await s.close(); } catch {} }
+  const dir = hostDataDir(port);
+  for (const f of ['chat-history.json', 'avatars.json', 'profiles.json', 'accounts.json', 'channels.json', 'files.json']) { try { fs.unlinkSync(path.join(dir, f)); } catch {} }
+  try { fs.rmSync(path.join(dir, 'banners'), { recursive: true, force: true }); } catch {}
+  if (dir !== app.getPath('userData')) { try { fs.rmSync(dir, { recursive: true, force: true }); } catch {} }
+  const c = loadConfig();
+  c.servers = (Array.isArray(c.servers) ? c.servers : []).filter((x) => !(x && x.host && hostPortOf(x) === port));
+  if (c.mainHostPort === port) delete c.mainHostPort;
+  saveConfig(c);
+  try { discovery && discovery.announce(); } catch {}
+  return { ok: true, servers: c.servers, running: [...hostServers.keys()] };
+});
 ipcMain.handle('launcher:connect', async (e, opts) => {
   if (!fromFile(e)) return { error: 'нельзя' };
   return connectTo(opts || {});
@@ -700,16 +802,18 @@ async function connectTo({ address, host, port, direct, name, access }) {
   }
   let target = host ? 'localhost' : String(address || '').trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
   if (!target) return { error: 'Впиши адрес хоста' };
+  // сервер уже открыт во вкладке — просто показываем его (голос не рвётся)
+  const tabKey = host ? hostKey(port) : target; // тот же ключ, что в «Мои серверы»
+  if (tabs.has(tabKey) && !tabs.get(tabKey).view.webContents.isDestroyed()) { if (host && hostServer) tabs.get(tabKey).hs = hostServer; showTab(tabKey); return { ok: true }; }
   let url = `https://${target}`;
   if (!/:\d+$/.test(target)) url += `:${port}`;
   { const c = loadConfig(); saveConfig(Object.assign(c, { address: host ? c.address : target, host: !!host, port: host ? port : c.port || port, direct }, host ? { access } : {})); }
-  currentServerUrl = url;
-  viaAlt = null;
+  const tab = { key: tabKey, url, realKey: null, name: '', host: !!host, port, hs: host ? hostServer : null, tempNote: null, viaAlt: null, at: Date.now(), view: null };
   let prevServers;
   try {
     {
       const old = (loadConfig().servers || []).find((x) => x && x.address === (host ? hostKey(port) : target));
-      currentServerName = String(name || '').trim() || (old && old.name) || (host ? 'Мой сервер' : target);
+      tab.name = String(name || '').trim() || (old && old.name) || (host ? 'Мой сервер' : target);
     }
     // запоминаем сервер в «Мои серверы» ещё до загрузки — страница сразу покажет его в полосе слева;
     // если не достучались — вернём список как был
@@ -723,48 +827,57 @@ async function connectTo({ address, host, port, direct, name, access }) {
       list.unshift(Object.assign({}, old && { alts: old.alts, fps: old.fps }, { address: key, name: nm, last: Date.now(), host: !!host }, host ? { access } : {}));
       c.servers = list.slice(0, 30); saveConfig(c);
     }
-    currentServerKey = new URL(url).host;
-    tempNote = null;
+    tab.realKey = new URL(url).host;
+    tab.view = makeTabView(tab);
+    tabs.set(tabKey, tab); // заранее: подпись для входа и проверка сертификата знают, куда мы идём
     // хоста нет в сети — не сдаёмся: временный сервер у кентов или у себя (голос и чат работают, прав хоста ни у кого нет)
     // общая сеть не пускает — пробуем запасные адреса сервера: свой мост → мост сервера → остальные
     if (!host && !(await reachable(url))) {
-      for (const alt of altOrder(currentServerKey)) {
-        if (alt === currentServerKey) continue;
-        if (await reachable('https://' + alt)) { url = 'https://' + alt; currentServerUrl = url; viaAlt = alt; break; }
+      for (const alt of altOrder(tab.realKey)) {
+        if (alt === tab.realKey) continue;
+        if (await reachable('https://' + alt)) { url = 'https://' + alt; tab.url = url; tab.viaAlt = alt; break; }
       }
     }
     if (!host && !(await reachable(url))) {
-      const t = await tempFallback(currentServerKey);
-      if (t) { currentServerUrl = t.url; tempNote = { owner: t.owner, host: currentServerKey }; await win.loadURL(t.url + '/'); }
+      const t = await tempFallback(tab.realKey);
+      if (t) { tab.url = t.url; tab.tempNote = { owner: t.owner, host: tab.realKey }; await tab.view.webContents.loadURL(t.url + '/'); }
       else throw new Error('unreachable');
-    } else await win.loadURL(url + '/');
-    connected = true;
-    presenceChanged();
+    } else await tab.view.webContents.loadURL(url + '/');
+    // лишние вкладки (больше 6) закрываем — кроме той, где голос
+    const extra = [...tabs.values()].filter((x) => x.key !== tabKey && x.key !== voiceTabKey).sort((a, b) => a.at - b.at);
+    while (tabs.size > 6 && extra.length) closeTab(extra.shift().key);
+    showTab(tabKey);
     friendsChanged(); // окно друзей: теперь можно звать на этот сервер
     return { ok: true };
   } catch (err) {
-    currentServerUrl = null;
-    connected = false;
+    if (tabs.get(tabKey) === tab) { tabs.delete(tabKey); try { tab.view && tab.view.webContents.close(); } catch {} }
     { const c = loadConfig(); c.servers = prevServers; saveConfig(c); }
-    win.loadFile(path.join(__dirname, 'launcher.html'));
+    if (win && !win.isDestroyed()) win.webContents.send('shell:tab', shellPayload());
     return { error: `Не достучался до ${url}. Хост запустил Кентовку? Вы в одной локальной сети? Если хоста нет — зайди хотя бы раз, пока он в сети: тогда в следующий раз Кентовка сможет держать сервер без него.` };
   }
 }
 
-ipcMain.handle('app:back', async () => {
-  connected = false;
-  presenceChanged();
-  setTimeout(friendsChanged, 0);
-  currentServerUrl = null;
-  await win.loadFile(path.join(__dirname, 'launcher.html'));
-});
+function makeTabView(tab) {
+  const v = new WebContentsView({ webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true, backgroundThrottling: false } });
+  v.setBackgroundColor('#0a0b14');
+  const wc = v.webContents;
+  wc.setWindowOpenHandler(({ url }) => { if (/^https?:\/\//.test(url)) require('electron').shell.openExternal(url); return { action: 'deny' }; });
+  wc.on('will-navigate', (e, url) => { if (!url.startsWith(tab.url)) e.preventDefault(); });
+  wc.on('render-process-gone', () => { if (tabs.get(tab.key) === tab) closeTab(tab.key); });
+  wc.on('before-input-event', (e, inp) => { if (inp.type === 'keyDown' && inp.key === 'F11') { e.preventDefault(); win.setFullScreen(!win.isFullScreen()); } });
+  return v;
+}
+// со страницы сервера «на главную»: вкладка остаётся (голос не рвётся)
+ipcMain.handle('app:back', async (e) => { showTab(null); });
+// выйти с сервера совсем (закрыть вкладку)
+ipcMain.handle('app:leave', async (e) => { const t = tabOf(e.sender); if (t) closeTab(t.key); });
 
 // ---------- временный сервер: хост вышел посреди звонка, сервером становлюсь я (без прав хоста) ----------
 const BACKUP_PORT = Number(process.env.KENTOVKA_BACKUP_PORT) || 8449;
 let backupServer = null, backupIdle = null;
 ipcMain.on('backup:port', (e) => { e.returnValue = BACKUP_PORT; });
 ipcMain.handle('backup:start', async (e, o) => {
-  if (!win || e.sender !== win.webContents || !o) return { error: 'нельзя' };
+  if (!tabOf(e.sender) || !o) return { error: 'нельзя' };
   return startBackup(o);
 });
 async function startBackup(o) {
@@ -794,7 +907,8 @@ const cacheDir = () => path.join(app.getPath('userData'), 'server-cache');
 const cacheFile = (key) => path.join(cacheDir(), String(key).replace(/[^\w.\-]/g, '_') + '.json');
 let currentServerKey = null; // адрес настоящего хоста (ip:порт), даже если сейчас мы на временном сервере
 ipcMain.on('server:cache', (e, snap) => {
-  if (!win || e.sender !== win.webContents || !snap || !currentServerKey) return;
+  const tb = tabOf(e.sender); if (!tb || !snap || !tb.realKey) return;
+  const currentServerKey = tb.realKey;
   try {
     const safe = {
       channels: Array.isArray(snap.channels) ? snap.channels.slice(0, 60) : [],
@@ -828,7 +942,7 @@ function reachable(url) {
   });
 }
 let tempNote = null; // для страницы: { owner: 'me' | ip }
-ipcMain.handle('app:temp-note', () => tempNote);
+ipcMain.handle('app:temp-note', (e) => { const t = tabOf(e.sender); return t ? t.tempNote || null : tempNote; });
 async function tempFallback(key) {
   let cache = null; try { cache = JSON.parse(fs.readFileSync(cacheFile(key), 'utf8')); } catch {}
   const mine = new Set(lanAddresses().map((a) => a.address));
@@ -844,7 +958,7 @@ async function tempFallback(key) {
   if (r.error) return null;
   return { url: `https://127.0.0.1:${BACKUP_PORT}`, owner: 'me' };
 }
-ipcMain.handle('app:host-info', () => (hostServer ? { port: hostServer.port, addresses: lanAddresses() } : null));
+ipcMain.handle('app:host-info', (e) => { const t = tabOf(e.sender); const hs = t ? t.hs : hostServer; return hs ? { port: hs.port, addresses: lanAddresses() } : null; });
 ipcMain.handle('app:copy', (e, text) => { clipboard.writeText(String(text).slice(0, 500)); });
 ipcMain.handle('app:hotkeys', () => ({ ...HOTKEYS }));
 // пока в настройках ждём новое сочетание — клавиши не срабатывают
@@ -880,7 +994,7 @@ ipcMain.handle('app:set-theme', (e, theme) => {
     bg: ['calm', 'aurora', 'grid', 'off', 'custom', 'stars', 'waves'].includes(theme.bg) ? theme.bg : (typeof theme.bg === 'string' ? theme.bg.slice(0, 20) : 'calm'),
     bgDim: Math.max(0, Math.min(0.95, Number(theme.bgDim) || 0)), bgBlur: Math.max(0, Math.min(40, Number(theme.bgBlur) || 0)), at: Date.now() };
   saveConfig(c);
-  for (const wc of [win && !win.isDestroyed() && win.webContents, fv()]) if (wc && wc !== e.sender) wc.send('theme:changed', c.theme);
+  for (const wc of [win && !win.isDestroyed() && win.webContents, fv(), ...allTabWC()]) if (wc && wc !== e.sender) wc.send('theme:changed', c.theme);
 });
 ipcMain.handle('app:get-theme', () => loadConfig().theme || null);
 // свой фон всего приложения — один на все серверы, лежит файлом в папке приложения
@@ -896,7 +1010,7 @@ ipcMain.handle('app:bg-set', async (e, data, mime) => {
     if (buf.length > 25 * 1024 * 1024 || !/^image\/(png|jpeg|gif|webp)$/.test(String(mime))) return { error: 'Фон — картинка или гифка до 25 МБ' };
     await fs.promises.writeFile(BG_FILE(), buf); c.bgMeta = { mime: String(mime), at: Date.now() }; saveConfig(c);
   }
-  for (const wc of [win && !win.isDestroyed() && win.webContents, fv()]) if (wc && wc !== e.sender) wc.send('bg:changed');
+  for (const wc of [win && !win.isDestroyed() && win.webContents, fv(), ...allTabWC()]) if (wc && wc !== e.sender) wc.send('bg:changed');
   return { ok: true };
 });
 
@@ -967,7 +1081,8 @@ ipcMain.handle('bridges:remove', (e, link) => { const c = loadConfig(); c.bridge
 // сервер прислал свои адреса во всех сетях и на мостах — запоминаем порядок для следующего входа
 const certSeen = new Map(); // имя хоста -> отпечаток сертификата
 ipcMain.on('server:alts', (e, alts) => {
-  if (!currentServerKey || !Array.isArray(alts)) return;
+  const tb = tabOf(e.sender); if (!tb || !tb.realKey || !Array.isArray(alts)) return;
+  const currentServerKey = tb.realKey, currentServerUrl = tb.url, viaAlt = tb.viaAlt;
   const c = loadConfig(); const sv = (c.servers || []).find((x) => x.address === currentServerKey); if (!sv) return;
   sv.alts = alts.filter((a) => a && typeof a.addr === 'string' && /^[\w.-]{1,200}:\d{2,5}$/.test(a.addr)).slice(0, 12).map((a) => ({ addr: a.addr, net: String(a.net || '').slice(0, 12), own: !!a.own }));
   // отпечаток сертификата сервера, увиденный по общей сети: через мост пустим только к нему же (мост не подменит сервер)
@@ -998,6 +1113,7 @@ ipcMain.handle('account:sign', (e, nonce, host) => {
   host = String(host || '');
   // подписываем только для того сервера, куда мы правда подключались (чтобы чужой сервер не выпросил подпись для другого)
   const ok = new Set([currentServerUrl && new URL(currentServerUrl).host, currentServerKey].filter(Boolean));
+  for (const t of tabs.values()) { try { ok.add(new URL(t.url).host); } catch {} if (t.realKey) ok.add(t.realKey); }
   if (!ok.has(host) && !new RegExp(':' + BACKUP_PORT + '$').test(host)) return null;
   const r = account.sign(`kentovka:${nonce}:${account.id}:${host}`);
   return { ...r, host };
@@ -1160,7 +1276,7 @@ app.whenReady().then(() => {
         if (fv()) fv().send('call:in', m);
         if (m.k === 'ring') {
           // входящий звонок: страница сервера покажет «Принять / Отклонить», а если окно свёрнуто — уведомление
-          if (win && !win.isDestroyed()) win.webContents.send('call:ring', { id: m.id, name: m.name, avatar: m.avatar });
+          { const w = tabWC(shellTab); if (w) w.send('call:ring', { id: m.id, name: m.name, avatar: m.avatar }); }
           if (Notification.isSupported() && !(win && win.isFocused())) {
             const n = new Notification({ title: 'Звонок', body: `${m.name} звонит тебе`, icon: ICON });
             n.on('click', () => openFriends(m.id)); n.show();

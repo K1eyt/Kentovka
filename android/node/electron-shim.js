@@ -23,7 +23,8 @@ let javaWait = null;
 function toJava(ev) { javaQueue.push(ev); if (javaWait) { const w = javaWait; javaWait = null; w(); } }
 
 // ---------- страницы: роль main (стартовая/сервер) и friends (друзья во фрейме) ----------
-const sockets = { main: new Set(), friends: new Set() };
+const sockets = { main: new Set(), friends: new Set() }; // и 'tab:<ключ>' — страница сервера во вкладке (фрейм на главной)
+const sockSet = (role) => sockets[role] || (sockets[role] = new Set());
 const encode = (v) => {
   if (Buffer.isBuffer(v) || v instanceof Uint8Array) return { __b64: Buffer.from(v).toString('base64') };
   if (v instanceof ArrayBuffer) return { __b64: Buffer.from(v).toString('base64') };
@@ -39,14 +40,16 @@ const decode = (v) => {
 };
 function push(role, ch, args) {
   const msg = JSON.stringify({ ev: ch, args: encode(args) });
-  for (const ws of sockets[role]) if (ws.readyState === 1) ws.send(msg);
+  for (const ws of sockSet(role)) if (ws.readyState === 1) ws.send(msg);
 }
 
 // ---------- webContents ----------
+let wcSeq = 10;
 class WebContents extends EventEmitter {
-  constructor(role) { super(); this.role = role; this.url = ''; this.id = role === 'main' ? 1 : 2; }
+  constructor(role) { super(); this.role = role; this.url = ''; this.id = role === 'main' ? 1 : role === 'friends' ? 2 : ++wcSeq; this.destroyed = false; }
   send(ch, ...args) { push(this.role, ch, args); }
-  isDestroyed() { return false; }
+  isDestroyed() { return this.destroyed; }
+  close() { if (this.destroyed) return; this.destroyed = true; if (/^tab:/.test(this.role)) { tabWCs.delete(this.role); push('main', 'shell:frame-close', [{ role: this.role }]); } this.emit('destroyed'); }
   getURL() { return this.url; }
   getZoomFactor() { return 1; }
   focus() {}
@@ -63,6 +66,17 @@ friendsWC.url = 'kapp://app/friends.html';
 
 // куда показывать страницу: файл приложения — со своего http, сервер Кентовки — через мостик
 async function navigate(wc, url) {
+  // вкладка сервера: страница во фрейме на главной (голос в ней не рвётся при переходах)
+  if (wc.role === 'tabpending' || /^tab:/.test(wc.role)) {
+    if (url === 'kapp://app/friends.html') return;
+    const u = new URL(url);
+    const lp = await proxyFor(u.hostname, Number(u.port) || 443);
+    if (wc.role === 'tabpending') { wc.role = 'tab:' + wc.id; tabWCs.set(wc.role, wc); }
+    wc.url = url;
+    push('main', 'shell:frame', [{ role: wc.role, url: `http://127.0.0.1:${lp}${u.pathname}${u.search}` }]);
+    setTimeout(() => wc.emit('did-finish-load'), 300);
+    return;
+  }
   if (wc.role !== 'main') return;
   mainWC.emit('did-start-navigation', { isMainFrame: true, isSameDocument: false, url });
   mainWC.url = url;
@@ -124,15 +138,17 @@ const ipcMain = {
   on(ch, fn) { if (!listeners.has(ch)) listeners.set(ch, []); listeners.get(ch).push(fn); },
   removeHandler(ch) { handlers.delete(ch); },
 };
+const tabWCs = new Map(); // 'tab:<id>' -> WebContents
 function evFor(role, sync) {
-  const wc = role === 'friends' ? friendsWC : mainWC;
-  const url = role === 'friends' ? 'kapp://app/friends.html' : wc.url;
+  const wc = role === 'friends' ? friendsWC : tabWCs.get(role) || mainWC;
+  const url = role === 'friends' ? 'kapp://app/friends.html' : /^tab:/.test(role) ? wc.url : wc.url;
   const e = { sender: wc, senderFrame: { url }, returnValue: undefined, preventDefault() {} };
   return e;
 }
 async function invoke(role, ch, args) {
   if (ch === 'account:sign' && args[1]) args[1] = realHostOf(String(args[1]));
   if (ch === 'call:state' && role === 'friends') toJava({ t: 'call', st: args[0] || null }); // звонок в личке: Java держит звук и службу
+  if (ch === 'voice:state' && /^tab:/.test(role)) toJava({ t: 'voice', st: args[0] || null }); // голос на сервере: Java держит звук и службу
   const h = handlers.get(ch);
   if (h) return h(evFor(role), ...args);
   const ls = listeners.get(ch);
@@ -174,7 +190,12 @@ class BrowserWindow extends EventEmitter {
   getContentSize() { return [400, 800]; } getBounds() { return { x: 0, y: 0, width: 400, height: 800 }; }
 }
 let appFocused = true;
-class WebContentsView { constructor() { this.webContents = friendsWC; } setBounds() {} setBackgroundColor() {} }
+// первая — друзья (страница во фрейме), остальные — вкладки серверов
+let friendsViewMade = false;
+class WebContentsView {
+  constructor() { if (!friendsViewMade) { friendsViewMade = true; this.webContents = friendsWC; } else this.webContents = new WebContents('tabpending'); }
+  setBounds() {} setBackgroundColor() {} setVisible() {}
+}
 
 const session = { defaultSession: {
   setCertificateVerifyProc(fn) { verifyProc = fn; },
@@ -283,9 +304,10 @@ const server = http.createServer(async (req, res) => {
 });
 const wss = new WebSocketServer({ server, path: '/rpc', maxPayload: 64 * 1024 * 1024 });
 wss.on('connection', (ws, req) => {
-  const role = new URL(req.url, HOME).searchParams.get('role') === 'friends' ? 'friends' : 'main';
-  sockets[role].add(ws);
-  ws.on('close', () => sockets[role].delete(ws));
+  const q = new URL(req.url, HOME).searchParams.get('role') || '';
+  const role = q === 'friends' ? 'friends' : /^tab:\d+$/.test(q) && tabWCs.has(q) ? q : 'main';
+  sockSet(role).add(ws);
+  ws.on('close', () => sockSet(role).delete(ws));
   ws.on('message', async (raw) => {
     let m; try { m = JSON.parse(raw); } catch { return; }
     if (m.t === 'page' && role === 'main') { mainWC.emit('did-finish-load'); return; }

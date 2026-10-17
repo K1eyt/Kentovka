@@ -14,9 +14,16 @@ const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.
   const WebSocket = require('ws');
   const ws = new WebSocket(pg.webSocketDebuggerUrl);
   await new Promise((r) => ws.on('open', r));
-  let id = 0; const wait = new Map();
-  ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } });
-  const ev = (expr) => new Promise((r) => { const i = ++id; wait.set(i, r); ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression: expr, awaitPromise: true, returnByValue: true } })); }).then((m) => (m.result && m.result.result ? m.result.result.value : m));
+  let id = 0; const wait = new Map(); const ctxs = [];
+  ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.method === 'Runtime.executionContextCreated') ctxs.push(m.params.context); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } });
+  const call = (method, params) => new Promise((r) => { const i = ++id; wait.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+  await call('Runtime.enable', {}); await sleep(1500);
+  // страница сервера — во фрейме-вкладке на главной (не 18444)
+  let ctxId;
+  for (let i = 0; i < 20 && !ctxId; i++) { const c = ctxs.filter((x) => x.auxData && x.auxData.isDefault && /^http:\/\/127\.0\.0\.1:\d+/.test(x.origin) && !/:18444$/.test(x.origin)).pop(); if (c) ctxId = c.id; else await sleep(1000); }
+  console.log('контекст вкладки сервера', ctxId, ctxs.map((x) => x.origin).join(' '));
+  const ev = (expr) => call('Runtime.evaluate', Object.assign({ expression: expr, awaitPromise: true, returnByValue: true }, ctxId ? { contextId: ctxId } : {})).then((m) => (m.result && m.result.result ? m.result.result.value : JSON.stringify(m.result || m.error)));
+  console.log('вкладка во фрейме, приложение', await ev('window.parent !== window') , await ev('!!(window.kentovkaApp && window.kentovkaApp.isTab)'));
   console.log('url', await ev('location.href'));
   console.log('kAndroid', await ev('!!window.kAndroid'));
   console.log('myName', await ev("document.getElementById('myName') && document.getElementById('myName').textContent"));

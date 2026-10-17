@@ -22,9 +22,14 @@
       radial-gradient(800px 460px at 0% -10%, rgba(var(--acc-rgb), calc(.12 * var(--glow))), transparent 70%),
       radial-gradient(700px 460px at 100% 110%, rgba(var(--acc2-rgb), calc(.10 * var(--glow))), transparent 70%), var(--bg); }
   button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; }
-  input[type=text], input[type=number], select { width: 100%; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
+  input[type=text], input[type=number], input[type=password], input[type=search], input[type=email], input[type=url], textarea, select { width: 100%; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
     border-radius: 8px; padding: 10px 12px; outline: none; transition: border-color var(--t), box-shadow var(--t); }
-  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), calc(.2 * var(--glow))); }
+  /* свои адреса спрятаны: копируются кнопкой, показать — по кнопке «показать» */
+  .ip { filter: blur(5px); user-select: none; transition: filter .15s; }
+  .showip .ip { filter: none; user-select: text; }
+  .ipeye { font-size: 12px; color: var(--dim); text-decoration: underline dotted; background: none; border: 0; padding: 0 4px; cursor: pointer; }
+  .ipeye:hover { color: var(--text); }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), calc(.2 * var(--glow))); }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .box { width: 100%; max-width: 560px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 26px 26px 22px;
@@ -53,13 +58,28 @@
   #rail .rb.mine::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 12px; height: 12px; border-radius: 50%; background: var(--faint); border: 3px solid var(--bg); }
   #rail .rb.mine.run::after { background: var(--green); }
   #rail .rb.busy { opacity: .55; pointer-events: none; }
+  /* открытые вкладки: полоска слева (как в Discord), видимая — длинная; где голос — значок динамика */
+  #rail .rb.open::before, #rail .rb.on::before { content: ""; position: absolute; left: -12px; top: 50%; width: 4px; height: 8px; margin-top: -4px; border-radius: 0 4px 4px 0; background: var(--text); transition: height var(--t), margin var(--t); }
+  #rail .rb.on::before { height: 36px; margin-top: -18px; }
+  #rail .rb.on:not(.home) { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px rgba(var(--acc-rgb), .7); }
+  #rail .rb.voice .vdot { position: absolute; left: -3px; bottom: -3px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--green); color: #06110b; border: 3px solid var(--bg); }
+  #rail .rb.voice .vdot svg { width: 9px; height: 9px; }
+  #accBanner.offtab { display: none !important; }
   #rail .rb .badge { position: absolute; right: -4px; bottom: -4px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; display: grid; place-items: center; font: 700 11px/1 var(--font-display); color: #fff; background: var(--red); border: 3px solid var(--bg); }
   #rail .sep { width: 32px; height: 2px; border-radius: 1px; background: var(--line); flex: none; }
   #rail .sp { flex: 1; }
   #railList { display: contents; }
   #mainArea { position: relative; min-width: 0; display: flex; flex-direction: column; }
   #mainArea #accBanner { margin: 12px 16px 0; }
-  #friendsFrame { flex: 1; width: 100%; border: 0; background: var(--bg); min-height: 0; }
+  @media (max-width: 600px) {
+    body.deep #rail { display: none; } body.deep #shell { grid-template-columns: minmax(0, 1fr); }
+    #shell { grid-template-columns: 62px minmax(0, 1fr); }
+    #rail { gap: 7px; padding: 10px 0; }
+    #rail .rb { width: 44px; height: 44px; }
+    #rail .rb.open::before, #rail .rb.on::before { left: -9px; }
+  }
+  #friendsFrame, .tabFrame { flex: 1; width: 100%; border: 0; background: var(--bg); min-height: 0; }
+  #friendsFrame[hidden], .tabFrame[hidden] { display: none; }
   #mainHint { flex: 1; display: grid; place-items: center; color: var(--faint); font: 600 14px var(--font-display); }
   .rmenu { position: fixed; z-index: 50; min-width: 190px; padding: 6px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.55); }
   .rmenu button { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
@@ -329,8 +349,10 @@
 (async () => {
   const $ = (id) => document.getElementById(id);
   const A = window.kentovkaApp;
-  const { config, addresses, hotkeys, hostRunning, mainHostPort } = await A.launcherGet();
+  const { config, addresses, hotkeys, hostRunning } = await A.launcherGet();
+  let mainHostPort = (await A.launcherGet()).mainHostPort;
   let running = (await A.launcherGet()).running || [];
+  let shell = { tab: null, open: [], voice: null }; // вкладки серверов (на ПК)
 
   // тема та же, что в приложении
   const th = Object.assign({ accent: '#22e1ff', accent2: '#ff3ec8', glow: 0.7, motion: true }, config.theme || {});
@@ -391,12 +413,14 @@
     const radmin = addresses.filter((a) => (a.net ? a.net !== 'other' : a.radmin));
     const head = document.createElement('div'); head.className = 'head';
     head.textContent = radmin.length > 1 ? 'Кинь друзьям адрес из сети, где вы вместе:' : radmin.length ? 'Кинь друзьям этот адрес:' : 'Твои адреса в сети:';
+    const eyeBtn = (txt) => { const e = document.createElement('button'); e.type = 'button'; e.className = 'ipeye'; const sync = () => { const on = document.documentElement.classList.contains('showip'); e.textContent = on ? 'скрыть' : (txt || 'показать'); e.title = on ? 'Спрятать адреса' : 'Показать адреса (копировать можно и так)'; }; sync(); e.onclick = (ev) => { ev.stopPropagation(); document.documentElement.classList.toggle('showip'); document.querySelectorAll('.ipeye').forEach((x) => x.__sync && x.__sync()); }; e.__sync = sync; return e; };
+    head.append(' ', eyeBtn());
     box.appendChild(head);
     const p = Number($('port').value) || 8443;
     (radmin.length ? radmin : addresses).forEach((a) => {
       const row = document.createElement('div'); row.className = 'addr';
       const full = p === 8443 ? a.address : `${a.address}:${p}`;
-      const c = document.createElement('code'); c.textContent = full;
+      const c = document.createElement('code'); c.className = 'ip'; c.textContent = full;
       const n = document.createElement('span'); n.className = 'n'; n.textContent = a.label || a.name; n.title = a.name;
       const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Копировать';
       b.onclick = () => { A.copy(full); b.textContent = 'Скопировано'; setTimeout(() => (b.textContent = 'Копировать'), 1500); };
@@ -498,6 +522,7 @@
     const res = await A.connect({ ...opts, port: opts.host ? (opts.port || $('port').value) : 8443,
       direct: { enabled: $('direct').checked, stunMode: $('stunMode').value, publicHost: $('publicHost').value.trim(), stunUrl: $('stunUrl').value.trim() } });
     if (res && res.error) { $('err').textContent = res.error; btn.disabled = false; btn.textContent = prev; if (!$('addDlg').open) kSay(res.error, { title: 'Не получилось зайти' }); }
+    else { btn.disabled = false; btn.textContent = prev; if ($('addDlg').open) $('addDlg').close(); } // сервер открылся во вкладке
   }
   renderServers();
 
@@ -546,6 +571,7 @@
   document.addEventListener('pointerdown', (e) => { if (menu && !menu.contains(e.target)) closeMenu(); }, true);
   const fake = () => ({ textContent: '', disabled: false });
   function goServer(sv, el) {
+    if (shell.open.includes(sv.address)) { A.shellShow(sv.address); return; } // уже открыт во вкладке
     if (el) el.classList.add('busy');
     const p = sv.host ? connectTo({ host: true, port: ownPort(sv), name: sv.name, access: sv.access || curAccess() }, fake())
       : connectTo({ address: sv.address, host: false, name: sv.name }, fake());
@@ -558,14 +584,25 @@
     const isRun = sv.host && running.includes(ownPort(sv));
     menu.innerHTML = '<div class="t"></div>'; menu.querySelector('.t').textContent = title;
     const item = (t, fn, cls) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = t; if (cls) b.className = cls; b.onclick = () => { closeMenu(); fn(); }; menu.appendChild(b); };
-    item(sv.host && !isRun ? 'Запустить и зайти' : 'Зайти', () => goServer(sv));
+    item(sv.host && !isRun ? 'Запустить и зайти' : shell.open.includes(sv.address) ? 'Открыть' : 'Зайти', () => goServer(sv));
+    if (shell.open.includes(sv.address)) item('Отключиться', async () => {
+      if (shell.voice === sv.address && !await kAsk('Ты в голосовом канале на этом сервере. Отключиться? Звонок закончится.', 'Отключиться')) return;
+      if (shell.voice === sv.address) { /* сначала выйдет из голоса страница */ }
+      const r = await A.shellClose(sv.address); if (r && r.error === 'voice') { await A.shellShow(sv.address); kSay('Сначала выйди из голосового канала на этом сервере.'); }
+    });
     item('Переименовать', async () => {
       const nm = await askText('Название сервера', 'Как его подписать в полосе слева.', sv.name || '', sv.host ? 'Мой сервер' : sv.address);
       if (nm == null) return; servers = await A.serverEdit({ address: sv.address, name: nm }); renderServers();
     });
     if (!sv.host) item('Копировать адрес', () => A.copy(sv.address));
     if (isRun) item('Остановить сервер', async () => { const r = await A.serverStop(ownPort(sv)); if (Array.isArray(r)) running = r; renderServers(); }, 'danger');
-    item('Убрать из списка', async () => { servers = await A.serverEdit({ address: sv.address, remove: true }); renderServers(); }, 'danger');
+    if (sv.host) item('Удалить сервер', async () => {
+      if (!await kAsk(`Удалить сервер «${title}»? Сотрутся история чата, каналы и профили на нём. Кенты больше не смогут на него зайти. Это не отменить.`, 'Удалить навсегда', { title: 'Удалить сервер', danger: true })) return;
+      const r = await A.serverDelete(ownPort(sv));
+      if (r && r.error) { kSay(r.error); return; }
+      if (r && r.servers) { servers = r.servers; running = r.running || running; } renderServers();
+    }, 'danger');
+    else item('Убрать из списка', async () => { servers = await A.serverEdit({ address: sv.address, remove: true }); renderServers(); }, 'danger');
     document.body.appendChild(menu);
     menu.style.left = Math.min(x, innerWidth - menu.offsetWidth - 8) + 'px'; menu.style.top = Math.min(y, innerHeight - menu.offsetHeight - 8) + 'px';
   }
@@ -589,12 +626,14 @@
       const title = sv.name || (sv.host ? 'Мой сервер' : sv.address);
       const b = document.createElement('button'); b.type = 'button';
       const isRun = sv.host && running.includes(ownPort(sv));
-      b.className = 'rb' + (sv.host ? ' mine' : '') + (isRun ? ' run' : '');
+      b.className = 'rb' + (sv.host ? ' mine' : '') + (isRun ? ' run' : '') + (shell.open.includes(sv.address) ? ' open' : '') + (shell.tab === sv.address ? ' on' : '') + (shell.voice === sv.address ? ' voice' : '');
+      b.dataset.key = sv.address;
       b.textContent = (title.trim()[0] || '?').toUpperCase();
       if (!sv.host) b.style.background = colorOf(sv.address);
       else b.style.background = 'linear-gradient(135deg, var(--accent), var(--accent2))', b.style.color = 'var(--on-accent)';
       b.title = sv.host ? `${title} · твой сервер, порт ${ownPort(sv)}${isRun ? ' · работает' : ''}` : `${title} · ${sv.address}`;
       b.setAttribute('aria-label', title);
+      if (shell.voice === sv.address) { const vd = document.createElement('span'); vd.className = 'vdot'; vd.title = 'Ты здесь в голосовом канале'; vd.innerHTML = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 9v6h4l5 4V5L8 9z"/></svg>'; b.appendChild(vd); }
       b.onclick = () => goServer(sv, b);
       b.oncontextmenu = (e) => { e.preventDefault(); serverMenu(sv, e.clientX, e.clientY); };
       box.appendChild(b);
@@ -616,7 +655,7 @@
   const anyDialog = () => regOpen || !!document.querySelector('dialog[open]') || !!menu;
   function area() {
     const m = $('mainArea').getBoundingClientRect(), bn = $('accBanner');
-    const top = bn.hidden ? m.top : bn.getBoundingClientRect().bottom + 10;
+    const top = bn.hidden || shell.tab ? m.top : bn.getBoundingClientRect().bottom + 10;
     return { x: m.left, y: top, w: m.width, h: m.bottom - top };
   }
   let shown = false;
@@ -626,18 +665,78 @@
     fr.allow = 'microphone; autoplay; display-capture; clipboard-write; fullscreen';
     $('mainHint').replaceWith(fr);
     A.openFriends();
+    // серверы — свои фреймы рядом (вкладки): переходы не рвут голос
+    const frames = new Map();
+    A.onShellFrame && A.onShellFrame(({ role, url }) => {
+      let f = frames.get(role);
+      if (!f) { f = document.createElement('iframe'); f.className = 'tabFrame'; f.name = 'k' + role; f.title = 'Сервер'; f.allow = 'microphone; camera; autoplay; display-capture; clipboard-write; fullscreen'; f.hidden = true; fr.parentNode.appendChild(f); frames.set(role, f); }
+      f.src = url; applyFrames();
+    });
+    A.onShellFrameClose && A.onShellFrameClose(({ role }) => { const f = frames.get(role); if (f) { f.remove(); frames.delete(role); } applyFrames(); });
+    window.__frames = frames;
   }
+  function applyFrames() {
+    if (!A.android) return;
+    const active = shell.tab ? (shell.roles || {})[shell.tab] : null;
+    $('friendsFrame').hidden = regOpen || !!active;
+    for (const [r, f] of (window.__frames || new Map())) f.hidden = regOpen || r !== active;
+    if (active !== lastActive) {
+      lastActive = active; document.body.classList.remove('deep');
+      const f = active ? (window.__frames || new Map()).get(active) : $('friendsFrame');
+      try { f.contentWindow.postMessage({ k: 'kshown', on: true }, '*'); } catch {}
+    }
+  }
+  let lastActive;
+  // телефон: кнопка «назад» — сначала то, что открыто (окно, меню, чат, сервер); с главной — свернуть приложение
+  let backSeq = 0; const backWait = new Map();
+  window.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.k === 'kback-r' && backWait.has(d.id)) { const f = backWait.get(d.id); backWait.delete(d.id); f(d.handled); }
+    if (d.k === 'deep') { document.body.classList.toggle('deep', !!d.on); setTimeout(() => A.friendsArea && A.friendsArea(area()), 0); }
+  });
+  window.kentovkaBack = () => {
+    if (menu) { closeMenu(); return true; }
+    const dl = [...document.querySelectorAll('dialog[open]')].pop(); if (dl) { dl.close(); return true; }
+    if (regOpen) return false;
+    if (shell.tab) {
+      const f = (window.__frames || new Map()).get((shell.roles || {})[shell.tab]);
+      const id = ++backSeq, key = shell.tab;
+      const done = (handled) => { if (!handled && shell.tab === key) A.shellShow(null); };
+      if (!f) { done(false); return true; }
+      const t = setTimeout(() => { if (backWait.delete(id)) done(false); }, 500);
+      backWait.set(id, (h) => { clearTimeout(t); done(h); });
+      try { f.contentWindow.postMessage({ k: 'kback', id }, '*'); } catch { done(false); }
+      return true;
+    }
+    try { const w = $('friendsFrame').contentWindow; if (w.kentovkaBack && w.kentovkaBack()) return true; } catch {}
+    return false;
+  };
+  // запись экрана (демка с телефона): приложение отвечает главной странице — передаём во все фреймы
+  window.__kScreen = (ok, w, h) => { for (const f of document.querySelectorAll('iframe')) { try { f.contentWindow.postMessage({ k: 'kscreen', ok, w, h }, '*'); } catch {} } };
+  window.__kScreenEnd = () => { for (const f of document.querySelectorAll('iframe')) { try { f.contentWindow.postMessage({ k: 'kscreen-end' }, '*'); } catch {} } };
   function syncFriends() {
-    if (A.android) { $('friendsFrame').hidden = regOpen; return; }
-    const want = !anyDialog();
-    if (want) { A.friendsArea(area()); if (!shown) { shown = true; A.openFriends(); } }
-    else if (shown) { shown = false; A.closeFriends(); }
+    if (A.android) { applyFrames(); return; }
+    A.friendsArea(area());
+    const cov = anyDialog();
+    if (cov !== lastCover) { lastCover = cov; A.shellCover(cov); }
   }
-  A.onFriendsShown((v) => { shown = !!v; $('friendsBtn').classList.toggle('on', !!v); if (!v && !anyDialog()) setTimeout(syncFriends, 50); });
+  let lastCover = null;
+  A.onFriendsShown((v) => { shown = !!v; });
+  // вкладки серверов: что открыто, что видно, где голос — подсветка в полосе
+  async function applyShell(st) {
+    shell = st || shell;
+    try { const g = await A.launcherGet(); if (g) { servers = Array.isArray(g.config.servers) ? g.config.servers : servers; running = g.running || running; mainHostPort = g.mainHostPort || mainHostPort; } } catch {}
+    $('friendsBtn').classList.toggle('on', !shell.tab);
+    if (!A.android) { const b = $('accBanner'); b.classList.toggle('offtab', !!shell.tab); }
+    renderRail(); applyFrames();
+    setTimeout(() => A.friendsArea && A.friendsArea(area()), 0);
+  }
+  if (A.onShellTab) A.onShellTab(applyShell);
+  if (A.shellState) A.shellState().then(applyShell);
   new MutationObserver(() => setTimeout(syncFriends, 0)).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['open', 'hidden'] });
   addEventListener('resize', () => { if (shown) A.friendsArea(area()); });
   if (window.ResizeObserver) new ResizeObserver(() => { if (shown) A.friendsArea(area()); }).observe($('accBanner'));
-  $('friendsBtn').onclick = () => { tipOff(); syncFriends(); };
+  $('friendsBtn').onclick = () => { tipOff(); if (A.shellShow) A.shellShow(null); else syncFriends(); };
 
   // ---------- регистрация: ник (и аватарка по желанию) — и сразу на главную ----------
   let regAvatar = null;

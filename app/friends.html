@@ -36,9 +36,17 @@
   /* ---------- раскладка как в Discord: слева лички, в середине «Друзья» или переписка, справа активные контакты ---------- */
   #bgfx { position: fixed; inset: 0; z-index: -1; background-size: cover; background-position: center; filter: blur(var(--bg-blur, 0px)); transform: scale(1.04); }
   #bgfx::after { content: ""; position: absolute; inset: 0; background: rgba(10, 11, 20, var(--bg-dim, .55)); }
+  /* свои адреса спрятаны: копируются кнопкой, показать — по кнопке «показать» */
+  .ip { filter: blur(5px); user-select: none; transition: filter .15s; }
+  .showip .ip { filter: none; user-select: text; }
+  .ipeye { font-size: 12px; color: var(--dim); text-decoration: underline dotted; background: none; border: 0; padding: 0 4px; cursor: pointer; }
+  .ipeye:hover { color: var(--text); }
   body.hasbg { background: transparent; }
   body.hasbg aside, body.hasbg .rpanel { background: color-mix(in srgb, var(--panel) 82%, transparent); }
   body.hasbg main { background: color-mix(in srgb, var(--bg) 55%, transparent); }
+  body.hasbg .m .t, body.hasbg .day, body.hasbg .gh, body.hasbg .chead, body.hasbg .ractempty, body.hasbg .mepanel, body.hasbg .gt { text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 8px rgba(0,0,0,.55); }
+  body.hasbg .m .t, body.hasbg .day, body.hasbg .gh span { color: color-mix(in srgb, var(--text) 72%, transparent); }
+  body.hasbg .chead, body.hasbg form.send, body.hasbg .mepanel { background: color-mix(in srgb, var(--panel) 75%, transparent); backdrop-filter: blur(8px); }
   .wrap { display: grid; grid-template-columns: 260px minmax(0, 1fr); height: 100%; }
   aside { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; min-width: 0; }
   .sfind { margin: 10px 10px 6px; }
@@ -79,6 +87,33 @@
   .mepanel .mebtn b { display: block; font: 700 14px/1.2 var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mepanel .mebtn span { display: block; font-size: 11.5px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mepanel .iconbtn.off { color: var(--red); }
+  .devgrp { display: inline-flex; align-items: center; border-radius: 8px; flex: none; }
+  .devgrp:hover { background: var(--panel2); }
+  .devgrp .iconbtn:hover { background: none; }
+  .devchev { width: 14px; height: 32px; display: grid; place-items: center; color: var(--dim); border-radius: 0 8px 8px 0; margin-left: -6px; }
+  .devchev svg { width: 12px; height: 12px; transition: transform var(--t-fast, .12s); }
+  .devchev:hover, .devchev.open { color: var(--text); background: var(--panel3); }
+  .devchev.open svg { transform: rotate(180deg); }
+  .devpop { position: fixed; z-index: 80; width: 280px; max-width: calc(100vw - 16px); padding: 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 34px rgba(0,0,0,.55); }
+  .devpop h4 { margin: 0 0 8px; font: 700 14px var(--font-display); }
+  .devpop label, .vdlg .vl { display: block; color: var(--dim); font-size: 12.5px; margin: 12px 0 6px; }
+  .devpop label b, .vdlg .vl b { color: var(--text); }
+  .devpop input[type=range], .vdlg input[type=range] { width: 100%; accent-color: var(--accent); }
+  .devlist { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; margin: 0 -6px; }
+  .devlist button { display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px; border-radius: 8px; font-size: 13.5px; color: var(--text); }
+  .devlist button:hover { background: var(--panel2); }
+  .devlist button i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--faint); flex: none; }
+  .devlist button.on i { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 3px, transparent 4px); }
+  .devlist button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .devpop .hint, .vdlg .hint { font-size: 12px; color: var(--faint); margin: 8px 6px 0; }
+  .devpop .vbmore { margin-top: 10px; font-size: 12.5px; color: var(--dim); text-decoration: underline dotted; }
+  .devpop .vbmore:hover { color: var(--text); }
+  .vdlg .kd-b { white-space: normal; }
+  .vdlg .seg { display: flex; gap: 4px; flex-wrap: wrap; }
+  .vdlg .seg button { flex: 1 1 30%; padding: 8px 4px; font: 600 12.5px var(--font-display); color: var(--dim); }
+  .vdlg .seg button.on { border-color: var(--accent); color: var(--text); background: rgba(var(--acc-rgb), .12); }
+  .vdlg .chk { display: flex; align-items: center; gap: 9px; margin: 12px 0 0; font-size: 13.5px; }
+  .vdlg .chk input { width: 17px; height: 17px; accent-color: var(--accent); }
   /* главная «Друзья» */
   main { display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
   .topbar { height: 52px; padding: 0 10px 0 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex: none; min-width: 0; }
@@ -116,7 +151,7 @@
   .addbox p { margin: 0 0 14px; color: var(--dim); font-size: 14px; }
   .addform { display: flex; gap: 8px; padding: 8px 8px 8px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
   .addform:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), calc(.18 * var(--glow))); }
-  .addform input, .addform input:focus { flex: 1; border: 0; background: none; box-shadow: none; padding: 6px 0; min-width: 0; }
+  .addform input, .addform input:focus, .addform input:focus-visible { outline: none; flex: 1; border: 0; background: none; box-shadow: none; padding: 6px 0; min-width: 0; }
   #addErr { font-size: 13px; margin-top: 8px; color: var(--red); min-height: 18px; }
   #addErr.ok { color: var(--green); }
   .mine { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
@@ -162,6 +197,30 @@
   .menu button.danger { color: var(--red); } .menu button.danger svg { color: var(--red); }
   .menu button:disabled { opacity: .45; cursor: default; }
   .menu hr { border: 0; border-top: 1px solid var(--line); margin: 5px 4px; }
+  .reacts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .m.me .reacts { justify-content: flex-end; }
+  .rchip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 8px; border-radius: 13px; background: var(--panel2); border: 1px solid var(--line); font-size: 13px; color: var(--dim); }
+  .rchip .em { font-size: 15px; line-height: 1; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+  .rchip.mine { border-color: rgba(var(--acc-rgb), .6); background: rgba(var(--acc-rgb), .14); color: var(--text); }
+  .rchip:hover { border-color: rgba(var(--acc-rgb), .5); }
+  .rchip.add { padding: 0 7px; } .rchip.add svg { width: 14px; height: 14px; }
+  .m, .gm { position: relative; }
+  .mreact { position: absolute; top: -8px; right: 6px; width: 28px; height: 28px; border-radius: 8px; display: none; place-items: center; color: var(--dim); background: var(--panel); border: 1px solid var(--line); z-index: 2; }
+  .m.me .mreact { right: auto; left: 6px; }
+  .mreact svg { width: 16px; height: 16px; }
+  .m:hover .mreact, .gm:hover .mreact { display: grid; }
+  .mreact:hover { color: var(--accent); border-color: rgba(var(--acc-rgb), .5); }
+  @media (hover: none) { .m:hover .mreact, .gm:hover .mreact { display: none; } }
+  .menu .mquick { display: flex; gap: 2px; padding: 2px 2px 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+  .menu .mquick button { width: 34px; height: 34px; padding: 0; justify-content: center; font-size: 19px; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+  .rxpop { width: 292px; max-width: calc(100vw - 16px); }
+  .rxpop .rpg { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; margin-bottom: 6px; }
+  .rxpop .rpg button { height: 32px; padding: 0; justify-content: center; font-size: 20px; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; }
+  .menu .mh { padding: 6px 10px 8px; font: 700 13px var(--font-display); color: var(--dim); }
+  .menu .mempty { padding: 4px 10px 8px; font-size: 13px; color: var(--faint); max-width: 240px; }
+  .invmenu { max-height: 60vh; overflow-y: auto; min-width: 240px; }
+  .invmenu button .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .invmenu button .n { font-size: 11.5px; color: var(--faint); flex: none; }
   #chat { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   /* группы */
   .gava { position: relative; background: none !important; }
@@ -331,12 +390,15 @@
   const I = {
     users: P('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'),
     send: P('<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>'),
+    home: P('<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'),
     invite: P('<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>'),
     trash: P('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>'),
     server: P('<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>'),
     phone: P('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>'),
     hang: P('<path d="M10.7 13.3a16 16 0 0 0 3.4 2.4l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 4.2 2 2 0 0 1 5.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L9 9.8"/><path d="M22 2L2 22"/>'),
     mic: P('<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5"/>'),
+    chev: P('<path d="M6 15l6-6 6 6"/>'),
+    cog: P('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
     micOff: P('<path d="M2 2l20 20M9 9v1a3 3 0 0 0 5.1 2.1M15 9.3V5a3 3 0 0 0-5.9-.7"/><path d="M17 16.9A7 7 0 0 1 5 12v-2m14 0v2c0 .8-.1 1.5-.4 2.2M12 19v3"/>'),
     head: P('<path d="M3 18v-6a9 9 0 0 1 18 0v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-6h3zM3 19a2 2 0 0 0 2 2h1v-6H3z"/>'),
     headOff: P('<path d="M2 2l20 20"/><path d="M3 18v-6a9 9 0 0 1 14.6-7M21 12v6"/><path d="M21 19a2 2 0 0 1-2 2h-1v-4M3 19a2 2 0 0 0 2 2h1v-6H3z"/>'),
@@ -354,6 +416,7 @@
     check: P('<path d="M20 6L9 17l-5-5"/>'),
     user: P('<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/>'),
     speaker: P('<path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>'),
+    smile: P('<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/>'),
     copy: P('<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>'),
   };
   // ---------- файлы и скрины в переписке ----------
@@ -473,6 +536,12 @@
   };
 
   const me = await F.me();
+  // общие настройки голоса (те же, что на серверах); на телефоне шумодав по умолчанию выключен
+  const VS = Object.assign({ nsMode: A.android ? 'off' : 'ultra', nsStrength: 80, ec: true, agc: true, micGain: 1, masterVol: 1, gate: false, gateDb: -50 }, (await A.voiceSettings().catch(() => null)) || {});
+  // микрофон и звук можно выключить заранее — так и зайдёшь в звонок
+  const pref = { muted: !!VS.muted, deaf: !!VS.deaf };
+  const savePref = () => { VS.muted = pref.muted; VS.deaf = pref.deaf; A.saveVoiceSettings({ muted: pref.muted, deaf: pref.deaf }); };
+  const saveVS = (o) => { Object.assign(VS, o); A.saveVoiceSettings(o); };
   let list = [], groups = [], cur = new URLSearchParams(location.search).get('focus');
   let gcall = null; // звонок в группе: { gid, cid, parts:Set, peers:Map(id -> { pc, audio, pend }), mic, muted, deaf, t0 }
   const gcalls = new Map(); // gid -> { cid, parts:Set } — звонки, которые идут в группах (даже если я не в них)
@@ -497,6 +566,15 @@
   let mobFriends = false;
   const narrow = () => window.innerWidth <= 600;
   const goHome = () => { cur = null; if (narrow()) mobFriends = false; render(); };
+  let lastDeep = null;
+  window.addEventListener('message', (e) => { if (e.data && e.data.k === 'kshown') { lastDeep = null; renderSide(); } });
+  // кнопка «назад» на телефоне: закрыть окно/меню, из чата — к списку бесед
+  window.kentovkaBack = () => {
+    const d = [...document.querySelectorAll('dialog[open]')].pop(); if (d) { d.close(); return true; }
+    if (document.querySelector('.card, .menu, .devpop')) { closeFloat(); closeDev(); return true; }
+    if (narrow() && (cur || mobFriends)) { goHome(); return true; }
+    return false;
+  };
   async function refresh() {
     [list, groups] = await Promise.all([F.list(), F.groups()]);
     for (const f of list) if (f.status === 'friend' && f.unread && !openDms.includes(f.id)) openDms.unshift(f.id); // новое сообщение — личка сама появляется слева
@@ -513,6 +591,8 @@
     $('navBadge').hidden = !pend; $('navBadge').textContent = pend;
     $('navHome').classList.toggle('on', !cur);
     $('wrap').classList.toggle('home', !cur); $('wrap').classList.toggle('inchat', !!cur); $('wrap').classList.toggle('mfr', !cur && mobFriends);
+    // телефон: в чате полоса серверов прячется (больше места), в списке — видна
+    { const deep = narrow() && (!!cur || mobFriends); if (deep !== lastDeep) { lastDeep = deep; try { if (window.parent !== window) window.parent.postMessage({ k: 'deep', on: deep }, '*'); } catch {} } }
     const box = $('list'); box.innerHTML = '';
     const q = dmFind.toLowerCase();
     const dms = openDms.map((id) => list.find((f) => f.id === id) || groups.find((g) => g.id === id)).filter(Boolean).filter((f) => !q || (f.members ? gTitle(f) : f.name).toLowerCase().includes(q));
@@ -672,13 +752,15 @@
     const mine = d.querySelector('#mine');
     const addrs = (me.addresses && me.addresses.length ? me.addresses : me.all || []).slice(0, 3);
     if (addrs.length) {
+      const eyeBtn = (txt) => { const e = document.createElement('button'); e.type = 'button'; e.className = 'ipeye'; const sync = () => { const on = document.documentElement.classList.contains('showip'); e.textContent = on ? 'скрыть' : (txt || 'показать'); e.title = on ? 'Спрятать адреса' : 'Показать адреса (копировать можно и так)'; }; sync(); e.onclick = (ev) => { ev.stopPropagation(); document.documentElement.classList.toggle('showip'); document.querySelectorAll('.ipeye').forEach((x) => x.__sync && x.__sync()); }; e.__sync = sync; return e; };
       mine.append('Твой адрес для друзей:');
       for (const a of addrs) {
-        const c = document.createElement('code'); c.textContent = a;
+        const c = document.createElement('code'); c.className = 'ip'; c.textContent = a;
         const b = document.createElement('button'); b.type = 'button'; b.textContent = 'копировать';
         b.onclick = () => { A.copy(a); b.textContent = 'скопировано'; setTimeout(() => (b.textContent = 'копировать'), 1500); };
         mine.append(c, b);
       }
+      mine.append(eyeBtn());
     } else mine.textContent = 'Локальная сеть не найдена. Подключись к сети, где вы с друзьями, и открой друзей заново.';
     d.querySelector('#addForm').onsubmit = async (e) => {
       e.preventDefault();
@@ -754,6 +836,93 @@
     c.append(ban, av, b);
     place(c, anchor.getBoundingClientRect ? anchor.getBoundingClientRect() : anchor);
   }
+  // ---------- прокрутка: перерисовка не дёргает чат, если ты листаешь историю ----------
+  function scrollState(same) {
+    const b = document.getElementById('msgs');
+    if (!b || !same) return null;
+    return { top: b.scrollTop, atBottom: b.scrollHeight - b.scrollTop - b.clientHeight < 60 };
+  }
+  function restoreScroll(box, sc) {
+    if (sc && !sc.atBottom) { box.scrollTop = sc.top; return; }
+    box.scrollTop = box.scrollHeight;
+  }
+  // ---------- реакции в личке и группах ----------
+  const RX = ['👍', '❤️', '😂', '🔥', '😮', '😢', '👎', '🎉', '💀', '🤡', '😎', '🤝', '👀', '🙏', '💯', '🗿', '😡', '🥲', '🤔', '✅', '❌', '⚡', '🍺', '🎮'];
+  let recentRx = []; try { recentRx = JSON.parse(localStorage.getItem('recentRx') || '[]'); } catch {}
+  const rxKey = (msgs) => msgs.map((m) => (m.reactions ? m.mid + JSON.stringify(m.reactions) : '')).join('');
+  function doReact(m, target, e) {
+    F.react(target, m.mid, e).then(() => refresh());
+    recentRx = [e, ...recentRx.filter((x) => x !== e)].slice(0, 8); try { localStorage.setItem('recentRx', JSON.stringify(recentRx)); } catch {}
+  }
+  function rxView(m, target, nameOf) {
+    const box = document.createElement('div'); box.className = 'reacts';
+    for (const [e, ids] of Object.entries(m.reactions || {})) {
+      if (!ids || !ids.length) continue;
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'rchip' + (ids.includes(me.id) ? ' mine' : '');
+      b.innerHTML = '<span class="em"></span><span class="n"></span>'; b.firstChild.textContent = e; b.lastChild.textContent = ids.length;
+      b.title = ids.map(nameOf).join(', ');
+      b.onclick = (ev) => { ev.stopPropagation(); doReact(m, target, e); };
+      box.appendChild(b);
+    }
+    if (box.children.length) { const a = document.createElement('button'); a.type = 'button'; a.className = 'rchip add'; a.title = 'Ещё реакция'; a.innerHTML = I.smile; a.onclick = (ev) => { ev.stopPropagation(); rxPicker(m, target, a.getBoundingClientRect()); }; box.appendChild(a); }
+    box.hidden = !box.children.length;
+    return box;
+  }
+  function rxHook(row, m, target) {
+    if (!m.mid) return;
+    const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'mreact'; rb.title = 'Поставить реакцию'; rb.innerHTML = I.smile;
+    rb.onclick = (e) => { e.stopPropagation(); rxPicker(m, target, rb.getBoundingClientRect()); };
+    row.appendChild(rb);
+    row.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('a, img, video')) return;
+      e.preventDefault(); closeFloat();
+      const pt = { left: e.clientX, right: e.clientX, top: e.clientY, bottom: e.clientY, width: 0, height: 0 };
+      const mn = document.createElement('div'); mn.className = 'menu';
+      const quick = document.createElement('div'); quick.className = 'mquick';
+      for (const em of (recentRx.length ? recentRx : RX).slice(0, 6)) { const q = document.createElement('button'); q.type = 'button'; q.textContent = em; q.onclick = () => { closeFloat(); doReact(m, target, em); }; quick.appendChild(q); }
+      mn.appendChild(quick);
+      const item = (ic, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = ic + '<span></span>'; b.lastChild.textContent = label; b.onclick = () => { closeFloat(); fn(); }; mn.appendChild(b); };
+      item(I.smile, 'Реакция…', () => rxPicker(m, target, pt));
+      if (m.text) item(I.copy, 'Копировать текст', () => { A.copy(m.text); flash('Скопировано'); });
+      place(mn, pt);
+    });
+    // на телефоне: долгое нажатие — то же меню
+    let lt = null;
+    row.addEventListener('touchstart', (e) => { const t = e.touches[0]; lt = setTimeout(() => { lt = null; row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: t.clientX, clientY: t.clientY })); }, 500); }, { passive: true });
+    const cancel = () => { if (lt) { clearTimeout(lt); lt = null; } };
+    row.addEventListener('touchend', cancel); row.addEventListener('touchmove', cancel); row.addEventListener('touchcancel', cancel);
+  }
+  function rxPicker(m, target, r) {
+    closeFloat();
+    const p = document.createElement('div'); p.className = 'menu rxpop';
+    const mk = (title, arr) => {
+      if (!arr.length) return;
+      const h = document.createElement('div'); h.className = 'mh'; h.textContent = title; p.appendChild(h);
+      const g = document.createElement('div'); g.className = 'rpg';
+      for (const e of arr) { const b = document.createElement('button'); b.type = 'button'; b.textContent = e; b.title = e; b.onclick = () => { closeFloat(); doReact(m, target, e); }; g.appendChild(b); }
+      p.appendChild(g);
+    };
+    mk('Недавние', recentRx); mk('Реакции', RX);
+    place(p, r);
+  }
+
+  // «Позвать на сервер»: выбираешь, куда именно
+  async function inviteMenu(f, r) {
+    closeFloat();
+    const m = document.createElement('div'); m.className = 'menu invmenu';
+    const h = document.createElement('div'); h.className = 'mh'; h.textContent = 'Позвать ' + f.name + ' на сервер'; m.appendChild(h);
+    const ls = await F.inviteList().catch(() => []);
+    if (!ls.length) { const p = document.createElement('div'); p.className = 'mempty'; p.textContent = 'Ты пока не состоишь ни в одном сервере — зайди на сервер или создай свой.'; m.appendChild(p); }
+    for (const t of ls) {
+      const b = document.createElement('button'); b.type = 'button';
+      b.innerHTML = (t.mine ? I.home : I.invite) + '<span class="t"></span><span class="n"></span>';
+      b.querySelector('.t').textContent = t.name; b.querySelector('.n').textContent = t.current ? 'ты здесь' : t.note;
+      b.disabled = !t.address;
+      b.onclick = async () => { closeFloat(); const x = await F.invite(f.id, t.key); if (x && x.error) kSay(x.error); else flash('Позвал на «' + (x.name || t.name) + '»'); };
+      m.appendChild(b);
+    }
+    place(m, r);
+  }
   function friendMenu(f, r) {
     closeFloat();
     const m = document.createElement('div'); m.className = 'menu';
@@ -761,7 +930,7 @@
     item(I.user, 'Профиль', () => openCard(f, r));
     item(I.chat, 'Написать', () => openDm(f.id));
     item(I.phone, 'Позвонить', () => { openDm(f.id); startCall(f); }, '', !f.online || !!call);
-    item(I.invite, 'Позвать на сервер', async () => { const r2 = await F.invite(f.id); if (r2 && r2.error) kSay(r2.error); else flash('Приглашение отправлено'); });
+    item(I.invite, 'Позвать на сервер…', () => inviteMenu(f, r));
     if (f.ip) item(I.copy, 'Копировать адрес', () => { A.copy(f.ip); flash('Адрес скопирован'); });
     if (openDms.includes(f.id)) item(I.x, 'Закрыть беседу', () => closeDm(f.id));
     m.appendChild(document.createElement('hr'));
@@ -777,10 +946,11 @@
     const msgs = await F.messages(f.id);
     if (f.unread && shown) F.read(f.id); // спрятаны — не отмечаем прочитанным, пусть горит значок
     const meNow = await F.me();
-    const key = f.id + ':' + msgs.length + ':' + msgs.filter((m) => m.delivered).length + ':' + f.online + ':' + JSON.stringify(f.presence) + ':' + (meNow.server ? meNow.server.address : '') + ':' + (call ? call.id + call.state : '');
+    const key = f.id + ':' + msgs.length + ':' + msgs.filter((m) => m.delivered).length + ':' + rxKey(msgs) + ':' + f.online + ':' + JSON.stringify(f.presence) + ':' + (meNow.server ? meNow.server.address : '') + ':' + (call ? call.id + call.state : '');
     if (key === lastRendered) return;
     const keepInput = main.querySelector('#msgInput') && main.querySelector('#msgInput').value;
     const sameFriend = lastRendered.startsWith(f.id + ':');
+    const sc = scrollState(sameFriend);
     lastRendered = key;
     main.innerHTML = '';
     const head = document.createElement('div'); head.className = 'chead';
@@ -789,9 +959,8 @@
     who.firstChild.textContent = f.name; who.lastChild.textContent = f.online ? doing(f) : seen(f.seen) + ' — сообщения дойдут, когда появится';
     const sp = document.createElement('span'); sp.className = 'sp';
     const inv = document.createElement('button'); inv.className = 'btn ghost'; inv.innerHTML = I.invite + '<span>Позвать на сервер</span>';
-    inv.disabled = !meNow.server;
-    inv.title = meNow.server ? `Позвать на «${meNow.server.name}»` : 'Сначала зайди на сервер или создай свой';
-    inv.onclick = async () => { const r = await F.invite(f.id); if (r && r.error) kSay(r.error); };
+    inv.title = 'Позвать на один из твоих серверов';
+    inv.onclick = (e) => { e.stopPropagation(); inviteMenu(f, inv.getBoundingClientRect()); };
     const back = document.createElement('button'); back.className = 'iconbtn back'; back.title = 'К друзьям'; back.innerHTML = I.left;
     back.onclick = goHome;
     const cb = document.createElement('button'); cb.className = 'iconbtn callme'; cb.innerHTML = I.phone;
@@ -835,6 +1004,7 @@
           row.appendChild(b);
         }
       }
+      if (!m.invite) { row.appendChild(rxView(m, { id: f.id }, (uid) => (uid === me.id ? (myProf.name || 'Я') : f.name))); rxHook(row, m, { id: f.id }); }
       const t = document.createElement('div'); t.className = 't';
       t.textContent = new Date(m.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + (m.from === 'me' ? (m.delivered ? ' · доставлено' : ' · ждёт друга') : '');
       row.appendChild(t);
@@ -850,7 +1020,7 @@
     main.append(head);
     mountStage(main);
     main.append(box, form);
-    box.scrollTop = box.scrollHeight;
+    restoreScroll(box, sc);
     if (sameFriend && keepInput) inp.value = keepInput;
     if (shown) inp.focus();
   }
@@ -865,12 +1035,102 @@
     w.lastChild.textContent = gcall ? 'в звонке группы' : call && call.state === 'live' ? 'в звонке' : voice ? 'в голосе' : 'в сети';
     b.append(av, w);
     b.onclick = () => openCard({ name: myProf.name || 'Я', avatar: myProf.avatar, bio: myProf.bio, color: myProf.color, color2: myProf.color2, status: 'me', online: true }, b);
-    const st = gcall ? { muted: gcall.muted, deaf: gcall.deaf } : call && call.state !== 'ringing' ? { muted: call.muted, deaf: call.deaf } : voice ? { muted: voice.muted, deaf: voice.deaf } : null;
-    const m = document.createElement('button'); m.className = 'iconbtn' + (st && st.muted ? ' off' : ''); m.innerHTML = st && st.muted ? I.micOff : I.mic; m.title = st ? (st.muted ? 'Включить микрофон' : 'Выключить микрофон') : 'Микрофон (когда ты в голосе или в звонке)';
-    m.onclick = () => { if (gcall) gMute(!gcall.muted); else if (call && call.state !== 'ringing') setMuted(!call.muted); else if (voice) F.voiceCmd('mute'); };
-    const d = document.createElement('button'); d.className = 'iconbtn' + (st && st.deaf ? ' off' : ''); d.innerHTML = st && st.deaf ? I.headOff : I.head; d.title = st ? (st.deaf ? 'Включить звук' : 'Выключить звук') : 'Звук (когда ты в голосе или в звонке)';
-    d.onclick = () => { if (gcall) gDeaf(!gcall.deaf); else if (call && call.state !== 'ringing') setDeaf(!call.deaf); else if (voice) F.voiceCmd('deaf'); };
-    p.append(b, m, d);
+    // как на сервере: в звонке — его состояние, вне звонка — заранее выбранное
+    const inCall = gcall || (call && call.state !== 'ringing');
+    const st = gcall ? { muted: gcall.muted, deaf: gcall.deaf } : call && call.state !== 'ringing' ? { muted: call.muted, deaf: call.deaf } : voice ? { muted: voice.muted, deaf: voice.deaf } : pref;
+    const grp = (main, kind, title) => { const g = document.createElement('span'); g.className = 'devgrp'; const ch = document.createElement('button'); ch.type = 'button'; ch.className = 'devchev'; ch.title = title; ch.innerHTML = I.chev; ch.onclick = (e) => { e.stopPropagation(); devPop(kind, ch); }; g.append(main, ch); return g; };
+    const m = document.createElement('button'); m.type = 'button'; m.className = 'iconbtn' + (st.muted || st.deaf ? ' off' : ''); m.innerHTML = st.muted || st.deaf ? I.micOff : I.mic;
+    m.title = st.muted ? 'Включить микрофон' : 'Выключить микрофон';
+    m.onclick = () => { if (gcall) gMute(!gcall.muted); else if (inCall) setMuted(!call.muted); else if (voice) F.voiceCmd('mute'); else setMuted(!pref.muted); };
+    const d = document.createElement('button'); d.type = 'button'; d.className = 'iconbtn' + (st.deaf ? ' off' : ''); d.innerHTML = st.deaf ? I.headOff : I.head;
+    d.title = st.deaf ? 'Включить звук' : 'Выключить звук';
+    d.onclick = () => { if (gcall) gDeaf(!gcall.deaf); else if (inCall) setDeaf(!call.deaf); else if (voice) F.voiceCmd('deaf'); else setDeaf(!pref.deaf); };
+    const cog = document.createElement('button'); cog.type = 'button'; cog.className = 'iconbtn'; cog.title = 'Настройки голоса'; cog.innerHTML = I.cog; cog.onclick = () => voiceDialog();
+    p.append(b, grp(m, 'in', 'Микрофон: выбрать устройство'), grp(d, 'out', 'Звук: куда выводить'), cog);
+  }
+
+  // ---------- выбор микрофона и наушников (стрелочка), как на сервере ----------
+  let devOpen = null;
+  function closeDev() { if (devOpen) { devOpen.el.remove(); devOpen.btn.classList.remove('open'); devOpen = null; } }
+  document.addEventListener('pointerdown', (e) => { if (devOpen && !e.target.closest('.devpop, .devchev')) closeDev(); });
+  async function devPop(kind, btn) {
+    if (devOpen && devOpen.btn === btn) return closeDev();
+    closeDev();
+    const isIn = kind === 'in';
+    const el = document.createElement('div'); el.className = 'devpop';
+    el.innerHTML = `<h4>${isIn ? 'Микрофон' : 'Звук'}</h4><div class="devlist"></div><label>${isIn ? 'Громкость микрофона' : 'Громкость друзей'}: <b></b></label><input type="range" min="0" max="200" step="5"><button type="button" class="vbmore">Все настройки голоса</button>`;
+    devOpen = { el, btn }; btn.classList.add('open');
+    const list = el.querySelector('.devlist');
+    const draw = async () => {
+      list.innerHTML = '';
+      const KA = window.kAndroid && window.kAndroid.audioDevices ? window.kAndroid : null;
+      const nat = KA ? KA.audioDevices() : null;
+      const item = (name, on, fn) => { const x = document.createElement('button'); x.type = 'button'; x.classList.toggle('on', on); x.innerHTML = '<i></i><span></span>'; x.lastChild.textContent = name; x.title = name; x.onclick = fn; list.appendChild(x); };
+      if (nat) {
+        const arr = isIn ? nat.inputs : nat.outputs, curD = isIn ? nat.curIn : nat.curOut;
+        for (const dv of arr || []) item(dv.name, String(dv.id) === String(curD), () => { KA.setAudioDevice(isIn ? 'in' : 'out', dv.id); setTimeout(draw, 350); });
+        if (nat.note) { const h = document.createElement('p'); h.className = 'hint'; h.textContent = nat.note; list.appendChild(h); }
+        return;
+      }
+      const devs = (await navigator.mediaDevices.enumerateDevices().catch(() => [])).filter((x) => x.kind === (isIn ? 'audioinput' : 'audiooutput') && x.deviceId !== 'communications');
+      const curL = isIn ? VS.micLabel : VS.outLabel;
+      if (!devs.length || !devs[0].label) { list.innerHTML = '<p class="hint">Список появится после первого звонка (нужно разрешение на микрофон).</p>'; return; }
+      for (const dv of devs) {
+        const name = dv.deviceId === 'default' ? 'Как в системе' : dv.label;
+        const on = dv.deviceId === 'default' ? !curL : dv.label === curL;
+        item(name, on, async () => { saveVS(isIn ? { micLabel: dv.deviceId === 'default' ? '' : dv.label } : { outLabel: dv.deviceId === 'default' ? '' : dv.label }); if (isIn) await swapMic(); else applyOut(); draw(); });
+      }
+    };
+    draw();
+    const r = el.querySelector('input'), vb = el.querySelector('label b');
+    const key = isIn ? 'micGain' : 'masterVol';
+    r.value = Math.round((VS[key] ?? 1) * 100); vb.textContent = r.value + '%';
+    r.oninput = () => { vb.textContent = r.value + '%'; VS[key] = r.value / 100; if (isIn) liveGain(); else applyOut(); };
+    r.onchange = () => saveVS({ [key]: r.value / 100 });
+    el.querySelector('.vbmore').onclick = () => { closeDev(); voiceDialog(); };
+    document.body.appendChild(el);
+    const place = () => { const rc = (btn.closest('.devgrp') || btn).getBoundingClientRect(); el.style.left = Math.max(8, Math.min(rc.left, innerWidth - el.offsetWidth - 8)) + 'px'; el.style.top = Math.max(8, rc.top - el.offsetHeight - 8) + 'px'; };
+    place(); if (window.ResizeObserver) new ResizeObserver(place).observe(el);
+  }
+  // смена устройства прямо в звонке
+  async function swapMic() {
+    const holders = [call && call.mic ? call : null, gcall && gcall.mic ? gcall : null].filter(Boolean);
+    for (const h of holders) {
+      try {
+        const nm = await openMic(); const old = h.mic; h.mic = nm;
+        const tr = nm.stream.getAudioTracks()[0];
+        const pcs = h === gcall ? [...gcall.peers.values()].map((x) => x.pc) : [call.pc];
+        for (const pc of pcs) { if (!pc) continue; for (const sn of pc.getSenders()) if (sn.track && sn.track.kind === 'audio') await sn.replaceTrack(tr).catch(() => {}); }
+        teardown(old);
+        if (h === gcall) gApplyMic(); else applyMic();
+      } catch (e) { kSay('Микрофон не переключился: ' + e.message); }
+    }
+  }
+  function liveGain() { for (const h of [call, gcall]) if (h && h.mic && h.mic.gain) h.mic.gain.gain.value = VS.micGain ?? 1; }
+  async function applyOut() {
+    const auds = [call && call.audio, ...(gcall ? [...gcall.peers.values()].map((x) => x.audio) : [])].filter(Boolean);
+    const dv = VS.outLabel ? (await navigator.mediaDevices.enumerateDevices().catch(() => [])).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel) : null;
+    for (const a of auds) { a.volume = Math.min(1, (a.__vol ?? 1) * (VS.masterVol ?? 1)); if (a.setSinkId) a.setSinkId(dv ? dv.deviceId : '').catch(() => {}); }
+  }
+  // ---------- настройки голоса (общие с серверами) ----------
+  function voiceDialog() {
+    const dl = document.createElement('dialog'); dl.className = 'kdlg vdlg';
+    const NS = [['off', 'Выключен'], ['browser', 'Встроенный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Максимум']];
+    dl.innerHTML = `<div class="kd-b"><div class="kd-t">Настройки голоса</div><div class="kd-x">Общие для звонков в личке, группах и на серверах.</div>
+      <label class="vl">Шумодав</label><div class="seg" id="vdNs"></div>
+      <label class="vl">Сила шумодава: <b id="vdStrV"></b></label><input type="range" id="vdStr" min="40" max="100" step="5">
+      <label class="chk"><input type="checkbox" id="vdEc"> Убирать эхо</label>
+      <label class="chk"><input type="checkbox" id="vdAgc"> Выравнивать громкость микрофона</label>
+      <p class="hint">Шумодав сменится со следующего звонка.</p></div><div class="kd-f"><button type="button" class="ok">Готово</button></div>`;
+    dl.querySelector('.ok').onclick = () => dl.close();
+    const seg = dl.querySelector('#vdNs');
+    for (const [v, t] of NS) { const x = document.createElement('button'); x.type = 'button'; x.textContent = t; x.classList.toggle('on', VS.nsMode === v); x.onclick = () => { saveVS({ nsMode: v }); seg.querySelectorAll('button').forEach((y) => y.classList.toggle('on', y === x)); }; seg.appendChild(x); }
+    const sr = dl.querySelector('#vdStr'), sv = dl.querySelector('#vdStrV'); sr.value = VS.nsStrength ?? 80; sv.textContent = sr.value + '%';
+    sr.oninput = () => { sv.textContent = sr.value + '%'; }; sr.onchange = () => saveVS({ nsStrength: Number(sr.value) });
+    const ec = dl.querySelector('#vdEc'), agc = dl.querySelector('#vdAgc'); ec.checked = VS.ec !== false; agc.checked = VS.agc !== false;
+    ec.onchange = () => saveVS({ ec: ec.checked }); agc.onchange = () => saveVS({ agc: agc.checked });
+    dl.addEventListener('close', () => dl.remove());
+    document.body.appendChild(dl); dl.showModal();
   }
 
   $('navHome').querySelector('.ic').innerHTML = I.users;
@@ -909,7 +1169,6 @@
 
   // ---------- звонок 1 на 1 ----------
   // сигналы идут через связь с другом (порт 8444), звук — напрямую между вашими компами (WebRTC, по локальной сети)
-  const VS = Object.assign({ nsMode: 'ultra', nsStrength: 80, ec: true, agc: true, micGain: 1, masterVol: 1, gate: false, gateDb: -50 }, (await A.voiceSettings().catch(() => null)) || {});
   const cid = () => Math.random().toString(16).slice(2) + Date.now().toString(16);
   let actx = null;
   const ctx = () => { if (!actx || actx.state === 'closed') actx = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' }); if (actx.state !== 'running') actx.resume().catch(() => {}); return actx; };
@@ -974,7 +1233,7 @@
     if (call) return;
     if (gcall) { kSay('Сначала выйди из звонка в группе.'); return; }
     if (!(await leaveVoiceIfNeeded())) return;
-    call = { id: f.id, name: f.name, cid: cid(), dir: 'out', state: 'ringing', muted: false, deaf: false, vol: 1 };
+    call = { id: f.id, name: f.name, cid: cid(), dir: 'out', state: 'ringing', muted: pref.muted, deaf: pref.deaf, vol: 1 };
     if (!(await say(f.id, 'ring'))) { call = null; kSay(`${f.name} не в сети — позвонить не получится.`); return; }
     tone('out'); report(); renderCall(); lastRendered = ''; renderMain();
     const my = call;
@@ -1007,8 +1266,8 @@
     Object.assign(d.style, { position: 'fixed', left: '50%', bottom: '24px', transform: 'translateX(-50%)', background: 'var(--panel3)', border: '1px solid var(--line)', padding: '10px 16px', borderRadius: '10px', zIndex: 50, maxWidth: '90%' });
     document.body.appendChild(d); setTimeout(() => d.remove(), 3500);
   }
-  function setMuted(v) { if (!call) return; call.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
-  function setDeaf(v) { if (!call) return; call.deaf = v; if (call.audio) call.audio.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
+  function setMuted(v) { pref.muted = v; savePref(); if (!call) return renderMe(); call.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
+  function setDeaf(v) { pref.deaf = v; savePref(); if (!call) return renderMe(); call.deaf = v; if (call.audio) call.audio.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
   const applyMic = () => { if (call && call.mic) call.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !call.muted && !call.deaf)); };
 
   // микрофон с тем же шумодавом, что на серверах (настройки голоса общие)
@@ -1045,7 +1304,7 @@
     if (VS.gate) { try { await x.audioWorklet.addModule('/voice-fx.js'); const gg = new AudioWorkletNode(x, 'k-gate', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1], channelCount: 1, channelCountMode: 'explicit', processorOptions: { threshold: VS.gateDb } }); last.connect(gg); last = gg; nodes.push(gg); } catch {} }
     const an = x.createAnalyser(); an.fftSize = 1024; last.connect(an); nodes.push(an);
     const dst = x.createMediaStreamDestination(); dst.channelCount = 1; last.connect(dst); nodes.push(dst);
-    return { raw, stream: dst.stream, nodes, an };
+    return { raw, stream: dst.stream, nodes, an, gain: g };
   }
   function teardown(m) { for (const n of m.nodes) { try { n.disconnect(); } catch {} } m.stream.getTracks().forEach((t) => t.stop()); m.raw.getTracks().forEach((t) => t.stop()); }
   const tuneSdp = (sdp) => sdp.replace(/a=fmtp:(\d+) (.*useinbandfec=1.*)/g, (m, pt, rest) => `a=fmtp:${pt} ${rest.replace(/;?maxaveragebitrate=\d+/, '')};maxaveragebitrate=128000`);
@@ -1093,7 +1352,7 @@
     if (m.k === 'gone') { if (call && call.id === m.id) endCall(null, 'Связь с другом пропала'); return; }
     if (m.k === 'ring') {
       if (call) { F.call(m.id, { k: 'busy', cid: m.cid }); return; }
-      call = { id: m.id, name: m.name, cid: m.cid, dir: 'in', state: 'ringing', muted: false, deaf: false, vol: 1 };
+      call = { id: m.id, name: m.name, cid: m.cid, dir: 'in', state: 'ringing', muted: pref.muted, deaf: pref.deaf, vol: 1 };
       tone('in'); report(); renderCall(); lastRendered = ''; renderMain();
       const my = call; call.timer = setTimeout(() => { if (call === my && call.state === 'ringing') endCall('decline'); }, 45000);
       return;
@@ -1315,10 +1574,11 @@
     const main = $('chat');
     const msgs = await F.groupMessages(g.id);
     if (g.unread && shown) F.groupRead(g.id);
-    const key = g.id + ':' + msgs.length + ':' + JSON.stringify(g.members.map((m) => m.id + m.online)) + g.name + ':' + gcallKey(g.id);
+    const key = g.id + ':' + msgs.length + ':' + rxKey(msgs) + ':' + JSON.stringify(g.members.map((m) => m.id + m.online)) + g.name + ':' + gcallKey(g.id);
     if (key === gLast) return;
     const keep = main.querySelector('#msgInput') && main.querySelector('#msgInput').value;
     const same = gLast.startsWith(g.id + ':');
+    const sc = scrollState(same);
     gLast = key; lastRendered = '';
     main.innerHTML = '';
     const head = document.createElement('div'); head.className = 'chead';
@@ -1358,6 +1618,8 @@
         m.text.split(/(https?:\/\/\S+)/g).forEach((part, i) => { if (i % 2) { const a = document.createElement('a'); a.href = part; a.textContent = part; a.target = '_blank'; t.appendChild(a); } else t.appendChild(document.createTextNode(part)); });
         b.appendChild(t);
       }
+      b.appendChild(rxView(m, { gid: g.id }, (uid) => (uid === me.id ? (myProf.name || 'Я') : ((g.members.find((x) => x.id === uid) || {}).name || 'кент'))));
+      rxHook(row, m, { gid: g.id });
       row.append(cont ? Object.assign(document.createElement('div'), { className: 'gpad' }) : av, b);
       box.appendChild(row);
     }
@@ -1385,7 +1647,7 @@
     }
     body.append(col, mem);
     main.append(head, body);
-    box.scrollTop = box.scrollHeight;
+    restoreScroll(box, sc);
     if (same && keep) inp.value = keep;
     if (shown) inp.focus();
   }
@@ -1424,7 +1686,7 @@
     if (gcall) gLeave();
     if (!(await leaveVoiceIfNeeded())) return;
     const known = gcalls.get(g.id);
-    gcall = { gid: g.id, cid: known ? known.cid : cid(), parts: new Set([me.id, ...(known ? known.parts : [])]), peers: new Map(), muted: false, deaf: false, t0: Date.now() };
+    gcall = { gid: g.id, cid: known ? known.cid : cid(), parts: new Set([me.id, ...(known ? known.parts : [])]), peers: new Map(), muted: pref.muted, deaf: pref.deaf, t0: Date.now() };
     let micDone; gcall.micWait = new Promise((r) => (micDone = r));
     const gc0 = gcall;
     try { gcall.mic = await openMic(); } catch (e) { gcall = null; micDone(); kSay('Микрофон не включился: ' + e.message); return; }
@@ -1449,8 +1711,8 @@
     gReport(); gRerender(); beepEnd();
   }
   function gApplyMic() { if (gcall && gcall.mic) gcall.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !gcall.muted && !gcall.deaf)); }
-  function gMute(v) { if (!gcall) return; gcall.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
-  function gDeaf(v) { if (!gcall) return; gcall.deaf = v; for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
+  function gMute(v) { pref.muted = v; savePref(); if (!gcall) return renderMe(); gcall.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
+  function gDeaf(v) { pref.deaf = v; savePref(); if (!gcall) return renderMe(); gcall.deaf = v; for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
   function gPeer(id, offerer) {
     const c = gcall; if (!c || c.peers.has(id)) return c && c.peers.get(id);
     const pc = new RTCPeerConnection({ iceServers: myIce, bundlePolicy: 'max-bundle' });

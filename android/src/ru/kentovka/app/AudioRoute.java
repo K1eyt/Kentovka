@@ -16,10 +16,30 @@ import java.util.List;
  */
 public class AudioRoute {
     private final AudioManager am;
+    private final android.content.SharedPreferences prefs;
     private String curOut = null, curIn = null;
     private boolean active = false;
+    private final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+    // «звук в блютуз-наушники, микрофон телефона»: обычный (музыкальный) режим. WebView в звонке сам включает режим связи —
+    // тогда звук уходит в динамик, поэтому возвращаем обычный режим, пока выбран этот вариант
+    private final Runnable keepMedia = new Runnable() { public void run() {
+        if (!active || !isMedia(curOut)) return;
+        try {
+            if (am.getMode() != AudioManager.MODE_NORMAL) {
+                if (Build.VERSION.SDK_INT >= 31) am.clearCommunicationDevice();
+                am.setMode(AudioManager.MODE_NORMAL);
+            }
+            if (am.isSpeakerphoneOn()) am.setSpeakerphoneOn(false);
+        } catch (Exception ignored) {}
+        h.postDelayed(this, 700);
+    } };
+    private static boolean isMedia(String id) { return id != null && id.startsWith("media:"); }
 
-    AudioRoute(Context c) { am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE); }
+    AudioRoute(Context c) {
+        am = (AudioManager) c.getSystemService(Context.AUDIO_SERVICE);
+        prefs = c.getSharedPreferences("audio", Context.MODE_PRIVATE);
+        curOut = prefs.getString("out", null);
+    }
 
     private static String kindName(int t) {
         switch (t) {
@@ -44,6 +64,8 @@ public class AudioRoute {
     synchronized void start() {
         if (active) return;
         active = true;
+        if (curOut != null && !hasOut(curOut)) curOut = null; // выбранные наушники отключены
+        if (curOut != null && isMedia(curOut)) { setOut(curOut); return; }
         try { am.setMode(AudioManager.MODE_IN_COMMUNICATION); } catch (Exception ignored) {}
         if (curOut == null) {
             String best = null;
@@ -52,9 +74,11 @@ public class AudioRoute {
             if (best != null) setOut(best);
         } else setOut(curOut);
     }
+    private boolean hasOut(String id) { for (Dev d : outs()) if (d.id.equals(id)) return true; return false; }
     synchronized void stop() {
         if (!active) return;
         active = false;
+        h.removeCallbacks(keepMedia);
         try {
             if (Build.VERSION.SDK_INT >= 31) am.clearCommunicationDevice();
             else { am.setSpeakerphoneOn(false); am.stopBluetoothSco(); am.setBluetoothScoOn(false); }
@@ -62,7 +86,7 @@ public class AudioRoute {
         } catch (Exception ignored) {}
     }
 
-    static class Dev { String id, name; int type; boolean headset; AudioDeviceInfo info; }
+    static class Dev { String id, name; int type; boolean headset, media; AudioDeviceInfo info; }
 
     private java.util.List<Dev> outs() {
         java.util.List<Dev> out = new java.util.ArrayList<>();
@@ -85,6 +109,15 @@ public class AudioRoute {
             }
             for (AudioDeviceInfo i : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) if (i.getType() == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) { Dev d = mk("bt", "Bluetooth-гарнитура", AudioDeviceInfo.TYPE_BLUETOOTH_SCO); d.headset = true; out.add(d); break; }
         }
+        // блютуз-наушники как музыка: звук в них, микрофон — телефона
+        for (AudioDeviceInfo i : am.getDevices(AudioManager.GET_DEVICES_OUTPUTS)) {
+            int t = i.getType();
+            if (t != AudioDeviceInfo.TYPE_BLUETOOTH_A2DP && t != 27) continue; // 27 = TYPE_BLE_SPEAKER
+            Dev d = new Dev(); d.type = t; d.media = true; d.id = "media:" + i.getId(); d.info = i;
+            CharSequence pn = i.getProductName();
+            d.name = (pn != null && pn.length() > 0 ? pn.toString() : "Bluetooth-наушники") + " — звук (микрофон телефона)";
+            out.add(d);
+        }
         return out;
     }
     private static String str(int i) { return java.lang.String.valueOf(i); }
@@ -92,6 +125,21 @@ public class AudioRoute {
 
     synchronized void setOut(String id) {
         curOut = id;
+        try { prefs.edit().putString("out", id).apply(); } catch (Exception ignored) {}
+        if (isMedia(id)) {
+            curIn = "builtin";
+            try {
+                if (Build.VERSION.SDK_INT >= 31) am.clearCommunicationDevice();
+                else { am.stopBluetoothSco(); am.setBluetoothScoOn(false); }
+                am.setSpeakerphoneOn(false);
+                am.setMode(AudioManager.MODE_NORMAL);
+            } catch (Exception ignored) {}
+            h.removeCallbacks(keepMedia);
+            if (active) h.post(keepMedia);
+            return;
+        }
+        h.removeCallbacks(keepMedia);
+        if (active) { try { if (am.getMode() != AudioManager.MODE_IN_COMMUNICATION) am.setMode(AudioManager.MODE_IN_COMMUNICATION); } catch (Exception ignored) {} }
         try {
             if (Build.VERSION.SDK_INT >= 31) {
                 for (Dev d : outs()) if (d.id.equals(id)) { am.setCommunicationDevice(d.info); curIn = d.headset ? id : "builtin"; return; }
@@ -108,6 +156,8 @@ public class AudioRoute {
         // микрофон гарнитуры — вместе с её выводом; «микрофон телефона» — вывод на громкий динамик (если сейчас на гарнитуре)
         if ("builtin".equals(id)) {
             for (Dev d : outs()) if (d.id.equals(curOut) && !d.headset) { curIn = "builtin"; return; }
+            // сейчас звук в гарнитуре: если это блютуз-наушники — оставляем звук в них (как музыку), микрофон — телефона
+            for (Dev d : outs()) if (d.media) { setOut(d.id); return; }
             for (Dev d : outs()) if (d.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) { setOut(d.id); break; }
             curIn = "builtin";
             return;
@@ -125,7 +175,7 @@ public class AudioRoute {
             }
             if (curOut == null) for (Dev d : outs()) if (d.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) curOut = d.id;
             return new JSONObject().put("outputs", o).put("inputs", in).put("curOut", curOut == null ? "" : curOut).put("curIn", curIn == null ? "builtin" : curIn)
-                .put("note", "Микрофон гарнитуры включается вместе с ней: выбрал гарнитуру — звук тоже пойдёт в неё.").toString();
+                .put("note", "Микрофон блютуз-гарнитуры работает вместе с её звуком. Нужен звук в наушниках, а микрофон телефона — выбери «Микрофон телефона» или вариант «звук (микрофон телефона)» в выводе.").toString();
         } catch (Exception e) { return "null"; }
     }
 }

@@ -72,6 +72,7 @@ public class MainActivity extends Activity {
     private final Handler ui = new Handler(Looper.getMainLooper());
     private Discovery discovery;
     AudioRoute audio;
+    String callOn = null, voiceOn = null; // что сейчас держит звук: звонок в личке / голос на сервере
     private volatile LocalProxy proxy;
     private volatile boolean nodeMode = false;
     private static final int REQ_PICK = 7;
@@ -101,7 +102,7 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(true);
-        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.7.2");
+        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.8.0");
         web.addJavascriptInterface(new Bridge(), "KentovkaAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
@@ -177,9 +178,13 @@ public class MainActivity extends Activity {
             }
             case "saved": case "open": copyToDownloads(ev.optString("path"), ev.optString("name"), "open".equals(t)); break;
             case "mirror": mirrorSaves(ev.optString("dir"), ev.optJSONArray("files")); break;
-            case "call": {
+            case "call": case "voice": {
+                // звонок в личке и голос на сервере: служба (чтобы не обрывалось в фоне) и звук — пока идёт хоть что-то
                 JSONObject st = ev.optJSONObject("st");
-                if (st != null) { VoiceService.start(this, st.optString("name", "звонок")); audio.start(); } else { VoiceService.stop(this); audio.stop(); }
+                boolean on = st != null && ("call".equals(t) || st.optBoolean("inVoice", true));
+                if ("call".equals(t)) callOn = on ? st.optString("name", "звонок") : null; else voiceOn = on ? st.optString("ch", "голосовой канал") : null;
+                String what = callOn != null ? callOn : voiceOn;
+                if (what != null) { VoiceService.start(this, what); audio.start(); } else { VoiceService.stop(this); audio.stop(); }
                 break;
             }
             case "relaunch": case "exit": {
@@ -293,7 +298,13 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         String u = web.getUrl();
-        if (nodeMode && u != null && u.startsWith(NodeHost.HOME)) { super.onBackPressed(); return; }
+        // «назад» как в Discord: закрывает то, что открыто (окно, чат, сервер), а с главной — сворачивает приложение (не закрывает)
+        if (nodeMode && u != null && u.startsWith(NodeHost.HOME)) {
+            web.evaluateJavascript("(function(){try{return !!(window.kentovkaBack&&window.kentovkaBack())}catch(e){return false}})()", new android.webkit.ValueCallback<String>() {
+                public void onReceiveValue(String v) { if (!"true".equals(v)) moveTaskToBack(true); }
+            });
+            return;
+        }
         if (u != null && !u.startsWith("file:")) { // на сервере: «назад» — выйти на стартовый экран
             new AlertDialog.Builder(this).setMessage("Выйти с сервера на стартовый экран?")
                 .setPositiveButton("Выйти", new android.content.DialogInterface.OnClickListener() { public void onClick(android.content.DialogInterface d, int w) { goLauncher(); } }).setNegativeButton("Остаться", null).show();

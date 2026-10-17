@@ -4,11 +4,17 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 const isAndroid = !!(typeof window !== 'undefined' && window.__kentovkaAndroid);
 const isLocal = location.protocol === 'file:' || location.protocol === 'kapp:' || isAndroid;
-const isEmbed = location.protocol === 'kapp:' || (isAndroid && window.__kentovkaAndroid.role === 'friends'); // страница внутри главного окна (друзья) — без своей рамки
+// страница сервера во вкладке главного окна (рядом с полосой серверов) — без своей рамки и своей полосы
+const isTab = !isLocal && (() => { try { return !!ipcRenderer.sendSync('app:is-tab'); } catch { return false; } })();
+const isEmbed = location.protocol === 'kapp:' || isTab || (isAndroid && window.__kentovkaAndroid.role === 'friends'); // страница внутри главного окна — без своей рамки
 
 const api = {
   isApp: true,
   android: isAndroid,
+  isTab: isTab || !!(isAndroid && window.__kentovkaAndroid && window.__kentovkaAndroid.tab),
+  voiceClaim: () => ipcRenderer.invoke('voice:claim'),
+  voiceTake: () => ipcRenderer.invoke('voice:take'),
+  leave: () => ipcRenderer.invoke('app:leave'),
   onHotkey: (cb) => ipcRenderer.on('hotkey', (_e, action) => cb(action)),
   hotkeys: () => ipcRenderer.invoke('app:hotkeys'),
   setHotkey: (action, accel) => ipcRenderer.invoke('app:set-hotkey', action, accel),
@@ -73,9 +79,17 @@ const api = {
 if (isLocal) {
   Object.assign(api, {
     launcherGet: () => ipcRenderer.invoke('launcher:get'),
+    shellCover: (on) => ipcRenderer.send('shell:cover', on),
+    shellShow: (key) => ipcRenderer.invoke('shell:show', key),
+    shellClose: (key) => ipcRenderer.invoke('shell:close', key),
+    shellState: () => ipcRenderer.invoke('shell:state'),
+    onShellTab: (cb) => ipcRenderer.on('shell:tab', (_e, st) => cb(st)),
+    onShellFrame: (cb) => ipcRenderer.on('shell:frame', (_e, x) => cb(x)),
+    onShellFrameClose: (cb) => ipcRenderer.on('shell:frame-close', (_e, x) => cb(x)),
     connect: (opts) => ipcRenderer.invoke('launcher:connect', opts),
     serverEdit: (opts) => ipcRenderer.invoke('launcher:server-edit', opts),
     serverStop: (port) => ipcRenderer.invoke('launcher:server-stop', port),
+    serverDelete: (port) => ipcRenderer.invoke('launcher:server-delete', port),
     lan: () => ipcRenderer.invoke('lan:list'),
     lanScan: () => ipcRenderer.invoke('lan:scan'),
     onLan: (cb) => ipcRenderer.on('lan:changed', () => cb()),
@@ -104,7 +118,9 @@ if (isLocal) {
       messages: (id) => ipcRenderer.invoke('friends:messages', id),
       read: (id) => ipcRenderer.invoke('friends:read', id),
       send: (id, text) => ipcRenderer.invoke('friends:send', id, text),
-      invite: (id) => ipcRenderer.invoke('friends:invite', id),
+      invite: (id, key) => ipcRenderer.invoke('friends:invite', id, key),
+      inviteList: () => ipcRenderer.invoke('friends:invite-list'),
+      react: (target, mid, emoji) => ipcRenderer.invoke('friends:react', target, mid, emoji),
       join: (address, name) => ipcRenderer.invoke('friends:join', address, name),
       onChanged: (cb) => ipcRenderer.on('friends:changed', () => cb()),
       onFocus: (cb) => ipcRenderer.on('friends:focus', (_e, id) => cb(id)),

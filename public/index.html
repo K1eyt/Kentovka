@@ -2,6 +2,13 @@
 <html lang="ru" data-bg="calm" data-motion="on">
 <head>
 <meta charset="utf-8">
+<script>
+// Кентовка на телефоне: страница сервера во вкладке приложения — подключаем мостик приложения (как на ПК)
+if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab:\d+$/.test(window.name) && window.parent !== window) {
+  window.__kentovkaAndroid = { role: 'tab:' + window.name.slice(5), port: 18444, tab: true };
+  document.write('<script src="http://127.0.0.1:18444/__shim.js?role=' + encodeURIComponent(window.__kentovkaAndroid.role) + '"><\/script>');
+}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Кентовка</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2322e1ff'/><stop offset='1' stop-color='%23ff3ec8'/></linearGradient></defs><rect width='32' height='32' rx='9' fill='url(%23g)'/><text x='16' y='23' font-size='18' text-anchor='middle' fill='%23070812' font-family='sans-serif' font-weight='bold'>К</text></svg>">
@@ -28,6 +35,11 @@
   button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   input, select { font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px 11px; outline: none; transition: border-color var(--t-fast), box-shadow var(--t-fast); }
   input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--acc-rgb), calc(.18 * var(--glow))); }
+  /* свои адреса спрятаны: копируются кнопкой, показать — по кнопке «показать» */
+  .ip { filter: blur(5px); user-select: none; transition: filter .15s; }
+  .showip .ip { filter: none; user-select: text; }
+  .ipeye { font-size: 12px; color: var(--dim); text-decoration: underline dotted; background: none; border: 0; padding: 0 4px; cursor: pointer; }
+  .ipeye:hover { color: var(--text); }
   input[type=checkbox] { accent-color: var(--accent); }
   /* ползунки: своя дорожка, заливка ровно до значения (--v считает скрипт), кружок по центру дорожки */
   input[type=range] { -webkit-appearance: none; appearance: none; height: 18px; padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; vertical-align: middle; min-width: 40px; --v: 50%; }
@@ -56,6 +68,11 @@
   [data-bg="custom"] #bgfx::after { content: ""; position: absolute; inset: 0; background: rgba(5, 6, 14, var(--bg-dim, .55)); }
   [data-bg="custom"] aside { background: color-mix(in srgb, var(--panel) 78%, transparent); }
   [data-bg="custom"] #rail { background: color-mix(in srgb, var(--bg) 70%, transparent); }
+  /* своя картинка: подписи, время и ники не сливаются с фоном */
+  [data-bg="custom"] .msg .meta, [data-bg="custom"] .sys, [data-bg="custom"] .msg .text, [data-bg="custom"] .chathead, [data-bg="custom"] .empty, [data-bg="custom"] .me .who { text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 8px rgba(0,0,0,.6); }
+  [data-bg="custom"] .msg .meta { color: color-mix(in srgb, var(--text) 72%, transparent); }
+  [data-bg="custom"] .sys { color: color-mix(in srgb, var(--text) 70%, transparent); }
+  [data-bg="custom"] .chathead, [data-bg="custom"] form#chatForm { background: color-mix(in srgb, var(--panel) 72%, transparent); backdrop-filter: blur(8px); }
   [data-bg="grid"] #bgfx::before { content: ""; position: absolute; inset: 0;
     background-image: linear-gradient(rgba(var(--acc-rgb), .06) 1px, transparent 1px), linear-gradient(90deg, rgba(var(--acc-rgb), .06) 1px, transparent 1px);
     background-size: 36px 36px; mask-image: radial-gradient(ellipse at 50% 40%, #000 30%, transparent 80%); }
@@ -1400,6 +1417,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   // ---------- выход в главное меню ----------
   let exiting = false;
   $('exitBtn').onclick = () => {
+    // вкладка в приложении: просто на главную — сервер остаётся открытым, голос не рвётся
+    if (APP0 && APP0.isTab) { APP0.back(); return; }
     if (inVoice && !confirmExit()) return;
     exiting = true;
     leaveVoice(false);
@@ -1709,13 +1728,17 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     }
   }
   // открыть чат канала: перерисовать сообщения
+  // «прилип к низу»: обновляется только когда ты сам листаешь — догрузка картинок не дёргает чат, если ты читаешь историю
+  let stickBottom = true;
+  $('messages').addEventListener('scroll', () => { const b = $('messages'); stickBottom = b.scrollHeight - b.scrollTop - b.clientHeight < 80; }, { passive: true });
+  const toBottom = () => { const b = $('messages'); b.scrollTop = b.scrollHeight; stickBottom = true; };
   function renderChannel() {
     const box = $('messages');
     box.innerHTML = ''; lastFrom = null; lastTs = 0; msgIndex.clear();
     for (const m of msgsByCh.get(curCh) || []) renderMsg(m, true);
     unread.delete(curCh);
     renderEmpty();
-    box.scrollTop = box.scrollHeight;
+    toBottom();
     const c = chanOf(curCh);
     $('chatInput').placeholder = c ? (c.type === 'voice' ? `Написать в чат «${c.name}»` : `Написать в #${c.name}`) : 'Написать';
     $('sideTitle').textContent = c ? `Чат «${c.name}»` : 'Чат';
@@ -1764,7 +1787,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       });
       body.appendChild(t);
     }
-    if (m.file) body.appendChild(renderFile(m.file, () => { if (atBottom) box.scrollTop = box.scrollHeight; }));
+    if (m.file) body.appendChild(renderFile(m.file, () => { if (stickBottom) box.scrollTop = box.scrollHeight; }));
     const rx = document.createElement('div'); rx.className = 'reacts'; body.appendChild(rx); renderReacts(rx, m);
     if (m.mid) {
       const rb = document.createElement('button'); rb.type = 'button'; rb.className = 'mreact'; rb.title = 'Поставить реакцию'; rb.innerHTML = ICON.smile;
@@ -1773,7 +1796,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     }
     row.appendChild(body); box.appendChild(row);
     row.addEventListener('contextmenu', (e) => { e.preventDefault(); showCtx(e, m); });
-    if (atBottom || m.fromId === myId) box.scrollTop = box.scrollHeight;
+    if ((atBottom && stickBottom) || (!fromHistory && m.fromId === myId)) toBottom();
     if (!fromHistory && m.fromId !== myId) {
       if (document.hidden || !document.hasFocus()) { document.title = '● Кентовка'; sfx('message'); }
       else if (!atBottom) sfx('message');
@@ -1822,7 +1845,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     mk('Недавние', recentReacts);
     mk('Реакции', REACTS);
     document.body.appendChild(p);
-    const r = anchor.getBoundingClientRect();
+    let r = anchor.getBoundingClientRect();
+    if (!r.width && !r.height && !r.left && !r.top) r = { left: innerWidth / 2, right: innerWidth / 2 + p.offsetWidth / 2, top: innerHeight / 2, bottom: innerHeight / 2 };
     p.style.left = Math.max(8, Math.min(r.right - p.offsetWidth, innerWidth - p.offsetWidth - 8)) + 'px';
     const top = r.top - p.offsetHeight - 6;
     p.style.top = (top > 8 ? top : Math.min(r.bottom + 6, innerHeight - p.offsetHeight - 8)) + 'px';
@@ -1913,7 +1937,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       menu.appendChild(b);
     };
     if (m.mid) item('Ответить', () => setReply(m), 'reply');
-    if (m.mid) { const row = document.querySelector(`#messages .msg[data-mid="${m.mid}"]`); item('Реакция', () => openReactPicker(m, (row && row.querySelector('.mreact')) || { getBoundingClientRect: () => ({ left: e.clientX, right: e.clientX, top: e.clientY, bottom: e.clientY }) }), 'smile'); }
+    if (m.mid) { const pt = { left: e.clientX, right: e.clientX, top: e.clientY, bottom: e.clientY, width: 0, height: 0 }; item('Реакция', () => openReactPicker(m, { getBoundingClientRect: () => pt }), 'smile'); }
     if (m.file) item('Сохранить на компьютер', () => saveToComputer(m.file), 'download');
     const sel = String(window.getSelection() || '').trim();
     if (sel) item('Копировать выделенное', () => copyText(sel), 'copy');
@@ -3189,6 +3213,14 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       if (!(await kAsk(`Ты в звонке с ${dmCall.name}. Завершить его и зайти в голосовой канал?`, 'Завершить и зайти'))) return;
       APP0.callCmd('hangup'); dmCall = null;
     } else if (dmCall && dmCall.state === 'ringing') APP0.callCmd('hangup');
+    // в голосе на другом сервере — предупреждаем и выходим оттуда
+    if (APP0 && APP0.voiceClaim && !inVoice) {
+      const cl = await APP0.voiceClaim().catch(() => null);
+      if (cl && cl.busy) {
+        if (!(await kAsk(`Ты в голосовом канале на «${cl.busy}»${cl.ch ? ' («' + cl.ch + '»)' : ''}. Перейти сюда? Там звонок закончится.`, 'Перейти'))) return;
+        await APP0.voiceTake().catch(() => {});
+      }
+    }
     if (inVoice) leaveVoice(); // переходим из одного голосового канала в другой
     myVoice = ch;
     if (!window.isSecureContext || !navigator.mediaDevices) { kSay('Микрофон работает только по https. Открой адрес, который начинается с https://'); return; }
@@ -3883,11 +3915,12 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       line.style.flexWrap = 'wrap';
       line.innerHTML = '';
       line.title = 'Нажми на адрес, чтобы скопировать';
-      line.append('Ты хост. Адреса для кентов:');
+      const eyeBtn = (txt) => { const e = document.createElement('button'); e.type = 'button'; e.className = 'ipeye'; const sync = () => { const on = document.documentElement.classList.contains('showip'); e.textContent = on ? 'скрыть' : (txt || 'показать'); e.title = on ? 'Спрятать адреса' : 'Показать адреса (копировать можно и так)'; }; sync(); e.onclick = (ev) => { ev.stopPropagation(); document.documentElement.classList.toggle('showip'); document.querySelectorAll('.ipeye').forEach((x) => x.__sync && x.__sync()); }; e.__sync = sync; return e; };
+      line.append('Ты хост. Адреса для кентов:', eyeBtn());
       for (const x of h.addresses.slice(0, 5)) {
         const r = document.createElement('span'); r.className = 'haddr';
         const t = withPort(x);
-        r.innerHTML = '<i></i><b></b>'; r.firstChild.textContent = x.label || x.name; r.lastChild.textContent = t; r.title = x.name;
+        r.innerHTML = '<i></i><b class="ip"></b>'; r.firstChild.textContent = x.label || x.name; r.lastChild.textContent = t; r.title = x.name;
         r.onclick = (e) => { e.stopPropagation(); APP.copy(t); r.lastChild.textContent = 'скопировано'; setTimeout(() => (r.lastChild.textContent = t), 1300); };
         line.appendChild(r);
       }
@@ -3902,7 +3935,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     };
     APP.hotkeys().then(showHotkeys);
     // ---------- полоса серверов слева (как в Discord) ----------
-    if (APP.servers) {
+    if (APP.servers && !APP.isTab) {
       $('app').classList.add('hasrail');
       const COLORS2 = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#3b82f6', '#8b5cf6', '#ec4899'];
       const colorOf2 = (t) => { let h = 0; for (const c of t) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS2[h % COLORS2.length]; };
@@ -4073,6 +4106,30 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
 
   $('menuBtn').onclick = (e) => { e.stopPropagation(); const o = !$('side').classList.contains('open'); $('side').classList.toggle('open', o); $('app').classList.toggle('drawer', o); };
   document.addEventListener('click', (e) => { if (!$('side').contains(e.target) && !$('rail').contains(e.target)) { $('side').classList.remove('open'); $('app').classList.remove('drawer'); } });
+  // телефон: выбрал канал — список каналов уезжает, открывается чат (как в мобильном Discord)
+  const narrowScr = () => innerWidth <= 760;
+  const setDrawer = (o) => { $('side').classList.toggle('open', o); $('app').classList.toggle('drawer', o); };
+  $('side').addEventListener('click', (e) => { if (narrowScr() && e.target.closest('.channel, #textList > *, #voiceList > *')) setTimeout(() => setDrawer(false), 0); });
+  // вкладка в приложении на телефоне: в чате полоса серверов прячется, в списке каналов — видна
+  let lastDeepS = null;
+  const postDeep = () => {
+    if (!(APP0 && APP0.isTab) || window.parent === window) return;
+    const deep = narrowScr() && !$('side').classList.contains('open');
+    if (deep !== lastDeepS) { lastDeepS = deep; try { window.parent.postMessage({ k: 'deep', on: deep }, '*'); } catch {} }
+  };
+  new MutationObserver(postDeep).observe($('side'), { attributes: true, attributeFilter: ['class'] });
+  window.kentovkaShown = (on) => { if (on) { lastDeepS = null; postDeep(); } };
+  if (APP0 && APP0.isTab && narrowScr()) setDrawer(true);
+  postDeep();
+  // кнопка «назад» на телефоне: окно → меню → чат → список каналов → (главная)
+  window.kentovkaBack = () => {
+    const dl = [...document.querySelectorAll('dialog[open]')].pop(); if (dl) { dl.close(); return true; }
+    if (document.getElementById('vbPop')) { closeVb(); return true; }
+    if (document.getElementById('reactPop')) { closeReactPicker(); return true; }
+    if ($('ctxMenu').classList.contains('on')) { hideCtx(); return true; }
+    if (narrowScr() && !$('side').classList.contains('open')) { setDrawer(true); return true; }
+    return false;
+  };
 
   // ---------- настройки ----------
   async function fillDevices() {

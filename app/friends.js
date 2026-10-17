@@ -202,6 +202,12 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
             send({ t: 'ack', mid });
           }
           break;
+        case 'rx': { // друг поставил или убрал реакцию в личке
+          if (!authed || !f) return;
+          const x = (db.dms[peer] || []).find((y) => y.mid === m.mid);
+          if (x && applyRx(x, peer, m.mine)) { save(); changed(); }
+          break;
+        }
         case 'call': // звонок 1 на 1: вызов, ответ, сброс и обмен данными WebRTC — только между друзьями
           if (!authed || !f) return;
           if (!['ring', 'accept', 'decline', 'end', 'busy', 'signal', 'state'].includes(m.k) || typeof m.cid !== 'string') return;
@@ -250,6 +256,17 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     return { id: g.id, key: g.key, name: short(g.name, 40), owner: /^[0-9a-f]{32}$/.test(g.owner || '') ? g.owner : null, members, v: Number(g.v) || 1, at: Number(g.at) || Date.now() };
   };
   const meAsMember = () => { const p = getProfile() || {}; return { id: db.me.id, name: short(p.name, 24) || 'кент', avatar: p.avatar && p.avatar.length < 60000 ? p.avatar : null, ip: '', port }; };
+  // реакции: у сообщения { эмодзи: [id кто поставил] }; передаём «мои реакции на сообщение» целиком — повтор не страшен
+  const RX_RE = /^[^\s<>"'`]{1,16}$/;
+  function applyRx(x, uid, mine) {
+    const r = x.reactions || {}; let changedAny = false;
+    const want = new Set((Array.isArray(mine) ? mine : []).map(String).filter((e) => RX_RE.test(e)).slice(0, 20));
+    for (const e of Object.keys(r)) { const had = r[e].includes(uid); if (had && !want.has(e)) { r[e] = r[e].filter((y) => y !== uid); changedAny = true; } if (!r[e].length) delete r[e]; }
+    for (const e of want) { if (!r[e]) { if (Object.keys(r).length >= 24) continue; r[e] = []; } if (!r[e].includes(uid)) { r[e].push(uid); changedAny = true; } }
+    if (Object.keys(r).length) x.reactions = r; else delete x.reactions;
+    return changedAny;
+  }
+  const myRx = (x) => Object.keys(x.reactions || {}).filter((e) => x.reactions[e].includes(db.me.id));
   function gsendAll(g, obj, except) {
     for (const mb of g.members) if (mb.id !== db.me.id && mb.id !== except) { const w = linkTo(mb.id); if (w) w.send(JSON.stringify(obj)); }
   }
@@ -311,6 +328,12 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
           onMessage && onMessage({ kind: 'gmsg', id: gid, name: `${m.name} · ${g.name || 'группа'}`, text: short(m.text, 140) });
           gsendAll(g, { t: 'g-msg', gid, mid: m.mid, from: m.from, name: m.name, text: m.text, ts: m.ts, file: m.file || undefined }, peerId); // передаём дальше тем, кто не на прямой связи с автором
         }
+        break;
+      }
+      case 'g-rx': { // реакция в группе (передаём дальше тем, кто не на прямой связи)
+        const who = /^[0-9a-f]{32}$/.test(m.from || '') && isMember(g, m.from) ? m.from : peerId;
+        const x = (db.gm[gid] || []).find((y) => y.mid === m.mid);
+        if (x && applyRx(x, who, m.mine)) { save(); changed(); gsendAll(g, { t: 'g-rx', gid, mid: m.mid, from: who, mine: m.mine }, peerId); }
         break;
       }
       case 'g-sync': { // участник просит то, что пропустил
@@ -396,6 +419,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
       if (x.from !== 'me' || x.delivered) continue;
       ws.send(JSON.stringify(x.invite ? { t: 'invite', mid: x.mid, address: x.invite.address, name: x.invite.name } : { t: 'dm', mid: x.mid, text: x.text, ts: x.ts, file: x.file || undefined }));
     }
+    for (const x of db.dms[id] || []) if (x.rxOut) { ws.send(JSON.stringify({ t: 'rx', mid: x.mid, mine: myRx(x) })); delete x.rxOut; }
   }
 
   // ---------- скачивание файла кусками (по 4 куска за раз) ----------
@@ -590,6 +614,17 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     announce() { for (const ws of conns.values()) if (ws.readyState === 1) hello(ws); },
     // чем я занят сейчас — друзьям на связи
     sendPresence() { const p = getPresence ? getPresence() : null; for (const ws of conns.values()) if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'presence', p })); },
+    // поставить или убрать реакцию (нажал ещё раз — убрал)
+    react(target, mid, emoji) {
+      emoji = String(emoji || ''); if (!RX_RE.test(emoji)) return false;
+      const toggle = (x) => { const mine = myRx(x); const i = mine.indexOf(emoji); if (i >= 0) mine.splice(i, 1); else mine.push(emoji); applyRx(x, db.me.id, mine); return mine; };
+      if (target && target.gid) {
+        const g = db.groups[target.gid]; const x = g && (db.gm[g.id] || []).find((y) => y.mid === mid); if (!x) return false;
+        const mine = toggle(x); save(); gsendAll(g, { t: 'g-rx', gid: g.id, mid, from: db.me.id, mine }); changed(); return true;
+      }
+      const id = target && target.id; const x = (db.dms[id] || []).find((y) => y.mid === mid); if (!x) return false;
+      toggle(x); x.rxOut = true; save(); flush(id); changed(); return true;
+    },
     messages(id) { return (db.dms[id] || []).slice(-DM_MAX); },
     read(id) { const f = byId(id); if (f && f.unread) { f.unread = 0; save(); changed(); } },
     send(id, text) {

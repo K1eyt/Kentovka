@@ -19,6 +19,12 @@ adb exec-out screencap -p > $OUT/2-server.png
 # голосовой канал: нажимаем через отладчик страницы
 node android/ci-webview.js > $OUT/webview.txt 2>&1 || true
 adb exec-out screencap -p > $OUT/3-voice.png
+# кнопка «назад»: чат → список каналов → главная (голос не рвётся) → свернуть, но не закрыть
+adb shell input keyevent 4; sleep 2; adb exec-out screencap -p > $OUT/4-back1.png
+adb shell input keyevent 4; sleep 2; adb exec-out screencap -p > $OUT/4-back2.png
+adb shell input keyevent 4; sleep 2; adb exec-out screencap -p > $OUT/4-back3.png
+adb shell input keyevent 4; sleep 2
+(echo "pid: $(adb shell pidof ru.kentovka.app)"; adb shell dumpsys activity activities | grep -E "mResumedActivity|topResumedActivity") > $OUT/back-alive.txt
 adb logcat -d > $OUT/logcat-all.txt
 adb shell run-as ru.kentovka.app ls -la files files/nodeproject files/kentovka > $OUT/files.txt 2>&1
 adb logcat -d -s kentovka kentovka-node AndroidRuntime > $OUT/logcat-node.txt

@@ -89,6 +89,16 @@
       }),
     };
   }
+  // фрейм внутри главной: ответы приложения (запись экрана) и кнопка «назад» приходят от главной страницы
+  if (window.parent !== window) {
+    window.addEventListener('message', function (e) {
+      var d = e.data || {};
+      if (d.k === 'kscreen' && window.__kScreen) window.__kScreen(d.ok, d.w, d.h);
+      if (d.k === 'kscreen-end' && window.__kScreenEnd) window.__kScreenEnd();
+      if (d.k === 'kback') { var h = false; try { h = !!(window.kentovkaBack && window.kentovkaBack()); } catch (x) {} try { e.source.postMessage({ k: 'kback-r', id: d.id, handled: h }, '*'); } catch (x) {} }
+      if (d.k === 'kshown' && window.kentovkaShown) { try { window.kentovkaShown(!!d.on); } catch (x) {} }
+    });
+  }
   window.__kentovkaLocal = true; // для preload: это страница приложения (как file:// на ПК)
   // eslint-disable-next-line no-new-func
   new Function('require', 'module', 'exports', __PRELOAD__)(function (n) { return n === 'electron' ? electron : null; }, {}, {});
