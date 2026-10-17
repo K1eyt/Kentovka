@@ -1158,6 +1158,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
 })() : null;
 (() => {
   const $ = (id) => document.getElementById(id);
+  // телефон: поле ввода, куда клавиатура разрешает вставлять скрины из своего буфера (заменяем до того, как к нему привяжутся обработчики)
+  if (window.kEditable) window.kEditable(document.getElementById('chatInput'), (files) => addPending(files));
   const COLORS = ['#ef4444','#f97316','#eab308','#22c55e','#14b8a6','#3b82f6','#8b5cf6','#ec4899'];
   const colorOf = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) >>> 0; return COLORS[h % COLORS.length]; };
   // ---------- иконки (тонкие линии, как в Discord) ----------
@@ -1513,8 +1515,9 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     }, 3000);
   }
   // номер этого устройства (браузера/приложения): переподключился — сервер закроет старое «зависшее» подключение, а не покажет тебя дважды
-  // свой на каждую вкладку/окно (sessionStorage), но тот же после перезагрузки и переподключения
-  function deviceId() { try { let d = sessionStorage.getItem('kdev'); if (!d) { d = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); sessionStorage.setItem('kdev', d); } return d; } catch { return ''; } }
+  // свой у каждой открытой страницы (в памяти): переподключилась эта же страница — сервер закроет её старое подключение; другие страницы не трогает
+  const PAGE_DEV = Math.random().toString(36).slice(2, 12) + Date.now().toString(36);
+  function deviceId() { return PAGE_DEV; }
   let pendingImport = null; // что писали, пока хоста не было, — отдадим хосту, когда он вернётся
   function moveTo(host) { // временный сервер сказал: хост вернулся
     try { const all = []; for (const l of msgsByCh.values()) for (const x of l) if (x.offline && x.text) all.push({ ch: x.ch, from: x.from, text: x.text, ts: x.ts }); if (all.length) pendingImport = all; } catch {}
@@ -1635,7 +1638,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
         case 'profile-info': profiles[m.name] = m.info || {}; if (mpOpen === m.name) openProfile(m.name, mpAnchor); break;
         case 'chat': addMsg(m); break;
         case 'event':
-          if (m.ev === 'online') { sfx('online'); toast(`${m.name} в сети`, m.name); }
+          if (m.ev === 'online' && m.name !== myName) { sfx('online'); toast(`${m.name} в сети`, m.name); } // о себе (с другого устройства) не сообщаем
           if (m.ev === 'rename') onRename(m.from, m.name);
           break;
         case 'avatar':
@@ -2409,22 +2412,6 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   const PENDING_MAX = 10;
   let pendingSeq = 0;
 
-  // телефон: кнопка «Вставить скрин из буфера» (клавиатура Android картинку в поле не вставляет)
-  async function pasteFromPhone() {
-    const K = window.KentovkaAndroid; if (!K || !K.clipImage) return;
-    const d = K.clipImage();
-    if (d === 'big') { toast('Картинка в буфере больше 25 МБ'); return; }
-    if (!d) { toast('В буфере нет картинки — сначала скопируй скрин'); return; }
-    const blob = await (await fetch(d)).blob();
-    const ext = (blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
-    addPending([new File([blob], 'image.' + ext, { type: blob.type })]);
-  }
-  if (window.KentovkaAndroid && window.KentovkaAndroid.clipImage) {
-    const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'iconbtn attach'; pb.id = 'pasteBtn'; pb.title = 'Вставить скрин из буфера';
-    pb.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>';
-    pb.onclick = () => pasteFromPhone();
-    $('attachBtn').after(pb);
-  }
   function addPending(list) {
     const stamp = () => new Date().toLocaleTimeString('ru-RU').replace(/:/g, '-');
     for (const f of list) {

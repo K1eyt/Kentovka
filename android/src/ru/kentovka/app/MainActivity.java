@@ -102,7 +102,7 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(true);
-        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.8.1");
+        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.8.2");
         web.addJavascriptInterface(new Bridge(), "KentovkaAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());

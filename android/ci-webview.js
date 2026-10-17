@@ -32,6 +32,9 @@ const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.
   console.log('ws connected (каналы)', await ev("[...document.querySelectorAll('#textList .channel, #voiceList .channel')].map((x) => x.textContent.trim()).join(' | ')"));
   console.log('getUserMedia', await ev("navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); return 'ok'; }, (e) => e.name + ': ' + e.message)"));
   console.log('secure context', await ev('window.isSecureContext'));
+  // шумодав RNNoise на телефоне: грузится ли
+  console.log('rnnoise', await ev("(async () => { try { const lib = await import('/ns/index.js'); const bin = await lib.loadRnnoise({ url: '/ns/rnnoise.wasm', simdUrl: '/ns/rnnoise_simd.wasm' }); const c = new AudioContext({ sampleRate: 48000 }); await c.audioWorklet.addModule('/ns/rnnoise/workletProcessor.js'); const n = new lib.RnnoiseWorkletNode(c, { wasmBinary: bin, maxChannels: 1 }); return 'ok ' + bin.byteLength + ' ' + c.state; } catch (e) { return 'ERR ' + (e && (e.stack || e.message) || e); } })()"));
+  console.log('rnnoise (как в чате)', await ev("(async () => { try { const s = JSON.parse(localStorage.getItem('settings') || '{}'); s.nsMode = 'rnnoise'; localStorage.setItem('settings', JSON.stringify(s)); return 'режим записан'; } catch (e) { return 'ERR ' + e.message; } })()"));
   await ev("document.getElementById('voiceChannel') && document.getElementById('voiceChannel').click()");
   for (let i = 0; i < 25; i++) { await sleep(1000); if (await ev("document.getElementById('voiceBar') && document.getElementById('voiceBar').classList.contains('on')")) break; }
   await sleep(8000);

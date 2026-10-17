@@ -484,7 +484,8 @@
     return box;
   }
   // скрепка, Ctrl+V скрина и перетаскивание файла в беседу
-  function attachTo(form, inp, target, dropZone) {
+  function attachTo(form, inp0, target, dropZone) {
+    let inp = inp0;
     const fi = document.createElement('input'); fi.type = 'file'; fi.multiple = true; fi.hidden = true;
     const ab = document.createElement('button'); ab.type = 'button'; ab.className = 'iconbtn attach'; ab.innerHTML = I.clip; ab.title = 'Прикрепить файл или скрин (можно Ctrl+V или перетащить)';
     ab.onclick = () => fi.click();
@@ -503,6 +504,8 @@
       lastRendered = ''; refresh();
     };
     fi.onchange = () => { const l = [...fi.files]; fi.value = ''; sendFiles(l); };
+    // телефон: поле, куда клавиатура разрешает вставить скрин из своего буфера
+    if (window.kEditable && window.kPhone) inp = window.kEditable(inp, (files) => sendFiles(files));
     inp.addEventListener('paste', (e) => { const files = [...(e.clipboardData && e.clipboardData.files || [])]; if (files.length) { e.preventDefault(); sendFiles(files); } });
     // область чата живёт между перерисовками — обработчики ставим ОДИН раз (иначе файл уходил столько раз, сколько было перерисовок)
     const z = dropZone || form;
@@ -514,18 +517,7 @@
       z.addEventListener('drop', (e) => { z.classList.remove('drop'); const files = [...(e.dataTransfer && e.dataTransfer.files || [])]; if (files.length) { e.preventDefault(); e.stopPropagation(); z.__send(files); } });
     }
     form.prepend(ab, fi);
-    // телефон: «вставить скрин из буфера» (клавиатура Android картинку в поле не вставляет)
-    if (window.KentovkaAndroid && window.KentovkaAndroid.clipImage) {
-      const pb = document.createElement('button'); pb.type = 'button'; pb.className = 'iconbtn attach'; pb.title = 'Вставить скрин из буфера'; pb.innerHTML = I.clipboard;
-      pb.onclick = async () => {
-        const d = window.KentovkaAndroid.clipImage();
-        if (d === 'big') { kSay('Картинка в буфере больше 25 МБ.'); return; }
-        if (!d) { flash('В буфере нет картинки — сначала скопируй скрин'); return; }
-        const blob = await (await fetch(d)).blob();
-        sendFiles([new File([blob], 'скрин.' + ((blob.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: blob.type })]);
-      };
-      ab.after(pb);
-    }
+    return inp;
   }
   // ---------- вид — тот же, что в приложении (цвета, свечение, свой фон) ----------
   const hexRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -1116,12 +1108,12 @@
     }
     if (!msgs.length) box.innerHTML = `<div class="ractempty" style="margin:auto">Это начало вашей переписки с ${f.name.replace(/[<>&]/g, '')}.<br>Напиши первым — или позови на сервер.</div>`;
     const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
-    const inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать ${f.name}`;
+    let inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать ${f.name}`;
     const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
     form.append(inp, sb);
     form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(f.id); await F.send(f.id, v, rp); refresh(); };
     replyBar(form, f.id);
-    attachTo(form, inp, { id: f.id }, main);
+    inp = attachTo(form, inp, { id: f.id }, main);
     main.append(head);
     mountStage(main);
     main.append(box, form);
@@ -1773,12 +1765,12 @@
     }
     if (!msgs.length) box.innerHTML = `<div class="ractempty" style="margin:auto">Это начало группы «${gTitle(g).replace(/[<>&]/g, '')}».<br>Пиши — сообщение увидят все участники.</div>`;
     const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
-    const inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать в «${gTitle(g)}»`;
+    let inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать в «${gTitle(g)}»`;
     const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
     form.append(inp, sb);
     form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(g.id); await F.groupSend(g.id, v, rp); refresh(); };
     replyBar(form, g.id);
-    attachTo(form, inp, { gid: g.id }, main);
+    inp = attachTo(form, inp, { gid: g.id }, main);
     col.append(box, form);
     // участники справа
     const mem = document.createElement('div'); mem.className = 'gmem';

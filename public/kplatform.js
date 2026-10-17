@@ -4,6 +4,45 @@
   'use strict';
   const phone = !!(window.__kentovkaAndroid || window.KentovkaAndroid || window.kAndroid || /Android/i.test(navigator.userAgent));
   window.kPhone = phone;
+  // телефон: поле ввода чата — «редактируемый блок», а не <input>: только в такое поле клавиатура Android
+  // разрешает вставить картинку из своего буфера (в обычном поле скрины зачёркнуты)
+  window.kEditable = function (inp, onFiles) {
+    if (!phone || !inp || inp.tagName !== 'INPUT') return inp;
+    const d = document.createElement('div');
+    d.id = inp.id; d.className = (inp.className ? inp.className + ' ' : '') + 'keditable';
+    d.contentEditable = 'true'; d.setAttribute('role', 'textbox'); d.setAttribute('enterkeyhint', 'send'); d.spellcheck = true;
+    d.dataset.ph = inp.placeholder || '';
+    const max = inp.maxLength > 0 ? inp.maxLength : 4000;
+    Object.defineProperty(d, 'value', { get() { return d.innerText.replace(/\u00a0/g, ' ').replace(/\n+$/, '').slice(0, max); }, set(v) { d.textContent = v == null ? '' : String(v); } });
+    Object.defineProperty(d, 'placeholder', { get() { return d.dataset.ph || ''; }, set(v) { d.dataset.ph = v; } });
+    d.maxLength = max; d.select = () => { const r = document.createRange(); r.selectNodeContents(d); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+    d.setSelectionRange = () => {};
+    d.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); const f = d.closest('form'); if (f) { if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); } }
+    });
+    // картинка с клавиатуры: появляется <img> — забираем её как файл и убираем из текста
+    const grab = async (img) => {
+      const src = img.getAttribute('src'); img.remove(); if (!src) return;
+      try { const b = await (await fetch(src)).blob(); onFiles && onFiles([new File([b], 'скрин.' + ((b.type.split('/')[1] || 'png').replace('jpeg', 'jpg')), { type: b.type || 'image/png' })]); } catch {}
+    };
+    new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) { if (n.nodeType !== 1) continue; if (n.tagName === 'IMG') grab(n); else if (n.querySelectorAll) n.querySelectorAll('img').forEach(grab); } })
+      .observe(d, { childList: true, subtree: true });
+    // вставка: файлы и картинки — отдаём чату; текст — без оформления
+    d.addEventListener('paste', (e) => {
+      const dt = e.clipboardData; if (!dt) return;
+      const files = [...(dt.files || [])];
+      if (files.length) { if (!onFiles) return; e.preventDefault(); e.stopPropagation(); onFiles(files); return; }
+      const t = dt.getData('text/plain');
+      if (t) { e.preventDefault(); document.execCommand('insertText', false, t); }
+    });
+    if (!document.getElementById('keditable-css')) {
+      const st = document.createElement('style'); st.id = 'keditable-css';
+      st.textContent = '.keditable{flex:1;min-width:0;min-height:22px;max-height:120px;overflow-y:auto;outline:none;white-space:pre-wrap;overflow-wrap:anywhere;padding:8px 0;cursor:text;line-height:1.4}.keditable:empty::before{content:attr(data-ph);color:var(--faint,#6b7090);pointer-events:none}';
+      document.head.appendChild(st);
+    }
+    inp.replaceWith(d);
+    return d;
+  };
   if (!phone) return;
   const R = [
     [/Сохранить на компьютер/g, 'Сохранить на телефон'],
