@@ -94,6 +94,8 @@ function startStun(port) {
   });
 }
 
+// эмодзи для реакций; на телефоне (node без полного ICU) — запасная проверка по диапазонам
+let EMOJI_RE; try { EMOJI_RE = new RegExp('^\\p{Extended_Pictographic}', 'u'); } catch { EMOJI_RE = /^(?:[\u00a9\u00ae\u203c-\u3299]|\ud83c[\udc00-\udfff]|\ud83d[\udc00-\udfff]|\ud83e[\udc00-\udfff])/; }
 const cleanName = (s) => String(s || 'файл').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 120) || 'файл';
 const snippet = (m) => (m.file ? 'файл ' + m.file.name : String(m.text || '')).slice(0, 90);
 
@@ -485,7 +487,7 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
           if (!me.name) return;
           const h = history.find((x) => x.mid === m.mid);
           const e = String(m.emoji || '');
-          if (!h || !e || e.length > 16 || !/^\p{Extended_Pictographic}/u.test(e)) return;
+          if (!h || !e || e.length > 16 || !EMOJI_RE.test(e)) return;
           h.reactions = h.reactions || {};
           const list = h.reactions[e] || [];
           const i = list.indexOf(me.name);
