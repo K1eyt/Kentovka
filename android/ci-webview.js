@@ -1,0 +1,30 @@
+// Через отладчик WebView (CDP) проверяем страницу сервера в APK: вошли ли, голосовой канал, звук
+const { execSync } = require('child_process');
+const http = require('http');
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.on('data', (c) => (d += c)); r.on('end', () => res(d)); }).on('error', rej));
+(async () => {
+  const socks = execSync('adb shell cat /proc/net/unix').toString().match(/webview_devtools_remote_\d+/g) || [];
+  console.log('sockets', socks);
+  if (!socks.length) return;
+  execSync(`adb forward tcp:9333 localabstract:${socks[0]}`);
+  const pages = JSON.parse(await get('http://127.0.0.1:9333/json'));
+  console.log('pages', pages.map((p) => p.url));
+  const pg = pages.find((p) => p.type === 'page');
+  const WebSocket = require('ws');
+  const ws = new WebSocket(pg.webSocketDebuggerUrl);
+  await new Promise((r) => ws.on('open', r));
+  let id = 0; const wait = new Map();
+  ws.on('message', (raw) => { const m = JSON.parse(raw); if (m.id && wait.has(m.id)) { wait.get(m.id)(m); wait.delete(m.id); } });
+  const ev = (expr) => new Promise((r) => { const i = ++id; wait.set(i, r); ws.send(JSON.stringify({ id: i, method: 'Runtime.evaluate', params: { expression: expr, awaitPromise: true, returnByValue: true } })); }).then((m) => (m.result && m.result.result ? m.result.result.value : m));
+  console.log('url', await ev('location.href'));
+  console.log('kAndroid', await ev('!!window.kAndroid'));
+  console.log('myName', await ev("document.getElementById('myName') && document.getElementById('myName').textContent"));
+  console.log('audioDevices', JSON.stringify(await ev('window.kAndroid && window.kAndroid.audioDevices && JSON.stringify(window.kAndroid.audioDevices())')));
+  console.log('nsMode default', await ev("JSON.parse(localStorage.getItem('settings') || '{}').nsMode || '(по умолчанию)'"));
+  await ev("document.getElementById('voiceChannel') && document.getElementById('voiceChannel').click()");
+  await sleep(6000);
+  console.log('inVoice', await ev("document.getElementById('voiceBar') && document.getElementById('voiceBar').classList.contains('on')"));
+  console.log('errors', JSON.stringify(await ev("(window.__errs || []).slice(-10)")));
+  process.exit(0);
+})().catch((e) => { console.log('ERR', e.message); process.exit(0); });

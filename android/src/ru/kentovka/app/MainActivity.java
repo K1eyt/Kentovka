@@ -107,8 +107,23 @@ public class MainActivity extends Activity {
         discovery.start();
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, REQ_NOTIF);
+        // отладочная сборка (проверки на GitHub): страницы можно смотреть через отладчик Chrome
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
+        handleIntent(getIntent());
         web.loadUrl(LAUNCHER);
     }
+
+    // запуск с параметрами (для проверок): ник и адрес сервера, куда сразу зайти
+    private void handleIntent(Intent it) {
+        if (it == null) return;
+        try {
+            String nm = it.getStringExtra("kname");
+            if (nm != null && !nm.trim().isEmpty()) { JSONObject c = config(); JSONObject p = c.optJSONObject("profile"); if (p == null) p = new JSONObject(); p.put("name", nm.trim()); c.put("profile", p); saveConfig(c); }
+            final String addr = it.getStringExtra("kconnect");
+            if (addr != null && addr.matches("[\\w.:-]{3,80}")) ui.postDelayed(new Runnable() { public void run() { connect(addr, ""); } }, 1500);
+        } catch (Exception ignored) {}
+    }
+    @Override protected void onNewIntent(Intent it) { super.onNewIntent(it); setIntent(it); handleIntent(it); }
 
     @Override
     protected void onDestroy() {
