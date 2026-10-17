@@ -179,3 +179,44 @@ class Gate extends AudioWorkletProcessor {
   }
 }
 registerProcessor('k-gate', Gate);
+
+// k-async — «умный шумодав» без треска: тяжёлая нейросеть (DeepFilterNet3 + k-blend) считается в отдельном
+//   потоке (df-worker.js), а здесь только очередь. Блоки уходят в поток пачками, обработанные копятся в запасе
+//   (~27 мс) — если комп на миг задумался, звук не рвётся. Задержка голоса: запас + задержка самой нейросети.
+class Async extends AudioWorkletProcessor {
+  constructor(o) {
+    super();
+    const p = o.processorOptions || {};
+    this.target = p.target || 10;          // блоков в запасе перед стартом (10 × 2.7 мс)
+    this.max = p.max || 48;                // больше — значит отстаём: выкидываем лишнее
+    this.batch = p.batch || 2;
+    this.fifo = []; this.primed = false; this.wp = null; this.under = 0; this.fade = 1;
+    this.inbuf = new Float32Array(BLOCK * this.batch); this.n = 0;
+    this.port.onmessage = (e) => {
+      const d = e.data || {};
+      if (d.port) {
+        this.wp = d.port;
+        this.wp.onmessage = (m) => {
+          const a = m.data; if (!(a instanceof Float32Array)) return;
+          for (let i = 0; i < a.length; i += BLOCK) this.fifo.push(a.subarray(i, i + BLOCK));
+          if (this.fifo.length > this.max) this.fifo.splice(0, this.fifo.length - this.target);
+        };
+      } else if (this.wp && typeof d.keep === 'number') this.wp.postMessage({ keep: d.keep });
+    };
+  }
+  process(inputs, outputs) {
+    const out = outputs[0] && outputs[0][0]; if (!out) return true;
+    const inp = inputs[0] && inputs[0][0];
+    if (this.wp) {
+      if (inp) this.inbuf.set(inp, this.n); else this.inbuf.fill(0, this.n, this.n + BLOCK);
+      this.n += BLOCK;
+      if (this.n >= this.inbuf.length) { const b = this.inbuf; this.wp.postMessage(b, [b.buffer]); this.inbuf = new Float32Array(BLOCK * this.batch); this.n = 0; }
+    }
+    if (!this.primed) { if (this.fifo.length >= this.target) this.primed = true; else return true; }
+    const blk = this.fifo.shift();
+    if (blk) out.set(blk);
+    else { this.primed = false; this.under++; } // поток не успел — копим запас заново (тишина 2.7 мс лучше треска)
+    return true;
+  }
+}
+registerProcessor('k-async', Async);

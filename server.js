@@ -504,9 +504,24 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
           if (!text || !me.name) return;
           const ch = chanOk(m.ch) ? m.ch : 'general';
           const msg = { type: 'chat', ch, from: me.name, fromId: id, text, ts: Date.now() };
+          if (noHost) msg.offline = true; // написано, пока хоста не было — вернётся к хосту, когда он придёт
           const orig = m.replyTo && history.find((h) => h.mid === m.replyTo);
           if (orig) msg.reply = { mid: orig.mid, from: orig.from, text: snippet(orig) };
           broadcast(pushMsg(msg));
+          break;
+        }
+        case 'import': { // хост вернулся: кенты приносят то, что писали без него (на временном сервере)
+          if (!me.name || noHost || !Array.isArray(m.msgs)) return;
+          const now = Date.now(); let added = 0;
+          for (const x of m.msgs.slice(0, 300)) {
+            if (!x || typeof x.text !== 'string') continue;
+            const text = x.text.slice(0, 2000).trim(), from = String(x.from || '').slice(0, 24).trim(), ts = Number(x.ts);
+            if (!text || !from || !(ts > now - 7 * 864e5 && ts <= now + 60000)) continue;
+            if (history.some((h) => h.ts === ts && h.from === from && h.text === text)) continue; // уже принёс кто-то другой
+            const ch = chanOk(x.ch) ? x.ch : 'general';
+            broadcast(pushMsg({ type: 'chat', ch, from, fromId: null, text, ts, imported: true }));
+            if (++added >= 300) break;
+          }
           break;
         }
         case 'file-offer': {

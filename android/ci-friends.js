@@ -55,6 +55,7 @@ const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.
     await sleep(2000);
     console.log('звонок в конце', await ev('window.kentovkaApp.callState().then((s) => JSON.stringify(s))'));
   }
+  console.log('сохранить аккаунт', await ev('window.kentovkaApp.account.saveNow().then((r) => JSON.stringify(r))')); await sleep(7000);
   try { console.log('сохранения в Документах', execSync("adb shell ls -la '/sdcard/Documents/Kentovka/Сохранения'").toString()); } catch (e) { console.log('сохранения в Документах: нет', e.message.slice(0, 200)); }
   process.exit(0);
 })().catch((e) => { console.log('ERR', e.message); process.exit(0); });

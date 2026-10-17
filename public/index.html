@@ -930,9 +930,10 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
         <p class="hint">Громкость отдельного кента — нажми на него в звонке или в списке слева.</p>
         <label>Шумодав</label>
         <select id="nsMode">
+          <option value="smart">Умный — нейросеть без треска, задержка ~30 мс (по умолчанию)</option>
           <option value="rnnoise">RNNoise — лёгкий и быстрый (для слабого компа)</option>
           <option value="dfn">DeepFilterNet3 — как Krisp, сильнее, но грузит комп</option>
-          <option value="ultra">ИИ-Максимум — глушит клавиатуру, шёпот слышно (по умолчанию)</option>
+          <option value="ultra">ИИ-Максимум — глушит клавиатуру, шёпот слышно</option>
           <option value="gtcrn">GTCRN — средний</option>
           <option value="browser">Встроенный — слабый</option>
           <option value="off">Выключен</option>
@@ -1339,11 +1340,13 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   const peers = new Map();   // id -> { pc, audio, screenAudio, videoTrack, pending:[], ping:null }
   window.kentovka = { peers }; // для отладки из консоли
   const volumes = store.get('volumes', {});
-  const settings = Object.assign({ mic: '', out: '', nsMode: window.kAndroid ? 'off' : 'ultra', nsStrength: 80, gate: false, gateDb: -50, ec: true, agc: true, quality: '1080_30', economy: 'auto', micGain: 1, masterVol: 1, sounds: true, soundVol: 1 }, store.get('settings', {}));
-  if (!['dfn', 'ultra', 'rnnoise', 'gtcrn', 'browser', 'off'].includes(settings.nsMode)) settings.nsMode = 'ultra';
+  const settings = Object.assign({ mic: '', out: '', nsMode: window.kAndroid ? 'off' : 'smart', nsStrength: 80, gate: false, gateDb: -50, ec: true, agc: true, quality: '1080_30', economy: 'auto', micGain: 1, masterVol: 1, sounds: true, soundVol: 1 }, store.get('settings', {}));
+  if (!['smart', 'dfn', 'ultra', 'rnnoise', 'gtcrn', 'browser', 'off'].includes(settings.nsMode)) settings.nsMode = 'smart';
   // 1.6.1: по умолчанию «ИИ-Максимум» на 80% — замерено: клавиатура в паузах глушится до −107 дБ, щелчки поверх речи −33 дБ,
   // а шёпот проходит (на 100% шёпот режется целиком, обрывается и обычная речь). Один раз переключаем всех
-  if (settings.nsVer !== 5) { settings.nsVer = 5; settings.nsMode = window.kAndroid ? 'off' : 'ultra'; settings.nsStrength = 80; store.set('settings', settings); }
+  if (settings.nsVer !== 5 && settings.nsVer !== 6) { settings.nsVer = 5; settings.nsMode = window.kAndroid ? 'off' : 'ultra'; settings.nsStrength = 80; store.set('settings', settings); }
+  // 1.8: «умный» шумодав (нейросеть в отдельном потоке — без треска) вместо тяжёлых режимов по умолчанию
+  if (settings.nsVer === 5) { settings.nsVer = 6; if (!window.kAndroid && ['ultra', 'dfn'].includes(settings.nsMode)) settings.nsMode = 'smart'; store.set('settings', settings); }
   settings.masterVol = Math.min(1, settings.masterVol);
   for (const k of Object.keys(volumes)) volumes[k] = Math.min(1, volumes[k]);
   let rawStream = null, micNodes = [];
@@ -1499,7 +1502,9 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
         members: users.filter((u) => u.appId).map((u) => ({ ip: u.ip, appId: u.appId, name: u.name })), mode: serverMode, ice: iceCfg });
     }, 3000);
   }
+  let pendingImport = null; // что писали, пока хоста не было, — отдадим хосту, когда он вернётся
   function moveTo(host) { // временный сервер сказал: хост вернулся
+    try { const all = []; for (const l of msgsByCh.values()) for (const x of l) if (x.offline && x.text) all.push({ ch: x.ch, from: x.from, text: x.text, ts: x.ts }); if (all.length) pendingImport = all; } catch {}
     migrating = true; freezePeers(); stopShare(); wsHost = host; tempSrv = null;
     try { ws.close(); } catch {}
     toast('Хост вернулся — переходим обратно к нему.');
@@ -1554,6 +1559,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
           if (!chanOf(curCh)) curCh = firstText();
           msgsByCh.clear(); unread.clear();
           m.history.forEach((h) => addMsg(h, true));
+          if (pendingImport && !tempSrv) { const pi = pendingImport; pendingImport = null; setTimeout(() => wsSend({ type: 'import', msgs: pi }), 500); }
           renderChannel();
           swarm.reannounce();
           if (rejoin) { const ch = rejoin; rejoin = false; joinVoice(typeof ch === 'string' && chanOf(ch) ? ch : undefined); }
@@ -2630,7 +2636,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   }
 
   // ---------- быстрые настройки голоса в нижней панели: шумодав и громкость микрофона ----------
-  const NS_SHORT = { rnnoise: 'RNNoise', dfn: 'DeepFilter', ultra: 'ИИ-Максимум', gtcrn: 'GTCRN', browser: 'Встроенный', off: 'Выключен' };
+  const NS_SHORT = { smart: 'Умный', rnnoise: 'RNNoise', dfn: 'DeepFilter', ultra: 'ИИ-Максимум', gtcrn: 'GTCRN', browser: 'Встроенный', off: 'Выключен' };
   function syncVoiceTools() {
     $('vtNsText').textContent = NS_SHORT[settings.nsMode] || 'Шумодав';
     $('vtNs').classList.toggle('active', settings.nsMode !== 'off');
@@ -2644,14 +2650,14 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     const p = document.createElement('div'); p.id = 'vbPop';
     if (kind === 'ns') {
       p.innerHTML = '<h4>Шумодав</h4><div class="seg" id="vbModes"></div><div id="vbStr"><label>Сила: <b id="vbStrVal"></b></label><input type="range" id="vbStrength" min="40" max="100" step="5"></div><p class="hint">Меньше — слышно шёпот и окончания слов. 100% — режет всё, что похоже на шум.</p>';
-      const modes = [['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Макс'], ['gtcrn', 'GTCRN'], ['browser', 'Встроенный'], ['off', 'Выкл']];
+      const modes = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Макс'], ['browser', 'Встроенный'], ['off', 'Выкл']];
       for (const [v, t] of modes) {
         const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.classList.toggle('on', settings.nsMode === v);
         b.onclick = () => { $('nsMode').value = v; $('nsMode').dispatchEvent(new Event('change')); p.querySelectorAll('#vbModes button').forEach((x) => x.classList.toggle('on', x === b)); syncVb(); syncVoiceTools(); };
         p.querySelector('#vbModes').appendChild(b);
       }
       const syncVb = () => {
-        p.querySelector('#vbStr').hidden = !['dfn', 'ultra', 'rnnoise', 'gtcrn'].includes(settings.nsMode);
+        p.querySelector('#vbStr').hidden = !['smart', 'dfn', 'ultra', 'rnnoise', 'gtcrn'].includes(settings.nsMode);
         p.querySelector('#vbStrength').value = settings.nsStrength;
         p.querySelector('#vbStrVal').textContent = settings.nsStrength >= 100 ? '100% — режет и шёпот' : settings.nsStrength + '%';
       };
@@ -3138,7 +3144,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   // микрофон → шумодав → громкость → порог → (индикатор) → то, что уходит кентам
   async function processMic(raw) {
     const ctx = getProcCtx();
-    const neural = ['dfn', 'ultra', 'rnnoise', 'gtcrn'].includes(settings.nsMode);
+    const neural = ['smart', 'dfn', 'ultra', 'rnnoise', 'gtcrn'].includes(settings.nsMode);
     const nodes = [];
     let nsNode = null;
     // всё строго в МОНО: берём первый канал как есть (без «половинного» смешивания).
@@ -3156,11 +3162,18 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     if (neural) {
       try {
         let n;
-        if (settings.nsMode === 'ultra') {
+        if (settings.nsMode === 'smart') {
+          // нейросеть и «бережём голос» считаются в отдельном потоке, сюда приходит готовый звук
+          const { smartNode } = await import('/ns-async.js');
+          const T = NS_TUNE.dfn;
+          n = await smartNode(ctx, { blend: { delay: T.delay, lo: T.lo, hi: T.hi, keep: nsKeep() } });
+          last.connect(n); nodes.push(n); nsNode = n; blendNode = n; last = n;
+        } else if (settings.nsMode === 'ultra') {
           const a = (await loadNs('dfn'))(), b = (await loadNs('rnnoise'))();
           last.connect(a); a.connect(b); nodes.push(a, b); nsNode = a; n = b;
         } else { n = (await loadNs(settings.nsMode))(); last.connect(n); nodes.push(n); nsNode = n; }
         // «не резать голос»: пока говоришь, подмешиваем живой звук (выровненный по задержке шумодава)
+        if (settings.nsMode !== 'smart') {
         await ctx.audioWorklet.addModule('/voice-fx.js');
         const NS = NS_TUNE[settings.nsMode];
         blendNode = new AudioWorkletNode(ctx, 'k-blend', {
@@ -3169,6 +3182,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
         });
         n.connect(blendNode, 0, 0); last.connect(blendNode, 0, 1); nodes.push(blendNode);
         last = blendNode;
+        }
       } catch (e) { console.error(e); sys('Шумодав не запустился, микрофон идёт без него. Попробуй другой режим в настройках.'); }
     }
     const gain = mono(); gain.gain.value = settings.micGain; last.connect(gain); last = gain;
@@ -3738,25 +3752,34 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     const src = actx.createMediaStreamSource(stream);
     const analyser = actx.createAnalyser(); analyser.fftSize = 512;
     src.connect(analyser);
-    watchers.set(key, { analyser, src, buf: new Uint8Array(analyser.fftSize), last: 0 });
+    watchers.set(key, { analyser, src, buf: new Float32Array(analyser.fftSize), last: 0 });
   }
   function unwatch(key) { const w = watchers.get(key); if (w) { w.src.disconnect(); watchers.delete(key); } }
   function stopWatchers() { for (const k of [...watchers.keys()]) unwatch(k); }
   function level(w) {
-    w.analyser.getByteTimeDomainData(w.buf);
-    let s = 0; for (const v of w.buf) { const x = (v - 128) / 128; s += x * x; }
+    // точные значения (а не 8-битные): тихую речь тоже видно
+    w.analyser.getFloatTimeDomainData(w.buf);
+    let s = 0; for (const x of w.buf) s += x * x;
     return Math.sqrt(s / w.buf.length);
+  }
+  // уровень звука от кента по данным самого звонка (RTP): работает, даже когда звук на компе ещё не «проснулся»
+  function rtpLevel(id) {
+    const p = peers.get(id); if (!p || !p.pc) return 0;
+    let m = 0;
+    try { for (const r of p.pc.getReceivers()) { if (!r.track || r.track.kind !== 'audio' || !r.getSynchronizationSources) continue; for (const x of r.getSynchronizationSources()) if (performance.timeOrigin + performance.now() - x.timestamp < 500 && x.audioLevel > m) m = x.audioLevel; } } catch {}
+    return m;
   }
   // ~11 раз в секунду и только когда в голосе или открыты настройки — почти не грузит проц
   setInterval(() => {
     if (!inVoice && !$('settings').open) return;
     const now = performance.now();
     for (const [id, w] of watchers) {
-      const lv = level(w);
       const isMe = id === myId;
-      const talking = lv > 0.02 && !(isMe && (muted || deaf));
+      const lv = Math.max(level(w), isMe ? 0 : rtpLevel(id) * 0.5);
+      // порог ниже прежнего (−42 дБ вместо −34): аватарка горит и при тихой речи
+      const talking = lv > 0.008 && !(isMe && (muted || deaf));
       if (talking) w.last = now;
-      const on = now - w.last < 300;
+      const on = now - w.last < 350;
       if (w.on === on) continue; // меняем DOM только когда состояние поменялось
       w.on = on;
       speakingNow[on ? 'add' : 'delete'](id);
@@ -4465,7 +4488,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   $('gateDb').value = settings.gateDb;
   syncGateUi();
   const syncDfUi = () => {
-    $('dfBox').style.display = ['dfn', 'ultra', 'rnnoise', 'gtcrn'].includes(settings.nsMode) ? '' : 'none';
+    $('dfBox').style.display = ['smart', 'dfn', 'ultra', 'rnnoise', 'gtcrn'].includes(settings.nsMode) ? '' : 'none';
     $('dfVal').textContent = settings.nsStrength >= 100 ? '100% — режет и шёпот' : settings.nsStrength + '%';
   };
   $('nsStrength').value = settings.nsStrength; syncDfUi();

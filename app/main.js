@@ -42,6 +42,8 @@ function setupKapp(ses) {
     ['/df/', path.join(ROOT, 'node_modules', '@lofcz', 'deepfilternet-web', 'dist')],
     ['/voice-fx.js', path.join(ROOT, 'public', 'voice-fx.js')],
     ['/df-shim.js', path.join(ROOT, 'public', 'df-shim.js')],
+    ['/ns-async.js', path.join(ROOT, 'public', 'ns-async.js')],
+    ['/df-worker.js', path.join(ROOT, 'public', 'df-worker.js')],
     ['/kselect.js', path.join(ROOT, 'public', 'kselect.js')],
     ['/', __dirname],
   ];
@@ -926,11 +928,11 @@ ipcMain.on('server:cache', (e, snap) => {
     fs.writeFile(cacheFile(currentServerKey), JSON.stringify(safe), () => {});
   } catch {}
 });
-function probeTemp(ip, key) {
+function probeTemp(ip, key, keys) {
   return new Promise((resolve) => {
     const req = require('https').get({ host: ip, port: BACKUP_PORT, path: '/__temp', rejectUnauthorized: false, timeout: 1500 }, (res) => {
       let b = ''; res.on('data', (d) => { b += d; if (b.length > 4096) req.destroy(); });
-      res.on('end', () => { try { const j = JSON.parse(b); resolve(j.temp && j.for === key ? ip : null); } catch { resolve(null); } });
+      res.on('end', () => { try { const j = JSON.parse(b); resolve(j.temp && (j.for === key || (keys && keys.has(j.for))) ? ip : null); } catch { resolve(null); } });
     });
     req.on('error', () => resolve(null)); req.on('timeout', () => { req.destroy(); resolve(null); });
   });
@@ -946,15 +948,21 @@ ipcMain.handle('app:temp-note', (e) => { const t = tabOf(e.sender); return t ? t
 async function tempFallback(key) {
   let cache = null; try { cache = JSON.parse(fs.readFileSync(cacheFile(key), 'utf8')); } catch {}
   const mine = new Set(lanAddresses().map((a) => a.address));
-  const ips = cache ? [...new Set(cache.members.map((m) => m.ip))].filter((ip) => !mine.has(ip) && !/^127\./.test(ip)) : [];
+  // где искать временный сервер: кто был на этом сервере, друзья и все Кентовки рядом в локальной сети
+  const cand = new Set(cache ? cache.members.map((m) => m.ip) : []);
+  try { for (const f of (friends && friends.db().friends) || []) if (f.ip) cand.add(String(f.ip).replace(/^::ffff:/, '').split(':')[0]); } catch {}
+  try { for (const p of (discovery ? discovery.peers() : [])) if (p.ip) cand.add(p.ip); } catch {}
+  const ips = [...cand].filter((ip) => ip && !mine.has(ip) && !/^127\./.test(ip) && /^[\d.]+$/.test(ip)).slice(0, 60);
+  // один и тот же хост кенты знают по разным адресам (общая сеть, мост) — подходят все
+  const keys = new Set([key]); try { const sv = (loadConfig().servers || []).find((x) => x.address === key); for (const a of (sv && sv.alts) || []) keys.add(a.addr); } catch {}
   if (process.env.KENTOVKA_TEST_PROBE) ips.push(...process.env.KENTOVKA_TEST_PROBE.split(','));
   // 1) у кого-то из кентов уже поднят временный сервер?
-  const found = (await Promise.all(ips.map((ip) => probeTemp(ip, key)))).find(Boolean);
+  const found = (await Promise.all(ips.map((ip) => probeTemp(ip, key, keys)))).find(Boolean);
   if (found) return { url: `https://${found}:${BACKUP_PORT}`, owner: found };
-  // 2) нет — поднимаем у себя (если знаем, какие были каналы)
-  if (!cache) return null;
+  // 2) нет — поднимаем у себя. Не были на сервере раньше — просто с общими каналами (истории нет, но общаться можно)
   if (backupServer) return { url: `https://127.0.0.1:${BACKUP_PORT}`, owner: 'me' };
-  const r = await startBackup({ seed: cache, allow: cache.members.map((m) => m.appId).filter(Boolean), access: cache.mode, upstream: key });
+  const seed = cache || { channels: [{ id: 'general', name: 'общий', type: 'text' }, { id: 'voice', name: 'Общий', type: 'voice' }], history: [], avatars: {}, profiles: {}, members: [] };
+  const r = await startBackup({ seed, allow: cache ? cache.members.map((m) => m.appId).filter(Boolean) : null, access: cache ? cache.mode : 'open', upstream: key });
   if (r.error) return null;
   return { url: `https://127.0.0.1:${BACKUP_PORT}`, owner: 'me' };
 }

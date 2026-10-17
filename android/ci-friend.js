@@ -10,13 +10,13 @@ let F, page = null, curCall = null;
 (async () => {
   try {
     const { chromium } = require('playwright');
-    const b = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
-    const c = await b.newContext({ permissions: ['microphone'] });
+    const b = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream', '--ignore-certificate-errors'] });
+    const c = await b.newContext({ permissions: ['microphone'], ignoreHTTPSErrors: true });
     page = await c.newPage();
     page.on('pageerror', (e) => log('page ERR', e.message));
     await page.exposeFunction('say', (k, data) => { if (curCall) F.call(curCall.id, { k, cid: curCall.cid, data }); });
     await page.exposeFunction('plog', (...a) => log('звонок:', ...a));
-    await page.setContent('<html><body>bot</body></html>');
+    await page.goto('https://127.0.0.1:8443/__temp').catch(() => {}); // нужен «безопасный» адрес — иначе нет микрофона
     await page.evaluate(() => {
       window.onSig = async (d) => {
         if (!window.pc) {

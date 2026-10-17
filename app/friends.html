@@ -257,6 +257,7 @@
     .chead .nm, .chead .st { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .chead .sp { flex: 1 1 0; min-width: 0; }
     .chead .btn.ghost { padding: 0 9px; flex: none; }
+    .chead .mhide { display: none !important; } /* на телефоне: «позвать», «профиль», «закрыть» — в меню ⋮ и кнопке «назад» */
     .chead .iconbtn { flex: none; }
     .m { max-width: 86%; }
     #msgs { padding: 12px 10px 6px; }
@@ -537,7 +538,7 @@
 
   const me = await F.me();
   // общие настройки голоса (те же, что на серверах); на телефоне шумодав по умолчанию выключен
-  const VS = Object.assign({ nsMode: A.android ? 'off' : 'ultra', nsStrength: 80, ec: true, agc: true, micGain: 1, masterVol: 1, gate: false, gateDb: -50 }, (await A.voiceSettings().catch(() => null)) || {});
+  const VS = Object.assign({ nsMode: A.android ? 'off' : 'smart', nsStrength: 80, ec: true, agc: true, micGain: 1, masterVol: 1, gate: false, gateDb: -50 }, (await A.voiceSettings().catch(() => null)) || {});
   // микрофон и звук можно выключить заранее — так и зайдёшь в звонок
   const pref = { muted: !!VS.muted, deaf: !!VS.deaf };
   const savePref = () => { VS.muted = pref.muted; VS.deaf = pref.deaf; A.saveVoiceSettings({ muted: pref.muted, deaf: pref.deaf }); };
@@ -974,6 +975,7 @@
     cl.onclick = () => closeDm(f.id);
     const hav = ava(f, true);
     pr.onclick = () => openCard(f, pr); who.onclick = () => openCard(f, hav); hav.style.cursor = 'pointer'; hav.onclick = () => openCard(f, hav);
+    inv.classList.add('mhide'); pr.classList.add('mhide'); cl.classList.add('mhide');
     head.append(back, hav, who, sp, cb, inv, pr, mo, cl);
     const box = document.createElement('div'); box.id = 'msgs';
     let lastDay = '';
@@ -1115,7 +1117,7 @@
   // ---------- настройки голоса (общие с серверами) ----------
   function voiceDialog() {
     const dl = document.createElement('dialog'); dl.className = 'kdlg vdlg';
-    const NS = [['off', 'Выключен'], ['browser', 'Встроенный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Максимум']];
+    const NS = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Максимум'], ['browser', 'Встроенный'], ['off', 'Выключен']];
     dl.innerHTML = `<div class="kd-b"><div class="kd-t">Настройки голоса</div><div class="kd-x">Общие для звонков в личке, группах и на серверах.</div>
       <label class="vl">Шумодав</label><div class="seg" id="vdNs"></div>
       <label class="vl">Сила шумодава: <b id="vdStrV"></b></label><input type="range" id="vdStr" min="40" max="100" step="5">
@@ -1283,7 +1285,15 @@
     let last = x.createMediaStreamSource(raw); nodes.push(last);
     const m0 = mono(); last.connect(m0); last = m0;
     const TUNE = { rnnoise: { delay: 992, lo: 0.12, hi: 0.4 }, gtcrn: { delay: 1530, lo: 0.45, hi: 0.8 }, dfn: { delay: 1952, lo: 0.3, hi: 0.6 }, ultra: { delay: 2944, lo: 0.3, hi: 0.6 } };
-    if (TUNE[VS.nsMode]) {
+    if (VS.nsMode === 'smart') {
+      // нейросеть в отдельном потоке (без треска), «бережём голос» — там же
+      try {
+        const { smartNode } = await import('/ns-async.js');
+        const T = TUNE.dfn, keep = Math.min(0.9, Math.max(0, (100 - (VS.nsStrength ?? 80)) / 100 * 2.5));
+        const n = await smartNode(x, { blend: { delay: T.delay, lo: T.lo, hi: T.hi, keep } });
+        last.connect(n); nodes.push(n); last = n;
+      } catch (e) { console.error('шумодав в звонке не запустился', e); }
+    } else if (TUNE[VS.nsMode]) {
       try {
         const lib = await import('/ns/index.js');
         const rn = async () => { const bin = await lib.loadRnnoise({ url: '/ns/rnnoise.wasm', simdUrl: '/ns/rnnoise_simd.wasm' }); await x.audioWorklet.addModule('/ns/rnnoise/workletProcessor.js'); return new lib.RnnoiseWorkletNode(x, { wasmBinary: bin, maxChannels: 1 }); };
@@ -1306,7 +1316,7 @@
     const dst = x.createMediaStreamDestination(); dst.channelCount = 1; last.connect(dst); nodes.push(dst);
     return { raw, stream: dst.stream, nodes, an, gain: g };
   }
-  function teardown(m) { for (const n of m.nodes) { try { n.disconnect(); } catch {} } m.stream.getTracks().forEach((t) => t.stop()); m.raw.getTracks().forEach((t) => t.stop()); }
+  function teardown(m) { for (const n of m.nodes) { try { n.disconnect(); } catch {} try { n.destroy && n.destroy(); } catch {} } m.stream.getTracks().forEach((t) => t.stop()); m.raw.getTracks().forEach((t) => t.stop()); }
   const tuneSdp = (sdp) => sdp.replace(/a=fmtp:(\d+) (.*useinbandfec=1.*)/g, (m, pt, rest) => `a=fmtp:${pt} ${rest.replace(/;?maxaveragebitrate=\d+/, '')};maxaveragebitrate=128000`);
   async function openPc(offerer) {
     const c = call;
@@ -1345,7 +1355,7 @@
     const t = setInterval(() => {
       if (call !== c) { clearInterval(t); try { src.disconnect(); } catch {} return; }
       an.getFloatTimeDomainData(buf); let v = 0; for (const s of buf) v += s * s;
-      const on = Math.sqrt(v / buf.length) > 0.015; talk.set(c.id, on); const el = document.querySelector('#callBar .cava'); if (el) el.classList.toggle('talking', on);
+      const on = Math.sqrt(v / buf.length) > 0.008; talk.set(c.id, on); const el = document.querySelector('#callBar .cava'); if (el) el.classList.toggle('talking', on);
     }, 150);
   }
   F.onCall(async (m) => {
@@ -1595,6 +1605,7 @@
     const add = document.createElement('button'); add.className = 'iconbtn'; add.title = 'Добавить друзей'; add.innerHTML = I.users; add.onclick = () => groupDialog(g);
     const mo = document.createElement('button'); mo.className = 'iconbtn'; mo.title = 'Ещё'; mo.innerHTML = I.more; mo.onclick = () => groupMenu(g, mo.getBoundingClientRect());
     const cl = document.createElement('button'); cl.className = 'iconbtn'; cl.title = 'Закрыть беседу'; cl.innerHTML = I.x; cl.onclick = () => closeDm(g.id);
+    cl.classList.add('mhide');
     head.append(back, gIcon(g), who, sp, cb, add, mo, cl);
     const body = document.createElement('div'); body.className = 'gbody';
     const col = document.createElement('div'); col.className = 'gcol';
@@ -1739,7 +1750,7 @@
     const t = setInterval(() => {
       if (gcall !== c) { clearInterval(t); try { src.disconnect(); } catch {} return; }
       an.getFloatTimeDomainData(buf); let v = 0; for (const s of buf) v += s * s;
-      const on = Math.sqrt(v / buf.length) > 0.015; talk.set(id, on);
+      const on = Math.sqrt(v / buf.length) > 0.008; talk.set(id, on);
       document.querySelectorAll(`.gcavs .ava[data-id="${id}"]`).forEach((el) => el.classList.toggle('talking', on));
     }, 150);
   }
