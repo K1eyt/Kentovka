@@ -1326,7 +1326,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   if (!['dfn', 'ultra', 'rnnoise', 'gtcrn', 'browser', 'off'].includes(settings.nsMode)) settings.nsMode = 'ultra';
   // 1.6.1: по умолчанию «ИИ-Максимум» на 80% — замерено: клавиатура в паузах глушится до −107 дБ, щелчки поверх речи −33 дБ,
   // а шёпот проходит (на 100% шёпот режется целиком, обрывается и обычная речь). Один раз переключаем всех
-  if (settings.nsVer !== 5) { settings.nsVer = 5; settings.nsMode = 'ultra'; settings.nsStrength = 80; store.set('settings', settings); }
+  if (settings.nsVer !== 5) { settings.nsVer = 5; settings.nsMode = window.kAndroid ? 'off' : 'ultra'; settings.nsStrength = 80; store.set('settings', settings); }
   settings.masterVol = Math.min(1, settings.masterVol);
   for (const k of Object.keys(volumes)) volumes[k] = Math.min(1, volumes[k]);
   let rawStream = null, micNodes = [];

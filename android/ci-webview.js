@@ -26,7 +26,9 @@ const get = (u) => new Promise((res, rej) => http.get(u, (r) => { let d = ''; r.
   console.log('getUserMedia', await ev("navigator.mediaDevices.getUserMedia({ audio: true }).then((s) => { s.getTracks().forEach((t) => t.stop()); return 'ok'; }, (e) => e.name + ': ' + e.message)"));
   console.log('secure context', await ev('window.isSecureContext'));
   await ev("document.getElementById('voiceChannel') && document.getElementById('voiceChannel').click()");
-  await sleep(6000);
+  for (let i = 0; i < 25; i++) { await sleep(1000); if (await ev("document.getElementById('voiceBar') && document.getElementById('voiceBar').classList.contains('on')")) break; }
+  await sleep(8000);
+  console.log('voice peers', await ev("JSON.stringify([...window.kentovka.peers.values()].map((x) => ({ st: x.pc.connectionState, audio: !!(x.audio && x.audio.srcObject) })))"));
   console.log('inVoice', await ev("document.getElementById('voiceBar') && document.getElementById('voiceBar').classList.contains('on')"));
   console.log('messages', JSON.stringify(await ev("(document.getElementById('messages') || {}).innerText && document.getElementById('messages').innerText.slice(-600)")));
   console.log('peers', await ev("window.kentovka && window.kentovka.budget ? JSON.stringify(window.kentovka.budget()) : '-'"));

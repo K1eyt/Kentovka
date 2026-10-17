@@ -248,6 +248,28 @@
   #vpanel .vinfo b { display: block; color: var(--green); font: 700 13px/1.2 var(--font-display); }
   #vpanel .vinfo span { display: block; font-size: 12px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #vpanel .iconbtn.off { color: var(--red); }
+  /* звонок как в Discord */
+  .stage { flex: none; display: flex; flex-direction: column; min-height: 250px; height: 44vh; max-height: 70vh; resize: vertical; overflow: hidden; background: color-mix(in srgb, #000 70%, var(--bg)); border-bottom: 1px solid var(--line); }
+  .stage .tiles { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 12px; padding: 14px; overflow: auto; }
+  .stage .tile { position: relative; width: 200px; height: 130px; border-radius: 14px; background: var(--panel2); display: grid; place-items: center; transition: box-shadow .12s; overflow: hidden; }
+  .stage .tile .tava { width: 72px; height: 72px; font-size: 28px; }
+  .stage .tile.talk { box-shadow: 0 0 0 3px var(--green, #3ddc97); }
+  .stage .tile.vid { width: min(520px, 100%); height: auto; aspect-ratio: 16 / 9; background: #000; cursor: zoom-in; }
+  .stage .tile video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .stage.hasvid .tiles { flex-wrap: nowrap; align-items: center; }
+  .stage.hasvid .tile.vid { height: 100%; width: auto; max-width: calc(100% - 150px); }
+  .stage.hasvid .tile:not(.vid) { width: 130px; height: 86px; flex: none; }
+  .stage.hasvid .tile:not(.vid) .tava { width: 46px; height: 46px; font-size: 18px; }
+  .stage.focus .tiles { flex-wrap: nowrap; align-items: stretch; }
+  .stage.focus .tile:not(.focused) { display: none; }
+  .stage.focus .tile.focused { width: 100%; height: 100%; max-width: 100%; aspect-ratio: auto; cursor: zoom-out; }
+  .stage .tname { position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 7px; background: rgba(0,0,0,.55); font-size: 12.5px; max-width: calc(100% - 16px); }
+  .stage .tname svg { width: 14px; height: 14px; color: var(--red); flex: none; }
+  .stage .tname span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stage .tname .live { font-style: normal; font: 700 10px var(--font-display); padding: 1px 5px; border-radius: 4px; background: var(--red); color: #fff; }
+  .stage .twait { position: absolute; top: 8px; right: 8px; font-size: 12px; color: var(--dim); }
+  .stage .sbar { display: flex; justify-content: center; gap: 10px; padding: 10px; }
+  .stage .sbar .cbtn.on { background: var(--green, #3ddc97); color: #06110b; }
   /* файлы в переписке */
   .fv { display: flex; flex-direction: column; gap: 6px; max-width: min(420px, 100%); margin: 2px 0; }
   .m.me .fv { align-self: flex-end; }
@@ -801,7 +823,9 @@
     form.append(inp, sb);
     form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; await F.send(f.id, v); refresh(); };
     attachTo(form, inp, { id: f.id }, main);
-    main.append(head, box, form);
+    main.append(head);
+    mountStage(main);
+    main.append(box, form);
     box.scrollTop = box.scrollHeight;
     if (sameFriend && keepInput) inp.value = keepInput;
     if (shown) inp.focus();
@@ -880,7 +904,8 @@
   let tickT = null;
   function renderCall() {
     const bar = $('callBar');
-    bar.hidden = !call;
+    bar.hidden = !call || (call.id === cur && !(call.dir === 'in' && call.state === 'ringing'));
+    drawStage();
     clearInterval(tickT);
     renderMe(); renderSide();
     if (!call) { bar.innerHTML = ''; bar.className = ''; return; }
@@ -942,6 +967,7 @@
   function endCall(kind = 'end', note) {
     if (!call) return;
     const c = call; call = null;
+    stopShareCall(true); clearRemote(c.id); stageFocus = null;
     tone(null); clearTimeout(c.timer);
     if (kind) say(c.id, kind === 'cancel' ? 'end' : kind, null, c.cid);
     try { c.pc && c.pc.close(); } catch {}
@@ -957,8 +983,8 @@
     Object.assign(d.style, { position: 'fixed', left: '50%', bottom: '24px', transform: 'translateX(-50%)', background: 'var(--panel3)', border: '1px solid var(--line)', padding: '10px 16px', borderRadius: '10px', zIndex: 50, maxWidth: '90%' });
     document.body.appendChild(d); setTimeout(() => d.remove(), 3500);
   }
-  function setMuted(v) { if (!call) return; call.muted = v; applyMic(); say(call.id, 'state', { muted: call.muted || call.deaf }); renderCall(); }
-  function setDeaf(v) { if (!call) return; call.deaf = v; if (call.audio) call.audio.muted = v; applyMic(); say(call.id, 'state', { muted: call.muted || call.deaf }); renderCall(); }
+  function setMuted(v) { if (!call) return; call.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
+  function setDeaf(v) { if (!call) return; call.deaf = v; if (call.audio) call.audio.muted = v; applyMic(); sendCallState(); renderCall(); drawStage(); }
   const applyMic = () => { if (call && call.mic) call.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !call.muted && !call.deaf)); };
 
   // микрофон с тем же шумодавом, что на серверах (настройки голоса общие)
@@ -1008,6 +1034,7 @@
     c.mic.stream.getTracks().forEach((t) => pc.addTrack(t, c.mic.stream));
     pc.onicecandidate = (e) => e.candidate && say(c.id, 'signal', { candidate: e.candidate.toJSON() });
     pc.ontrack = (e) => {
+      if (onRemoteTrack(c.id, e)) return;
       const a = c.audio || (c.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
       a.volume = Math.min(1, (c.vol ?? 1) * (VS.masterVol ?? 1));
       (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
@@ -1035,7 +1062,7 @@
     const t = setInterval(() => {
       if (call !== c) { clearInterval(t); try { src.disconnect(); } catch {} return; }
       an.getFloatTimeDomainData(buf); let v = 0; for (const s of buf) v += s * s;
-      const on = Math.sqrt(v / buf.length) > 0.015; const el = document.querySelector('#callBar .cava'); if (el) el.classList.toggle('talking', on);
+      const on = Math.sqrt(v / buf.length) > 0.015; talk.set(c.id, on); const el = document.querySelector('#callBar .cava'); if (el) el.classList.toggle('talking', on);
     }, 150);
   }
   F.onCall(async (m) => {
@@ -1056,7 +1083,7 @@
     if (m.k === 'decline') return endCall(null, `${call.name} не может говорить`);
     if (m.k === 'busy') return endCall(null, `${call.name} сейчас в другом звонке`);
     if (m.k === 'end') return endCall(null, call.state === 'live' ? 'Звонок завершён' : call.dir === 'in' ? 'Пропущенный звонок' : null);
-    if (m.k === 'state' && m.data) { call.remote = { muted: !!m.data.muted }; renderCall(); return; }
+    if (m.k === 'state' && m.data) { call.remote = { muted: !!m.data.muted }; remoteMuted.set(call.id, !!m.data.muted); remoteSharing.set(call.id, !!m.data.sharing); renderCall(); drawStage(); return; }
     if (m.k === 'signal' && m.data) { if (call.pc) await onSig(m.data); else (call.early = call.early || []).push(m.data); }
   });
   async function onSig(d) {
@@ -1072,6 +1099,137 @@
       }
     }
   }
+
+  // ================= звонок как в Discord: плитки участников, кто говорит, демка экрана =================
+  const talk = new Map();          // id -> сейчас говорит
+  const remoteVid = new Map();     // id -> демка кента (MediaStream)
+  const remoteSharing = new Map(); // id -> кент показывает экран
+  const remoteMuted = new Map();   // id -> у кента выключен микрофон
+  let share = null;                // моя демка: { stream, track, senders: Map(pc -> sender) }
+  let stageFocus = null;
+  const stageEl = document.createElement('div'); stageEl.className = 'stage';
+  const videoEls = new Map();
+  function stageCtx() {
+    if (gcall && gcall.gid === cur) return { kind: 'g', ids: [me.id, ...[...gcall.parts].filter((x) => x !== me.id)], muted: gcall.muted, deaf: gcall.deaf, mic: gcall.mic };
+    if (call && call.id === cur && !(call.dir === 'in' && call.state === 'ringing')) return { kind: 'dm', ids: [me.id, call.id], muted: call.muted, deaf: call.deaf, mic: call.mic, wait: call.state !== 'live' };
+    return null;
+  }
+  function personOf(id) {
+    if (id === me.id) return { name: (myProf.name || 'Я'), avatar: myProf.avatar };
+    const f = list.find((x) => x.id === id); if (f) return f;
+    for (const g of groups) { const mb = g.members.find((x) => x.id === id); if (mb) return mb; }
+    return { name: 'кент' };
+  }
+  const hasVideo = (id) => (id === me.id ? !!share : !!(remoteSharing.get(id) && remoteVid.get(id) && remoteVid.get(id).getVideoTracks().some((t) => t.readyState === 'live')));
+  function vidOf(id) {
+    let v = videoEls.get(id);
+    if (!v) { v = document.createElement('video'); v.autoplay = true; v.playsInline = true; v.muted = true; videoEls.set(id, v); }
+    const src = id === me.id ? (share && share.stream) : remoteVid.get(id);
+    if (v.srcObject !== src) v.srcObject = src || null;
+    if (src) v.play().catch(() => {});
+    return v;
+  }
+  function mountStage(container) {
+    const c = stageCtx();
+    if (!c) { stageEl.remove(); return false; }
+    container.appendChild(stageEl);
+    drawStage();
+    return true;
+  }
+  function drawStage() {
+    const c = stageCtx();
+    if (!c) { stageEl.remove(); return; }
+    if (stageFocus && !hasVideo(stageFocus)) stageFocus = null;
+    stageEl.classList.toggle('focus', !!stageFocus);
+    stageEl.classList.toggle('hasvid', c.ids.some((id) => hasVideo(id)));
+    stageEl.innerHTML = '';
+    const tiles = document.createElement('div'); tiles.className = 'tiles';
+    for (const id of c.ids) {
+      const p = personOf(id), vid = hasVideo(id);
+      const t = document.createElement('div'); t.className = 'tile' + (vid ? ' vid' : '') + (stageFocus === id ? ' focused' : ''); t.dataset.id = id;
+      if (vid) {
+        t.appendChild(vidOf(id));
+        t.title = 'Нажми — на весь звонок, ещё раз — обратно';
+        t.onclick = () => { stageFocus = stageFocus === id ? null : id; drawStage(); };
+      } else {
+        const a = ava(p, false); a.classList.add('tava'); t.appendChild(a);
+      }
+      const nm = document.createElement('div'); nm.className = 'tname';
+      const muted = id === me.id ? (c.muted || c.deaf) : remoteMuted.get(id);
+      nm.innerHTML = (muted ? I.micOff : '') + '<span></span>' + (vid ? ' <i class="live">В ЭФИРЕ</i>' : '');
+      nm.querySelector('span').textContent = (p.name || 'кент') + (id === me.id ? ' (ты)' : '');
+      t.appendChild(nm);
+      if (c.wait && id !== me.id) { const w = document.createElement('div'); w.className = 'twait'; w.textContent = call && call.state === 'ringing' ? 'Звоним…' : 'Соединяемся…'; t.appendChild(w); }
+      tiles.appendChild(t);
+    }
+    const bar = document.createElement('div'); bar.className = 'sbar';
+    const btn = (cls, ic, title, fn) => { const b = document.createElement('button'); b.className = 'cbtn ' + cls; b.innerHTML = ic; b.title = title; b.onclick = fn; bar.appendChild(b); return b; };
+    const isG = c.kind === 'g';
+    btn(c.muted ? 'off' : '', c.muted ? I.micOff : I.mic, c.muted ? 'Включить микрофон' : 'Выключить микрофон', () => (isG ? gMute(!gcall.muted) : setMuted(!call.muted)));
+    btn(c.deaf ? 'off' : '', c.deaf ? I.headOff : I.head, c.deaf ? 'Включить звук' : 'Выключить звук', () => (isG ? gDeaf(!gcall.deaf) : setDeaf(!call.deaf)));
+    if (!c.wait) btn(share ? 'on' : '', share ? I.stop : I.screen, share ? 'Остановить показ экрана' : 'Показать экран', () => startShareCall());
+    if (stageFocus) btn('', I.full, 'Во весь экран', () => { const t = stageEl.querySelector('.tile.focused'); if (t) (document.fullscreenElement ? document.exitFullscreen() : t.requestFullscreen()).catch(() => {}); });
+    btn('red', I.hang, isG ? 'Выйти из звонка' : 'Завершить звонок', () => (isG ? gLeave() : endCall(call.state === 'ringing' && call.dir === 'out' ? 'cancel' : 'end')));
+    stageEl.append(tiles, bar);
+    paintTalk();
+  }
+  function paintTalk() {
+    const c = stageCtx(); if (!c || !stageEl.isConnected) return;
+    if (c.mic && c.mic.an && !c.muted && !c.deaf) {
+      const an = c.mic.an, buf = new Float32Array(an.fftSize); an.getFloatTimeDomainData(buf); let v = 0; for (const x of buf) v += x * x;
+      talk.set(me.id, Math.sqrt(v / buf.length) > 0.012);
+    } else talk.set(me.id, false);
+    stageEl.querySelectorAll('.tile').forEach((t) => t.classList.toggle('talk', !!talk.get(t.dataset.id)));
+  }
+  setInterval(paintTalk, 150);
+  // демка в звонке: добавляем видеодорожку каждому участнику и договариваемся заново
+  const sharePcs = () => (gcall ? [...gcall.peers.entries()].map(([id, p]) => [id, p.pc]) : call && call.pc ? [[call.id, call.pc]] : []);
+  function callSig(id, data) { if (gcall) gsay(gcall.gid, 'signal', data, id); else if (call) say(call.id, 'signal', data); }
+  async function renego(id, pc) {
+    if (pc.signalingState !== 'stable') { setTimeout(() => renego(id, pc).catch(() => {}), 400); return; }
+    const o = await pc.createOffer(); await pc.setLocalDescription({ type: 'offer', sdp: tuneSdp(o.sdp) });
+    callSig(id, { sdp: { type: 'offer', sdp: pc.localDescription.sdp } });
+  }
+  async function addShareTo(pc) {
+    if (!share || share.senders.has(pc)) return;
+    const snd = pc.addTrack(share.track, share.stream); share.senders.set(pc, snd);
+    try { const prm = snd.getParameters(); if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}]; prm.encodings[0].maxBitrate = 2500000; await snd.setParameters(prm); } catch {}
+  }
+  async function getShareStream() {
+    if (window.kAndroid && window.kAndroid.screenStream) return window.kAndroid.screenStream({ w: 1280, h: 720, fps: 12 });
+    return navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 30, max: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+  }
+  async function startShareCall() {
+    if (share) return stopShareCall();
+    let stream = null; try { stream = await getShareStream(); } catch { return; }
+    if (!stream) return;
+    const track = stream.getVideoTracks()[0]; if (!track) return;
+    track.contentHint = 'detail';
+    share = { stream, track, senders: new Map() };
+    track.onended = () => stopShareCall();
+    for (const [id, pc] of sharePcs()) { await addShareTo(pc); renego(id, pc).catch(() => {}); }
+    sendCallState(); drawStage(); renderMe();
+  }
+  function stopShareCall(silent) {
+    if (!share) return;
+    const s2 = share; share = null;
+    s2.stream.getTracks().forEach((t) => { try { t.stop(); } catch {} });
+    if (!silent) for (const [id, pc] of sharePcs()) { const snd = s2.senders.get(pc); if (snd) { try { pc.removeTrack(snd); } catch {} renego(id, pc).catch(() => {}); } }
+    if (!silent) sendCallState();
+    drawStage();
+  }
+  function sendCallState() {
+    if (gcall) gsay(gcall.gid, 'state', { muted: gcall.muted || gcall.deaf, sharing: !!share });
+    else if (call) say(call.id, 'state', { muted: call.muted || call.deaf, sharing: !!share });
+  }
+  function onRemoteTrack(id, e) {
+    if (e.track.kind !== 'video') return false;
+    remoteVid.set(id, new MediaStream([e.track]));
+    e.track.onended = () => drawStage(); e.track.onunmute = () => drawStage();
+    drawStage();
+    return true;
+  }
+  function clearRemote(id) { remoteVid.delete(id); remoteSharing.delete(id); remoteMuted.delete(id); talk.delete(id); const v = videoEls.get(id); if (v) { v.srcObject = null; videoEls.delete(id); } }
   // ================= группы в личке (как в Discord): чат и звонок на всех =================
   const gOf = (id) => groups.find((g) => g.id === id);
   const gIcon = (g, cls) => {
@@ -1157,6 +1315,7 @@
     const body = document.createElement('div'); body.className = 'gbody';
     const col = document.createElement('div'); col.className = 'gcol';
     const banner = renderGcallBar(g); if (banner) col.appendChild(banner);
+    mountStage(col);
     const box = document.createElement('div'); box.id = 'msgs';
     let lastDay = '', lastFrom = '', lastTs = 0;
     for (const m of msgs) {
@@ -1214,6 +1373,7 @@
   function renderGcallBar(g) {
     const known = gcalls.get(g.id);
     if (!known && !(gcall && gcall.gid === g.id)) return null;
+    if (gcall && gcall.gid === g.id) return null; // в звонке — большая панель звонка (как в Discord)
     const bar = document.createElement('div'); bar.className = 'gcbar';
     const parts = gcall && gcall.gid === g.id ? gcall.parts : known.parts;
     const avs = document.createElement('div'); avs.className = 'gcavs';
@@ -1256,6 +1416,7 @@
   function gLeave() {
     if (!gcall) return;
     const c = gcall; gcall = null;
+    stopShareCall(true); for (const id of c.parts) clearRemote(id); stageFocus = null;
     clearInterval(c.tick);
     F.groupCall(c.gid, { k: 'leave', cid: c.cid });
     for (const p of c.peers.values()) { try { p.pc.close(); } catch {} if (p.audio) { p.audio.srcObject = null; p.audio.remove(); } }
@@ -1264,16 +1425,18 @@
     gReport(); gRerender(); beepEnd();
   }
   function gApplyMic() { if (gcall && gcall.mic) gcall.mic.stream.getAudioTracks().forEach((t) => (t.enabled = !gcall.muted && !gcall.deaf)); }
-  function gMute(v) { if (!gcall) return; gcall.muted = v; gApplyMic(); gsay(gcall.gid, 'state', { muted: gcall.muted || gcall.deaf }); gRerender(); }
-  function gDeaf(v) { if (!gcall) return; gcall.deaf = v; for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = v; gApplyMic(); gsay(gcall.gid, 'state', { muted: gcall.muted || gcall.deaf }); gRerender(); }
+  function gMute(v) { if (!gcall) return; gcall.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
+  function gDeaf(v) { if (!gcall) return; gcall.deaf = v; for (const p of gcall.peers.values()) if (p.audio) p.audio.muted = v; gApplyMic(); sendCallState(); gRerender(); drawStage(); }
   function gPeer(id, offerer) {
     const c = gcall; if (!c || c.peers.has(id)) return c && c.peers.get(id);
     const pc = new RTCPeerConnection({ iceServers: myIce, bundlePolicy: 'max-bundle' });
     const p = { pc, audio: null, pend: [] };
     c.peers.set(id, p);
     c.mic.stream.getTracks().forEach((t) => pc.addTrack(t, c.mic.stream));
+    if (share) { if (offerer) addShareTo(pc); else setTimeout(() => { if (share && gcall === c) addShareTo(pc).then(() => renego(id, pc)).catch(() => {}); }, 2500); }
     pc.onicecandidate = (e) => e.candidate && gsay(c.gid, 'signal', { candidate: e.candidate.toJSON() }, id);
     pc.ontrack = (e) => {
+      if (onRemoteTrack(id, e)) return;
       const a = p.audio || (p.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
       a.volume = Math.min(1, VS.masterVol ?? 1);
       (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
@@ -1290,7 +1453,7 @@
     const t = setInterval(() => {
       if (gcall !== c) { clearInterval(t); try { src.disconnect(); } catch {} return; }
       an.getFloatTimeDomainData(buf); let v = 0; for (const s of buf) v += s * s;
-      const on = Math.sqrt(v / buf.length) > 0.015;
+      const on = Math.sqrt(v / buf.length) > 0.015; talk.set(id, on);
       document.querySelectorAll(`.gcavs .ava[data-id="${id}"]`).forEach((el) => el.classList.toggle('talking', on));
     }, 150);
   }
@@ -1309,10 +1472,12 @@
     if (m.k === 'who') { if (gcall && gcall.gid === m.gid) F.groupCall(m.gid, { k: 'here', cid: gcall.cid, to: m.from }); return; }
     if (m.k === 'leave') {
       if (k) { k.parts.delete(m.from); if (!k.parts.size) gcalls.delete(m.gid); }
+      clearRemote(m.from);
       if (gcall && gcall.gid === m.gid) { gcall.parts.delete(m.from); const p = gcall.peers.get(m.from); if (p) { try { p.pc.close(); } catch {} if (p.audio) p.audio.srcObject = null; gcall.peers.delete(m.from); } }
       gRerender(); return;
     }
     if (!gcall || gcall.gid !== m.gid || !m.data) return;
+    if (m.k === 'state') { remoteMuted.set(m.from, !!m.data.muted); remoteSharing.set(m.from, !!m.data.sharing); drawStage(); return; }
     if (m.k === 'signal') {
       const d = m.data;
       let p = gcall.peers.get(m.from);
