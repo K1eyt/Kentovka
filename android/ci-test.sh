@@ -7,8 +7,11 @@ adb shell settings put global window_animation_scale 0; adb shell settings put g
 adb install -r -g android/build/Kentovka-debug.apk > $OUT/install.txt 2>&1
 adb logcat -c
 adb shell am start -n ru.kentovka.app/.MainActivity --es kname "Тест" > $OUT/start1.txt 2>&1
-sleep 12
+sleep 20
 adb exec-out screencap -p > $OUT/1-launcher.png
+# друзья и личка (программа как на ПК внутри приложения)
+node android/ci-friends.js > $OUT/friends.txt 2>&1 || true
+adb exec-out screencap -p > $OUT/1b-friends.png
 adb shell am start -n ru.kentovka.app/.MainActivity --es kconnect 10.0.2.2:8443 > $OUT/start2.txt 2>&1
 sleep 25
 adb exec-out screencap -p > $OUT/2-server.png

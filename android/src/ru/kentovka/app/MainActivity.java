@@ -73,6 +73,8 @@ public class MainActivity extends Activity {
     private Discovery discovery;
     AudioRoute audio;
     private volatile LocalProxy proxy;
+    private volatile boolean nodeMode = false;
+    private static final int REQ_PICK = 7;
     private volatile String currentKey = null;   // адрес сервера, как он сохранён (ip:порт)
     private volatile String currentHost = null;  // куда реально подключены (может быть мост)
     private volatile boolean viaAlt = false;
@@ -99,24 +101,135 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(true);
-        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.7.1");
+        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.7.2");
         web.addJavascriptInterface(new Bridge(), "KentovkaAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
         audio = new AudioRoute(this);
-        discovery = new Discovery(this);
-        discovery.start();
+        // программа Кентовки (как на ПК) — в node внутри приложения; если не запустилась — простой режим (только серверы)
+        nodeMode = NodeHost.start(this);
+        if (!nodeMode) { discovery = new Discovery(this); discovery.start(); }
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[] { Manifest.permission.POST_NOTIFICATIONS }, REQ_NOTIF);
         // отладочная сборка (проверки на GitHub): страницы можно смотреть через отладчик Chrome
         if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) WebView.setWebContentsDebuggingEnabled(true);
         handleIntent(getIntent());
-        web.loadUrl(LAUNCHER);
+        if (nodeMode) {
+            migrateAccount();
+            web.loadUrl("file:///android_asset/loading.html");
+            NodeHost.listen(new NodeHost.Events() { public void onEvent(final JSONObject ev) { ui.post(new Runnable() { public void run() { onNodeEvent(ev); } }); } });
+            new Thread(new Runnable() { public void run() {
+                for (int i = 0; i < 100 && !NodeHost.alive(); i++) { try { Thread.sleep(150); } catch (InterruptedException ignored) {} }
+                if (NodeHost.alive()) { sendIfaces(); ui.post(new Runnable() { public void run() { String u = web.getUrl(); if (u == null || u.startsWith("file:")) web.loadUrl(NodeHost.HOME + "/launcher.html"); } }); }
+                else ui.post(new Runnable() { public void run() { nodeMode = false; discovery = new Discovery(MainActivity.this); discovery.start(); web.loadUrl(LAUNCHER); } });
+            } }).start();
+        } else web.loadUrl(LAUNCHER);
+    }
+
+    // аккаунт из 1.7.x (был в Java) — переносим в программу, чтобы серверы узнавали тебя как раньше
+    private void migrateAccount() {
+        try {
+            java.io.File data = new java.io.File(getFilesDir(), "kentovka"); data.mkdirs();
+            java.io.File acc = new java.io.File(data, "account.json"), fr = new java.io.File(data, "friends.json"), cfg = new java.io.File(data, "config.json");
+            if (acc.exists() || !prefs.contains("seed") || prefs.getBoolean("fresh", false) && !config().has("servers")) return;
+            byte[] sd = seed();
+            JSONObject a = new JSONObject().put("id", accId()).put("pub", Base64.getEncoder().encodeToString(Ed25519.spki(Ed25519.publicKey(sd)))).put("priv", Ed25519.pem(sd)).put("created", prefs.getLong("created", System.currentTimeMillis()));
+            try (java.io.OutputStream o = new java.io.FileOutputStream(acc)) { o.write(a.toString().getBytes(StandardCharsets.UTF_8)); }
+            if (!fr.exists()) try (java.io.OutputStream o = new java.io.FileOutputStream(fr)) { o.write(new JSONObject().put("me", new JSONObject().put("id", accId())).put("friends", new JSONArray()).put("dms", new JSONObject()).put("groups", new JSONObject()).put("gm", new JSONObject()).toString().getBytes(StandardCharsets.UTF_8)); }
+            if (!cfg.exists()) { JSONObject c = config(); JSONObject out = new JSONObject(); if (c.has("profile")) out.put("profile", c.get("profile")); if (c.has("servers")) out.put("servers", c.get("servers"));
+                try (java.io.OutputStream o = new java.io.FileOutputStream(cfg)) { o.write(out.toString().getBytes(StandardCharsets.UTF_8)); } }
+        } catch (Exception ignored) {}
+    }
+    private void sendIfaces() {
+        try {
+            JSONArray l = new JSONArray();
+            for (java.net.NetworkInterface ni : java.util.Collections.list(java.net.NetworkInterface.getNetworkInterfaces())) {
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                for (java.net.InterfaceAddress ia : ni.getInterfaceAddresses()) {
+                    if (!(ia.getAddress() instanceof java.net.Inet4Address)) continue;
+                    int pl = ia.getNetworkPrefixLength(); long m = pl == 0 ? 0 : (0xffffffffL << (32 - pl)) & 0xffffffffL;
+                    l.put(new JSONObject().put("name", ni.getName()).put("address", ia.getAddress().getHostAddress()).put("netmask", ((m >> 24) & 255) + "." + ((m >> 16) & 255) + "." + ((m >> 8) & 255) + "." + (m & 255)));
+                }
+            }
+            NodeHost.tell(new JSONObject().put("t", "ifaces").put("list", l));
+        } catch (Exception ignored) {}
+    }
+    private android.app.NotificationManager nm() { return (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE); }
+    // события программы: куда перейти, уведомления, файлы, звонки
+    private void onNodeEvent(JSONObject ev) {
+        String t = ev.optString("t");
+        switch (t) {
+            case "nav": web.loadUrl(ev.optString("url")); break;
+            case "copy": ((ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Кентовка", ev.optString("text"))); break;
+            case "url": try { startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(ev.optString("url")))); } catch (Exception ignored) {} break;
+            case "notify": {
+                if (Build.VERSION.SDK_INT >= 26) nm().createNotificationChannel(new android.app.NotificationChannel("msgs", "Сообщения и звонки", android.app.NotificationManager.IMPORTANCE_HIGH));
+                Intent it = new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("knotify", ev.optString("id"));
+                android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, ev.optString("id").hashCode(), it, android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_UPDATE_CURRENT);
+                android.app.Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new android.app.Notification.Builder(this, "msgs") : new android.app.Notification.Builder(this);
+                nm().notify(ev.optString("id").hashCode(), b.setSmallIcon(R.drawable.ic_voice).setContentTitle(ev.optString("title")).setContentText(ev.optString("body")).setAutoCancel(true).setContentIntent(pi).build());
+                break;
+            }
+            case "pick": {
+                Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT); i.addCategory(Intent.CATEGORY_OPENABLE); i.setType("*/*");
+                try { startActivityForResult(i, REQ_PICK); } catch (Exception e) { NodeHost.tell(jo("t", "picked")); }
+                break;
+            }
+            case "saved": case "open": copyToDownloads(ev.optString("path"), ev.optString("name"), "open".equals(t)); break;
+            case "call": {
+                JSONObject st = ev.optJSONObject("st");
+                if (st != null) { VoiceService.start(this, st.optString("name", "звонок")); audio.start(); } else { VoiceService.stop(this); audio.stop(); }
+                break;
+            }
+            case "relaunch": case "exit": {
+                android.app.AlarmManager am = (android.app.AlarmManager) getSystemService(ALARM_SERVICE);
+                android.app.PendingIntent pi = android.app.PendingIntent.getActivity(this, 1, new Intent(this, MainActivity.class), android.app.PendingIntent.FLAG_IMMUTABLE | android.app.PendingIntent.FLAG_CANCEL_CURRENT);
+                if ("relaunch".equals(t)) am.set(android.app.AlarmManager.RTC, System.currentTimeMillis() + 600, pi);
+                finishAffinity(); System.exit(0);
+                break;
+            }
+        }
+    }
+    static JSONObject jo(Object... kv) { JSONObject o = new JSONObject(); try { for (int i = 0; i + 1 < kv.length; i += 2) o.put(String.valueOf(kv[i]), kv[i + 1]); } catch (Exception ignored) {} return o; }
+    // файл из программы — в «Загрузки» телефона (ждём, пока он допишется)
+    private void copyToDownloads(final String path, final String name0, final boolean open) {
+        new Thread(new Runnable() { public void run() {
+            try {
+                java.io.File f = new java.io.File(path); long last = -1;
+                for (int i = 0; i < 100; i++) { long n = f.exists() ? f.length() : -1; if (n >= 0 && n == last) break; last = n; Thread.sleep(200); }
+                if (!f.exists()) return;
+                String name = name0 == null || name0.isEmpty() ? f.getName() : name0;
+                if (Build.VERSION.SDK_INT >= 29) {
+                    ContentValues v = new ContentValues();
+                    v.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                    v.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Kentovka");
+                    Uri u = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                    if (u == null) return;
+                    try (java.io.InputStream in = new java.io.FileInputStream(f); OutputStream o = getContentResolver().openOutputStream(u)) { byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
+                    final Uri fu = u;
+                    ui.post(new Runnable() { public void run() {
+                        android.widget.Toast.makeText(MainActivity.this, "Сохранено в «Загрузки/Kentovka»: " + name, android.widget.Toast.LENGTH_LONG).show();
+                        if (open) { try { startActivity(new Intent(Intent.ACTION_VIEW).setData(fu).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)); } catch (Exception ignored) {} }
+                    } });
+                }
+            } catch (Exception ignored) {}
+        } }).start();
     }
 
     // запуск с параметрами (для проверок): ник и адрес сервера, куда сразу зайти
     private void handleIntent(Intent it) {
         if (it == null) return;
+        if (nodeMode) { // проверки: ник и сервер — через программу
+            final String nm = it.getStringExtra("kname"), addr = it.getStringExtra("kconnect");
+            new Thread(new Runnable() { public void run() {
+                for (int i = 0; i < 100 && !NodeHost.alive(); i++) { try { Thread.sleep(150); } catch (InterruptedException ignored) {} }
+                try {
+                    if (nm != null && !nm.trim().isEmpty()) NodeHost.ipc("app:profile-set", new JSONObject().put("name", nm.trim()));
+                    if (addr != null && addr.matches("[\\w.:-]{3,80}")) { Thread.sleep(1500); NodeHost.ipc("launcher:connect", new JSONObject().put("address", addr).put("host", false)); }
+                } catch (Exception ignored) {}
+            } }).start();
+            return;
+        }
         try {
             String nm = it.getStringExtra("kname");
             if (nm != null && !nm.trim().isEmpty()) { JSONObject c = config(); JSONObject p = c.optJSONObject("profile"); if (p == null) p = new JSONObject(); p.put("name", nm.trim()); c.put("profile", p); saveConfig(c); }
@@ -124,7 +237,13 @@ public class MainActivity extends Activity {
             if (addr != null && addr.matches("[\\w.:-]{3,80}")) ui.postDelayed(new Runnable() { public void run() { connect(addr, ""); } }, 1500);
         } catch (Exception ignored) {}
     }
-    @Override protected void onNewIntent(Intent it) { super.onNewIntent(it); setIntent(it); handleIntent(it); }
+    @Override protected void onNewIntent(Intent it) {
+        super.onNewIntent(it); setIntent(it); handleIntent(it);
+        final String nid = it.getStringExtra("knotify");
+        if (nodeMode && nid != null) new Thread(new Runnable() { public void run() { NodeHost.tell(jo("t", "notifyClick", "id", nid)); } }).start();
+    }
+    @Override protected void onResume() { super.onResume(); if (nodeMode) new Thread(new Runnable() { public void run() { NodeHost.tell(jo("t", "focus", "on", true)); sendIfaces(); } }).start(); }
+    @Override protected void onPause() { super.onPause(); if (nodeMode) new Thread(new Runnable() { public void run() { NodeHost.tell(jo("t", "focus", "on", false)); } }).start(); }
 
     @Override
     protected void onDestroy() {
@@ -136,6 +255,7 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         String u = web.getUrl();
+        if (nodeMode && u != null && u.startsWith(NodeHost.HOME)) { super.onBackPressed(); return; }
         if (u != null && !u.startsWith("file:")) { // на сервере: «назад» — выйти на стартовый экран
             new AlertDialog.Builder(this).setMessage("Выйти с сервера на стартовый экран?")
                 .setPositiveButton("Выйти", new android.content.DialogInterface.OnClickListener() { public void onClick(android.content.DialogInterface d, int w) { goLauncher(); } }).setNegativeButton("Остаться", null).show();
@@ -143,6 +263,7 @@ public class MainActivity extends Activity {
     }
 
     void goLauncher() {
+        if (nodeMode) { VoiceService.stop(this); if (audio != null) audio.stop(); new Thread(new Runnable() { public void run() { NodeHost.ipc("app:back"); } }).start(); return; }
         VoiceService.stop(this);
         if (audio != null) audio.stop();
         currentKey = null; currentHost = null; viaAlt = false;
@@ -364,13 +485,18 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String config() { return MainActivity.this.config().toString(); }
         @JavascriptInterface public void setConfig(String json) { try { saveConfig(new JSONObject(json)); } catch (Exception ignored) {} }
         @JavascriptInterface public void connect(final String address, final String name) { MainActivity.this.connect(address, name); }
-        @JavascriptInterface public void back() { ui.post(new Runnable() { public void run() { goLauncher(); } }); }
-        @JavascriptInterface public String profile() { JSONObject p = MainActivity.this.config().optJSONObject("profile"); return p == null ? "null" : p.toString(); }
+        @JavascriptInterface public void back() { if (nodeMode) { VoiceService.stop(MainActivity.this); audio.stop(); NodeHost.ipc("app:back"); return; } ui.post(new Runnable() { public void run() { goLauncher(); } }); }
+        @JavascriptInterface public String profile() {
+            if (nodeMode) { String r = NodeHost.ipc("app:profile-get"); return r == null ? "null" : r; }
+            JSONObject p = MainActivity.this.config().optJSONObject("profile"); return p == null ? "null" : p.toString();
+        }
         @JavascriptInterface public boolean setProfile(String json) {
+            if (nodeMode) { try { NodeHost.ipc("app:profile-set", new JSONObject(json)); return true; } catch (Exception e) { return false; } }
             try { JSONObject c = MainActivity.this.config(); c.put("profile", new JSONObject(json)); c.put("profileAt", System.currentTimeMillis()); saveConfig(c); return true; } catch (Exception e) { return false; }
         }
         // подпись для входа на сервер — только для того сервера, к которому мы сейчас подключены
         @JavascriptInterface public String sign(String nonce, String host) {
+            if (nodeMode) { String r = NodeHost.ipc("account:sign", nonce, host); return r == null ? "null" : r; }
             try {
                 // страница видит адрес мостика 127.0.0.1:порт — подписываем настоящий адрес сервера
                 LocalProxy lp = proxy;
@@ -387,6 +513,7 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return "null"; }
         }
         @JavascriptInterface public void serverAlts(String json) {
+            if (nodeMode) { try { NodeHost.ipc("server:alts", new JSONArray(json)); } catch (Exception ignored) {} return; }
             try {
                 if (currentKey == null) return;
                 JSONArray in = new JSONArray(json), out = new JSONArray();
@@ -404,6 +531,7 @@ public class MainActivity extends Activity {
             } catch (Exception ignored) {}
         }
         @JavascriptInterface public void voiceState(String json) {
+            if (nodeMode) { try { NodeHost.ipc("voice:state", "null".equals(json) ? null : new JSONObject(json)); } catch (Exception ignored) {} }
             try {
                 JSONObject st = "null".equals(json) ? null : new JSONObject(json);
                 if (st != null && st.optBoolean("inVoice")) {
@@ -465,6 +593,21 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
+        if (req == REQ_PICK) {
+            final Uri u = res == RESULT_OK && data != null ? data.getData() : null;
+            new Thread(new Runnable() { public void run() {
+                if (u == null) { NodeHost.tell(jo("t", "picked")); return; }
+                try {
+                    String name = "file";
+                    try (android.database.Cursor c = getContentResolver().query(u, null, null, null, null)) { if (c != null && c.moveToFirst()) { int i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME); if (i >= 0) name = c.getString(i); } }
+                    java.io.File dir = new java.io.File(getCacheDir(), "picked"); dir.mkdirs();
+                    java.io.File f = new java.io.File(dir, name.replaceAll("[/\\\\]", "_"));
+                    try (InputStream in = getContentResolver().openInputStream(u); OutputStream o = new java.io.FileOutputStream(f)) { byte[] b = new byte[65536]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
+                    NodeHost.tell(jo("t", "picked", "path", f.getAbsolutePath()));
+                } catch (Exception e) { NodeHost.tell(jo("t", "picked")); }
+            } }).start();
+            return;
+        }
         if (req == REQ_SCREEN) {
             if (res != RESULT_OK || data == null) { js("window.__kScreen && __kScreen(false)"); return; }
             ScreenService.onEnd = new Runnable() { public void run() { js("window.__kScreenEnd && __kScreenEnd()"); } };

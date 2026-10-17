@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="ru">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta charset="utf-8">
 <title>Кентовка</title>
 <style>
@@ -58,6 +59,7 @@
   #railList { display: contents; }
   #mainArea { position: relative; min-width: 0; display: flex; flex-direction: column; }
   #mainArea #accBanner { margin: 12px 16px 0; }
+  #friendsFrame { flex: 1; width: 100%; border: 0; background: var(--bg); min-height: 0; }
   #mainHint { flex: 1; display: grid; place-items: center; color: var(--faint); font: 600 14px var(--font-display); }
   .rmenu { position: fixed; z-index: 50; min-width: 190px; padding: 6px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(0,0,0,.55); }
   .rmenu button { display: block; width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 14px; }
@@ -617,7 +619,15 @@
     return { x: m.left, y: top, w: m.width, h: m.bottom - top };
   }
   let shown = false;
+  // Android: друзья — фрейм прямо на странице (на ПК — отдельное окно поверх)
+  if (A.android) {
+    const fr = document.createElement('iframe'); fr.id = 'friendsFrame'; fr.src = '/friends.html'; fr.title = 'Друзья';
+    fr.allow = 'microphone; autoplay; display-capture; clipboard-write; fullscreen';
+    $('mainHint').replaceWith(fr);
+    A.openFriends();
+  }
   function syncFriends() {
+    if (A.android) { $('friendsFrame').hidden = regOpen; return; }
     const want = !anyDialog();
     if (want) { A.friendsArea(area()); if (!shown) { shown = true; A.openFriends(); } }
     else if (shown) { shown = false; A.closeFriends(); }

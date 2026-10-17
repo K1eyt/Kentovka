@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="ru">
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta charset="utf-8">
 <title>Кентовка — друзья</title>
 <style>
@@ -184,7 +185,18 @@
   .gdlg .gpick { max-height: 300px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
   .gdlg .gp { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; cursor: pointer; }
   .gdlg .gp:hover { background: var(--panel2); } .gdlg .gp input { width: 18px; height: 18px; accent-color: var(--accent); }
-  @media (max-width: 600px) { .wrap { grid-template-columns: minmax(0, 1fr); } .wrap.inchat aside { display: none; } .wrap:not(.inchat) main { display: none; } .wrap.home main { display: flex; } .wrap.home aside { display: none; } .back { display: inline-grid !important; } }
+  .mback { display: none !important; }
+  @media (max-width: 600px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); }
+    .wrap main { display: none; } .wrap aside { display: flex; }
+    .wrap.inchat main, .wrap.mfr main { display: flex; } .wrap.inchat aside, .wrap.mfr aside { display: none; }
+    .back, .mback { display: inline-grid !important; }
+    .topbar { overflow-x: auto; scrollbar-width: none; }
+    .chead .btn.ghost span { display: none; }
+    .send { margin: 8px; }
+    .stage { min-height: 200px; height: 38vh; }
+    .stage .tile { width: 140px; height: 100px; }
+  }
   .back { display: none; }
 
 
@@ -473,7 +485,10 @@
     render();
   };
   const closeDm = (id) => { openDms = openDms.filter((x) => x !== id); saveOpen(); if (cur === id) cur = null; render(); };
-  const goHome = () => { cur = null; render(); };
+  // телефон: список бесед и «Друзья» — разные экраны (как в мобильном Discord)
+  let mobFriends = false;
+  const narrow = () => window.innerWidth <= 600;
+  const goHome = () => { cur = null; if (narrow()) mobFriends = false; render(); };
   async function refresh() {
     [list, groups] = await Promise.all([F.list(), F.groups()]);
     for (const f of list) if (f.status === 'friend' && f.unread && !openDms.includes(f.id)) openDms.unshift(f.id); // новое сообщение — личка сама появляется слева
@@ -489,7 +504,7 @@
     const pend = list.filter((f) => f.status === 'incoming').length;
     $('navBadge').hidden = !pend; $('navBadge').textContent = pend;
     $('navHome').classList.toggle('on', !cur);
-    $('wrap').classList.toggle('home', !cur); $('wrap').classList.toggle('inchat', !!cur);
+    $('wrap').classList.toggle('home', !cur); $('wrap').classList.toggle('inchat', !!cur); $('wrap').classList.toggle('mfr', !cur && mobFriends);
     const box = $('list'); box.innerHTML = '';
     const q = dmFind.toLowerCase();
     const dms = openDms.map((id) => list.find((f) => f.id === id) || groups.find((g) => g.id === id)).filter(Boolean).filter((f) => !q || (f.members ? gTitle(f) : f.name).toLowerCase().includes(q));
@@ -540,7 +555,8 @@
     const keepFocus = document.activeElement && document.activeElement.id;
     main.innerHTML = '';
     const top = document.createElement('div'); top.className = 'topbar';
-    top.innerHTML = `<span class="ttl">${I.users}<span>Друзья</span></span>`;
+    top.innerHTML = `<button class="iconbtn back mback" type="button" title="К беседам">${I.left}</button><span class="ttl">${I.users}<span>Друзья</span></span>`;
+    top.querySelector('.mback').onclick = () => { mobFriends = false; render(); };
     const pend = list.filter((f) => f.status === 'incoming' || f.status === 'outgoing').length;
     for (const [id, label] of [['online', 'В сети'], ['all', 'Все'], ['pending', 'Ожидание'], ['add', 'Добавить в друзья']]) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'tab' + (id === 'add' ? ' add' : '') + (tab === id ? ' on' : ''); b.dataset.tab = id;
@@ -850,7 +866,7 @@
   }
 
   $('navHome').querySelector('.ic').innerHTML = I.users;
-  $('navHome').onclick = goHome;
+  $('navHome').onclick = () => { cur = null; mobFriends = true; render(); };
   $('newGroup').innerHTML = P('<path d="M12 5v14M5 12h14"/>'); $('newGroup').onclick = () => groupDialog(null);
   $('dmFind').oninput = () => { dmFind = $('dmFind').value; renderSide(); };
 

@@ -43,6 +43,7 @@ jobs:
           sleep 3; cat /tmp/srv.log
           npm install --no-save --no-audit --no-fund playwright@1.48.2 && npx playwright install --with-deps chromium
           nohup node android/ci-peer.js > /tmp/peer.log 2>&1 &
+          nohup node android/ci-friend.js > /tmp/friendn.log 2>&1 &
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -60,6 +61,7 @@ jobs:
         run: |
           cp /tmp/srv.log ci-out/server.log 2>/dev/null || true
           cp /tmp/peer.txt ci-out/peer.txt 2>/dev/null || true; cp /tmp/peer.log ci-out/peer.log 2>/dev/null || true
+          cp /tmp/friend.txt ci-out/friend.txt 2>/dev/null || true; cp /tmp/friendn.log ci-out/friendn.log 2>/dev/null || true
           cd ci-out && git init -q && git checkout -q -b ci-results
           echo "run ${{ github.run_id }} commit ${{ github.sha }}" > RUN.txt
           git add -A && git -c user.name=ci -c user.email=ci@localhost commit -q -m "ci ${{ github.run_id }}"

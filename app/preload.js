@@ -2,11 +2,13 @@
 // управление подключением — только стартовому экрану (локальный файл).
 const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
-const isLocal = location.protocol === 'file:' || location.protocol === 'kapp:';
-const isEmbed = location.protocol === 'kapp:'; // страница внутри главного окна (друзья) — без своей рамки
+const isAndroid = !!(typeof window !== 'undefined' && window.__kentovkaAndroid);
+const isLocal = location.protocol === 'file:' || location.protocol === 'kapp:' || isAndroid;
+const isEmbed = location.protocol === 'kapp:' || (isAndroid && window.__kentovkaAndroid.role === 'friends'); // страница внутри главного окна (друзья) — без своей рамки
 
 const api = {
   isApp: true,
+  android: isAndroid,
   onHotkey: (cb) => ipcRenderer.on('hotkey', (_e, action) => cb(action)),
   hotkeys: () => ipcRenderer.invoke('app:hotkeys'),
   setHotkey: (action, accel) => ipcRenderer.invoke('app:set-hotkey', action, accel),
@@ -145,7 +147,7 @@ contextBridge.exposeInMainWorld('kentovkaApp', api);
 
 // ---------- своя рамка окна: неоновая полоса сверху с кнопками свернуть / развернуть / закрыть ----------
 // одна и та же на стартовом экране и в приложении; в полноэкранном режиме (F11) прячется
-if (!/picker\.html$/.test(location.pathname) && !isEmbed) {
+if (!/picker\.html$/.test(location.pathname) && !isEmbed && !isAndroid) {
   const SVG = (d) => `<svg viewBox="0 0 12 12" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.2">${d}</svg>`;
   const ICONS = {
     min: SVG('<path d="M1.5 6.5h9"/>'),
