@@ -43,7 +43,27 @@
     inp.replaceWith(d);
     return d;
   };
+  // заливка ползунков ровно до кружка (в окне друзей её не было — стояла на середине)
+  if (!window.kRangeFill) (() => {
+    const fill = (el) => { if (!el || el.type !== 'range') return; const min = +el.min || 0, max = el.max === '' ? 100 : +el.max, v = +el.value;
+      el.style.setProperty('--v', (max > min ? Math.max(0, Math.min(100, ((v - min) / (max - min)) * 100)) : 0) + '%'); };
+    const d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+    Object.defineProperty(HTMLInputElement.prototype, 'value', { configurable: true, enumerable: d.enumerable, get() { return d.get.call(this); }, set(v) { d.set.call(this, v); if (this.type === 'range') fill(this); } });
+    for (const k of ['min', 'max']) { const dd = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, k); Object.defineProperty(HTMLInputElement.prototype, k, { configurable: true, get() { return dd.get.call(this); }, set(v) { dd.set.call(this, v); if (this.type === 'range') fill(this); } }); }
+    document.addEventListener('input', (e) => fill(e.target), true);
+    const all = () => document.querySelectorAll('input[type=range]').forEach(fill);
+    new MutationObserver((ms) => { for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1) { if (n.matches('input[type=range]')) fill(n); else n.querySelectorAll && n.querySelectorAll('input[type=range]').forEach(fill); } })
+      .observe(document.documentElement, { childList: true, subtree: true });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', all); else all();
+    window.kRangeFill = fill;
+  })();
   if (!phone) return;
+  // телефон: ползунок под палец — кружок крупнее, зона касания выше, тянешь ползунок — страница не листается
+  {
+    const st = document.createElement('style'); st.id = 'krange-phone';
+    st.textContent = 'input[type=range]{height:30px!important;touch-action:none}input[type=range]::-webkit-slider-thumb{width:22px!important;height:22px!important;margin-top:-8.5px!important}input[type=range]:active::-webkit-slider-thumb{transform:scale(1.1)}.kp-seek input[type=range]{height:18px!important}.kp-seek input[type=range]::-webkit-slider-thumb{width:16px!important;height:16px!important;margin-top:-5.5px!important}';
+    (document.head || document.documentElement).appendChild(st);
+  }
   const R = [
     [/Сохранить на компьютер/g, 'Сохранить на телефон'],
     [/на компьютер/g, 'на телефон'], [/компьютер(?!а)/g, 'телефон'], [/компьютера/g, 'телефона'],

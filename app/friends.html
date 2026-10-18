@@ -114,9 +114,9 @@
   .devpop .hint, .vdlg .hint { font-size: 12px; color: var(--faint); margin: 8px 6px 0; }
   .devpop .vbmore { margin-top: 10px; font-size: 12.5px; color: var(--dim); text-decoration: underline dotted; }
   .devpop .vbmore:hover { color: var(--text); }
-  .vdlg .kd-b { white-space: normal; }
+  dialog.kdlg.vdlg .kd-b { white-space: normal; }
   .vdlg .seg { display: flex; gap: 4px; flex-wrap: wrap; }
-  .vdlg .seg button { flex: 1 1 30%; padding: 8px 4px; font: 600 12.5px var(--font-display); color: var(--dim); }
+  .vdlg .seg button { flex: 1 1 auto; min-width: 0; padding: 8px 6px; font: 600 12.5px var(--font-display); color: var(--dim); overflow-wrap: normal; word-break: normal; hyphens: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .vdlg .seg button.on { border-color: var(--accent); color: var(--text); background: rgba(var(--acc-rgb), .12); }
   .vdlg .chk { display: flex; align-items: center; gap: 9px; margin: 12px 0 0; font-size: 13.5px; }
   .vdlg .chk input { width: 17px; height: 17px; accent-color: var(--accent); }
@@ -266,7 +266,7 @@
   .gcbar .cinfo { flex: 1; min-width: 0; } .gcbar .cinfo b { display: block; font: 700 15px var(--font-display); } .gcbar .cinfo span { font-size: 12.5px; color: var(--dim); }
   .gcavs { display: flex; } .gcavs .ava { width: 36px; height: 36px; border: 2px solid var(--panel); margin-left: -8px; transition: box-shadow var(--t); } .gcavs .ava:first-child { margin-left: 0; }
   .gcavs .ava.talking { box-shadow: 0 0 0 2px var(--green), 0 0 calc(12px * var(--glow)) var(--green); z-index: 1; }
-  .gdlg .kd-b { white-space: normal; }
+  dialog.kdlg.gdlg .kd-b { white-space: normal; }
   .gdlg .gname { width: 100%; margin: 10px 0 4px; }
   .gdlg .gpick { max-height: 300px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 2px; }
   .gdlg .gp { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; cursor: pointer; }
