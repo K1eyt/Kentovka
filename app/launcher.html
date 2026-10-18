@@ -348,7 +348,7 @@
 
   <button class="go" id="go">Зайти</button>
   <div id="err" role="alert"></div>
-  <div class="keys">Твои серверы — в полосе слева: клик — зайти, правый клик — переименовать, убрать или остановить. В игре: <kbd id="kMute">Ctrl+Shift+M</kbd> микрофон, <kbd id="kDeaf">Ctrl+Shift+D</kbd> звук</div>
+  <div class="keys">Твои серверы — в полосе слева: клик — зайти, правый клик — переименовать, убрать или остановить.<span id="kGame"> В игре: <kbd id="kMute">Ctrl+Shift+M</kbd> микрофон, <kbd id="kDeaf">Ctrl+Shift+D</kbd> звук</span></div>
 </form>
 </dialog>
 
@@ -407,6 +407,7 @@
   const pretty = (s) => (s ? s.replace('CommandOrControl', 'Ctrl') : 'не задано');
   $('kMute').textContent = pretty(hotkeys.mute);
   $('kDeaf').textContent = pretty(hotkeys.deaf);
+  if (window.KentovkaAndroid || window.kAndroid || /Android/i.test(navigator.userAgent)) $('kGame').hidden = true;
 
   const isHost = () => $('host').checked;
   const ACCESS_HINT = { open: 'Зайдёт любой, кто знает твой адрес.', approve: 'Новый гость ждёт у двери, пока ты не нажмёшь «Пустить». Друзья заходят сразу.', friends: 'Зайдут только те, кто у тебя в друзьях (кнопка «Друзья» сверху).' };

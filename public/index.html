@@ -3988,7 +3988,9 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       document.querySelectorAll('.hk').forEach((b) => { if (!b.classList.contains('rec')) b.textContent = pk(k[b.dataset.act]); });
       $('helpKeys').textContent = `Кнопки внизу слева или ${pk(k.mute)} / ${pk(k.deaf)} — работают даже из игры. Правой кнопкой по сообщению — ответить или сохранить файл.`;
     };
-    APP.hotkeys().then(showHotkeys);
+    // телефон: горячих клавиш нет — ни подсказки, ни настройки
+    if (window.kPhone) { $('hotkeyHint').hidden = true; $('hkBox').hidden = true; $('helpKeys').textContent = 'Кнопки внизу. Долгое нажатие на сообщение — ответить или сохранить файл.'; }
+    else APP.hotkeys().then(showHotkeys);
     // ---------- полоса серверов слева (как в Discord) ----------
     if (APP.servers && !APP.isTab) {
       $('app').classList.add('hasrail');
