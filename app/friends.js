@@ -103,7 +103,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
   function hello(ws) {
     const p = getProfile() || {};
     // профиль для мини-карточки (о себе, цвета шапки) и чем сейчас занят (сервер, голосовой канал, звонок)
-    ws.send(JSON.stringify({ t: 'hi', id: db.me.id, name: short(p.name, 24) || 'кент', avatar: p.avatar && p.avatar.length < 60000 ? p.avatar : null, port,
+    ws.send(JSON.stringify({ t: 'hi', id: db.me.id, name: short(p.name, 24) || 'Без ника', avatar: p.avatar && p.avatar.length < 60000 ? p.avatar : null, port,
       bio: short(p.bio, 190), color: p.color || null, color2: p.color2 || null, presence: getPresence ? getPresence() : null,
       alts: getAlts ? (getAlts() || []).slice(0, 6) : [] })); // запасные адреса: через мост на VPS
   }
@@ -259,10 +259,10 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
   const cleanGroup = (g) => {
     if (!g || typeof g !== 'object' || !/^[0-9a-f]{16,32}$/.test(g.id || '') || !/^[0-9a-f]{32}$/.test(g.key || '')) return null;
     const members = (Array.isArray(g.members) ? g.members : []).filter((x) => x && /^[0-9a-f]{32}$/.test(x.id)).slice(0, 10)
-      .map((x) => ({ id: x.id, name: short(x.name, 24) || 'кент', avatar: x.avatar && String(x.avatar).length < 60000 ? x.avatar : null, ip: short(x.ip, 60), port: Number(x.port) || PORT }));
+      .map((x) => ({ id: x.id, name: short(x.name, 24) || 'Без ника', avatar: x.avatar && String(x.avatar).length < 60000 ? x.avatar : null, ip: short(x.ip, 60), port: Number(x.port) || PORT }));
     return { id: g.id, key: g.key, name: short(g.name, 40), owner: /^[0-9a-f]{32}$/.test(g.owner || '') ? g.owner : null, members, v: Number(g.v) || 1, at: Number(g.at) || Date.now() };
   };
-  const meAsMember = () => { const p = getProfile() || {}; return { id: db.me.id, name: short(p.name, 24) || 'кент', avatar: p.avatar && p.avatar.length < 60000 ? p.avatar : null, ip: '', port }; };
+  const meAsMember = () => { const p = getProfile() || {}; return { id: db.me.id, name: short(p.name, 24) || 'Без ника', avatar: p.avatar && p.avatar.length < 60000 ? p.avatar : null, ip: '', port }; };
   // реакции: у сообщения { эмодзи: [id кто поставил] }; передаём «мои реакции на сообщение» целиком — повтор не страшен
   const RX_RE = /^[^\s<>"'`]{1,16}$/;
   function applyRx(x, uid, mine) {
@@ -503,7 +503,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
         const g = db.groups[target.gid]; if (!g) return { error: 'нет группы' };
         db.files[fid] = { ...file, done: true, mine: true, gid: g.id, from: db.me.id };
         const p = getProfile() || {};
-        const m = { mid: rid(), from: db.me.id, name: short(p.name, 24) || 'кент', text: short(caption, 4000).trim(), ts: Date.now(), file };
+        const m = { mid: rid(), from: db.me.id, name: short(p.name, 24) || 'Без ника', text: short(caption, 4000).trim(), ts: Date.now(), file };
         storeGroupMsg(g, m); save(); gsendAll(g, { t: 'g-msg', gid: g.id, ...m }); changed();
         return { ok: true, fid };
       }
@@ -614,7 +614,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     groupSend(gid, text, reply) {
       const g = db.groups[gid]; text = short(text, 4000).trim(); if (!g || !text) return null;
       const p = getProfile() || {};
-      const m = { mid: rid(), from: db.me.id, name: short(p.name, 24) || 'кент', text, ts: Date.now() };
+      const m = { mid: rid(), from: db.me.id, name: short(p.name, 24) || 'Без ника', text, ts: Date.now() };
       const rp = cleanReply(reply); if (rp) m.reply = rp;
       storeGroupMsg(g, m); save();
       gsendAll(g, { t: 'g-msg', gid, ...m });

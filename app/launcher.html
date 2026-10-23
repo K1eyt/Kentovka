@@ -255,7 +255,7 @@
   <form class="box" id="regForm" autocomplete="off">
     <header><div class="logo">К</div><div class="hd"><h1>Кентовка</h1><p>Голос, чат и стримы для своей компании</p></div></header>
     <label class="f" for="regName">Как тебя зовут</label>
-    <input type="text" id="regName" maxlength="24" placeholder="Ник для кентов" spellcheck="false">
+    <input type="text" id="regName" maxlength="24" placeholder="Твой ник" spellcheck="false">
     <div class="avarow">
       <label class="ava" id="regAva" title="Аватарка (по желанию)">+<input type="file" id="regAvaFile" accept="image/*" hidden></label>
       <div class="hint" style="margin:0">Аватарка — по желанию, можно поставить потом. Ник и аватарка общие для всех серверов.</div>
@@ -270,13 +270,14 @@
 <form class="box" id="form" autocomplete="off">
   <header>
     <div class="logo">К</div>
-    <div class="hd"><h1>Серверы</h1><p>Зайти к кентам или создать свой</p></div>
+    <div class="hd"><h1>Серверы</h1><p>Зайти к друзьям или создать свой</p></div>
+    <span id="addHelp"></span>
     <button type="button" class="xbtn" id="addClose" aria-label="Закрыть"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </header>
-  <div id="running" hidden>● Твой сервер работает, кенты на связи.</div>
+  <div id="running" hidden>● Твой сервер работает.</div>
 
   <div class="modes" role="radiogroup" aria-label="Что делаем">
-    <input type="radio" name="mode" id="saved" value="saved" hidden><span id="srvCnt" hidden></span>
+    <input type="radio" name="mode" id="saved" value="saved" hidden style="display:none"><span id="srvCnt" hidden style="display:none"></span>
     <label class="mode">
       <input type="radio" name="mode" id="join" value="join">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
@@ -404,7 +405,8 @@
   $('publicHost').value = dc.publicHost || '';
   $('stunUrl').value = dc.stunUrl || DEFAULT_STUN;
   $('stunMode').value = dc.stunMode || (dc.publicHost ? 'own' : 'public');
-  const pretty = (s) => (s ? s.replace('CommandOrControl', 'Ctrl') : 'не задано');
+  const MODN = { LCtrl: 'Левый Ctrl', RCtrl: 'Правый Ctrl', LAlt: 'Левый Alt', RAlt: 'Правый Alt', LShift: 'Левый Shift', RShift: 'Правый Shift' };
+  const pretty = (s) => (MODN[s] || (s ? s.replace('CommandOrControl', 'Ctrl') : 'не задано'));
   $('kMute').textContent = pretty(hotkeys.mute);
   $('kDeaf').textContent = pretty(hotkeys.deaf);
   if (window.KentovkaAndroid || window.kAndroid || /Android/i.test(navigator.userAgent)) $('kGame').hidden = true;
@@ -456,7 +458,7 @@
   function renderServers() {
     renderRail();
     const box = $('srvList'); box.innerHTML = '';
-    $('srvCnt').hidden = !servers.length; $('srvCnt').textContent = servers.length;
+    $('srvCnt').textContent = servers.length; // счётчик служебный, на экран не выводится (раньше вылезал «1» над карточками)
     if (!servers.length) {
       box.innerHTML = '<div class="srvempty"><b>Пока пусто</b>Зайди к кому-нибудь по адресу или создай свой сервер — он появится здесь, и в следующий раз хватит одного клика.</div>';
       return;
@@ -478,7 +480,7 @@
       let stop = null;
       if (isRun) {
         stop = document.createElement('button'); stop.type = 'button'; stop.className = 'enter stop'; stop.textContent = 'Остановить';
-        stop.title = 'Выключить сервер — кенты с него выйдут';
+        stop.title = 'Выключить сервер — все участники с него выйдут';
         stop.onclick = async () => { const r = await A.serverStop(ownPort(sv)); if (Array.isArray(r)) running = r; renderServers(); };
       }
       ren.onclick = () => {
@@ -605,7 +607,7 @@
     if (!sv.host) item('Копировать адрес', () => A.copy(sv.address));
     if (isRun) item('Остановить сервер', async () => { const r = await A.serverStop(ownPort(sv)); if (Array.isArray(r)) running = r; renderServers(); }, 'danger');
     if (sv.host) item('Удалить сервер', async () => {
-      if (!await kAsk(`Удалить сервер «${title}»? Сотрутся история чата, каналы и профили на нём. Кенты больше не смогут на него зайти. Это не отменить.`, 'Удалить навсегда', { title: 'Удалить сервер', danger: true })) return;
+      if (!await kAsk(`Удалить сервер «${title}»? Сотрутся история чата, каналы и профили на нём. Никто больше не сможет на него зайти. Это не отменить.`, 'Удалить навсегда', { title: 'Удалить сервер', danger: true })) return;
       const r = await A.serverDelete(ownPort(sv));
       if (r && r.error) { kSay(r.error); return; }
       if (r && r.servers) { servers = r.servers; running = r.running || running; } renderServers();
@@ -771,7 +773,7 @@
   $('regForm').onsubmit = async (e) => {
     e.preventDefault();
     const name = $('regName').value.trim().slice(0, 24);
-    if (!name) { $('regErr').textContent = 'Впиши ник — по нему тебя узнают кенты.'; $('regName').focus(); return; }
+    if (!name) { $('regErr').textContent = 'Впиши ник — по нему тебя узнают.'; $('regName').focus(); return; }
     $('regGo').disabled = true;
     await A.setProfile({ name, avatar: regAvatar });
     regOpen = false; $('reg').hidden = true;
@@ -785,6 +787,8 @@
 </script>
 <script src="../public/kselect.js"></script>
 <script src="../public/kplatform.js"></script>
+<script src="../public/khelp.js"></script>
+<script>document.getElementById('addHelp').appendChild(kHelp.button('add'));</script>
 <script>
 // ---------- аккаунт: сохранения, пароль, привязка второго устройства, восстановление после переустановки ----------
 (async () => {
@@ -803,6 +807,10 @@
     const btns = d.querySelector('.kd-b > .btns:last-child');
     if (btns) { const f = d.querySelector('.kd-f'); for (const b of [...btns.children]) { b.classList.remove('b'); f.appendChild(b); } btns.remove(); f.querySelector('.cancel').textContent = 'Отмена'; }
     d.addEventListener('close', () => d.remove());
+    // клик мимо окна (в том числе по той же кнопке, что его открыла) — закрыть
+    let downOut = false;
+    d.addEventListener('pointerdown', (e) => { const r = d.getBoundingClientRect(); downOut = e.target === d && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom); });
+    d.addEventListener('click', (e) => { if (downOut && e.target === d) d.close(); downOut = false; });
     document.body.appendChild(d); d.showModal(); return d;
   }
   async function askPassword(title, text, confirm) {
@@ -862,9 +870,10 @@
       '<div class="saves" id="aSaves">' + info.saves.map((s, i) => '<div><span>' + esc(s.name || 'аккаунт') + ' · ' + when(s.at) + (s.enc ? ' · 🔒' : '') + '</span><a data-i="' + i + '">восстановить</a></div>').join('') + '</div>' +
       '<h3>Другие устройства</h3><p>Чтобы зайти тем же аккаунтом с ноутбука или телефона: нажми «Показать код» здесь, а на новом устройстве — «Ввести код». Устройства должны быть в одной локальной сети. Данные идут напрямую, зашифрованно.' + (info.siblings ? ' Привязано устройств: ' + info.siblings + ', сейчас в сети: ' + info.siblingsOnline + '.' : '') + '</p>' +
       '<div class="btns"><button type="button" class="b" id="aCode">Показать код</button><button type="button" class="b" id="aJoin">Ввести код</button></div><div id="aCodeBox"></div>' +
-      '<h3>Мост на своём VPS</h3><p>Чтобы к тебе заходили не только из локальной сети — с телефона, с мобильного интернета, из любой сети. Мост ставится на VPS (bridge\\install.sh), он печатает ссылку <b>KNTB1.…</b> — вставь её сюда. Кенты, которые хоть раз заходили по локальной сети, дальше сами пойдут через мост, если она не работает. Мост видит только шифрованный поток.</p>' +
+      '<h3>Мост на своём VPS</h3><p>Чтобы к тебе заходили не только из локальной сети — с телефона, с мобильного интернета, из любой сети. Мост ставится на VPS (bridge\\install.sh), он печатает ссылку <b>KNTB1.…</b> — вставь её сюда. Те, кто хоть раз заходил по локальной сети, дальше сами пойдут через мост, если она не работает. Мост видит только шифрованный поток.</p>' +
       '<div class="saves" id="aBridges"></div><input type="text" id="aBridgeIn" placeholder="KNTB1.…" spellcheck="false"><div class="btns"><button type="button" class="b" id="aBridgeAdd">Подключить мост</button></div>' +
       '<div class="note" id="aNote"></div>');
+    if (window.kHelp) { const t = d.querySelector('.kd-t'); t.style.display = 'flex'; t.style.alignItems = 'center'; t.style.justifyContent = 'space-between'; t.appendChild(kHelp.button('account')); }
     const drawBridges = async () => {
       const box = d.querySelector('#aBridges'); if (!box || !A.bridges) return;
       const list = await A.bridges();

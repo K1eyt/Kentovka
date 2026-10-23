@@ -22,6 +22,10 @@ const api = {
   hostInfo: () => ipcRenderer.invoke('app:host-info'),
   copy: (text) => ipcRenderer.invoke('app:copy', text),
   back: () => ipcRenderer.invoke('app:back'),
+  // качество демки — одно на всё приложение (сервер, друзья, окно выбора экрана)
+  shareGet: () => ipcRenderer.invoke('share:get'),
+  shareSet: (o) => ipcRenderer.invoke('share:set', o),
+  onShare: (cb) => ipcRenderer.on('share:prefs', (_e, p) => cb(p)),
   // звук демки без голосов из Кентовки
   takeSysAudio: () => ipcRenderer.invoke('sysaudio:take'),
   startSysAudio: () => ipcRenderer.invoke('sysaudio:start'),

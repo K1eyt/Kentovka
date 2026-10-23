@@ -4,6 +4,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta charset="utf-8">
 <title>Кентовка — друзья</title>
+<script src="/kchat.js"></script>
+<script src="/kshare.js"></script>
+<script src="/khelp.js"></script>
 <style>
   :root {
     --bg: #0a0b14; --panel: #11131f; --panel2: #171a2a; --panel3: #1e2236; --line: #262a40;
@@ -301,6 +304,11 @@
   .chead .st { font-size: 12.5px; color: var(--dim); }
   .chead .sp { flex: 1; }
   #msgs { flex: 1; overflow-y: auto; padding: 16px 20px 8px; min-height: 0; }
+  #msgs:has(> .ractempty) { display: flex; flex-direction: column; }
+  .stageslot:empty { display: none; } .gbanner[hidden] { display: none; }
+  body.hasbg .msg .meta, body.hasbg .msg .text, body.hasbg .kday, body.hasbg .sys { text-shadow: 0 1px 2px rgba(0,0,0,.9), 0 0 8px rgba(0,0,0,.6); }
+  body.hasbg .msg .meta { color: color-mix(in srgb, var(--text) 72%, transparent); }
+  .msg .inv { margin-top: 4px; }
   .m { display: flex; flex-direction: column; max-width: 72%; margin: 3px 0; }
   .m .b { padding: 8px 12px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); white-space: pre-wrap; overflow-wrap: anywhere; }
   .m.me { margin-left: auto; align-items: flex-end; }
@@ -370,6 +378,38 @@
   .stage.focus .tiles { flex-wrap: nowrap; align-items: stretch; }
   .stage.focus .tile:not(.focused) { display: none; }
   .stage.focus .tile.focused { width: 100%; height: 100%; max-width: 100%; aspect-ratio: auto; cursor: zoom-out; }
+  .stage.isfs { height: 100vh; max-height: none; resize: none; border: 0; background: #000; position: relative; }
+  .stage.isfs .tiles { padding: 0; }
+  .stage.isfs .tile.focused { border-radius: 0; }
+  .stage.isfs .sbar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); transition: opacity .2s; }
+  .stage.isfs:not(.act) { cursor: none; } .stage.isfs:not(.act) .sbar, .stage.isfs:not(.act) .tname { opacity: 0; }
+  dialog.kdlg.sdlg { width: min(640px, calc(100vw - 24px)); }
+  .sdlg .stabs { display: flex; gap: 6px; flex-wrap: wrap; padding: 14px 16px 0; }
+  .sdlg .stab { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px !important; border-radius: 10px; font: 600 13.5px var(--font-display) !important; color: var(--dim) !important; background: transparent !important; border: 1px solid transparent !important; }
+  .sdlg .stab svg { width: 16px; height: 16px; } .sdlg .stab.on { color: var(--text) !important; background: var(--panel3) !important; border-color: var(--line) !important; }
+  dialog.kdlg.sdlg .spane { white-space: normal; max-height: min(68vh, 640px); }
+  .sdlg h3 { margin: 0 0 4px; font: 700 17px var(--font-display); } .sdlg .lead { margin: 0 0 10px; color: var(--dim); font-size: 13.5px; }
+  .sdlg .vl { display: block; color: var(--dim); font-size: 12.5px; margin: 12px 0 6px; } .sdlg .vl b { color: var(--text); }
+  .sdlg input[type=range] { width: 100%; } .sdlg .seg { display: flex; gap: 4px; flex-wrap: wrap; }
+  .sdlg .seg button { flex: 1 1 auto; padding: 8px 8px !important; font: 600 12.5px var(--font-display) !important; color: var(--dim) !important; white-space: nowrap; }
+  .sdlg .seg button.on { border-color: var(--accent) !important; color: var(--text) !important; background: rgba(var(--acc-rgb), .12) !important; }
+  .sdlg .chk { display: flex; align-items: center; gap: 9px; margin: 12px 0 0; font-size: 13.5px; cursor: pointer; } .sdlg .chk input { width: 17px; height: 17px; accent-color: var(--accent); }
+  .sdlg .hint { font-size: 12px; color: var(--faint); margin: 6px 0 0; } .sdlg details { margin-top: 12px; } .sdlg summary { cursor: pointer; color: var(--dim); font-size: 13px; }
+  .sdlg .srow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; } .sdlg .savapick { cursor: pointer; } .sdlg .sava { width: 64px; height: 64px; font-size: 24px; }
+  .sdlg input[type=text], .sdlg textarea { width: 100%; box-sizing: border-box; font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; outline: none; resize: vertical; }
+  .sdlg input[type=text]:focus, .sdlg textarea:focus { border-color: var(--accent); }
+  .sdlg .sban, .sdlg .swat { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; } .sdlg .sban button, .sdlg .swat button { height: 30px; border-radius: 8px; border: 2px solid transparent !important; padding: 0 !important; }
+  .sdlg .sban button.on, .sdlg .swat button.on { border-color: var(--text) !important; }
+  .sdlg .sprev { position: relative; margin-top: 14px; border-radius: 14px; overflow: hidden; background: var(--panel2); border: 1px solid var(--line); padding-bottom: 12px; }
+  .sdlg .spban { height: 76px; } .sdlg .spava { width: 56px; height: 56px; font-size: 22px; margin: -28px 0 0 14px; border: 4px solid var(--panel2); }
+  .sdlg .spt { padding: 6px 14px 0; } .sdlg .spt b { display: block; font: 700 16px var(--font-display); } .sdlg .spt span { color: var(--dim); font-size: 13px; white-space: pre-wrap; }
+  .sdlg .linkbtn { background: none !important; border: 0 !important; color: var(--dim) !important; padding: 4px 0 !important; font: 500 12.5px var(--font) !important; text-decoration: underline; }
+  .sdlg .hkrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; } .sdlg .hk.rec { border-color: var(--accent) !important; }
+  .sdlg .kshareq { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; } .sdlg .kshareq-net { width: 100%; color: var(--dim); font-size: 12.5px; }
+  .sdlg .kd-f { align-items: center; }
+  .menu.volpop { width: 240px; padding: 12px; } .volpop .vh b { font: 700 14px var(--font-display); } .volpop .vl { display: block; color: var(--dim); font-size: 12.5px; margin: 10px 0 6px; } .volpop .vl b { color: var(--text); }
+  .volpop input[type=range] { width: 100%; } .volpop .chk { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13.5px; cursor: pointer; } .volpop .chk input { accent-color: var(--accent); width: 16px; height: 16px; }
+  .stage .tile.pmuted::after { content: "заглушён для тебя"; position: absolute; top: 8px; right: 8px; font-size: 11px; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.6); color: var(--dim); }
   .stage .tname { position: absolute; left: 8px; bottom: 8px; display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 7px; background: rgba(0,0,0,.55); font-size: 12.5px; max-width: calc(100% - 16px); }
   .stage .tname svg { width: 14px; height: 14px; color: var(--red); flex: none; }
   .stage .tname span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -461,7 +501,7 @@
       box.innerHTML = '';
       if (info && info.done && isImg) {
         const img = document.createElement('img'); img.className = 'fimg'; img.src = fileUrl(file.id); img.alt = file.name; img.title = file.name + ' — открыть';
-        img.onclick = () => viewImage(file); img.onload = () => { const m = document.getElementById('msgs'); if (m && m.scrollHeight - m.scrollTop - m.clientHeight < 400) m.scrollTop = m.scrollHeight; };
+        img.onclick = () => viewImage(file);
         box.appendChild(img);
       } else if (info && info.done && (isVid || isAud)) {
         const v = document.createElement(isVid ? 'video' : 'audio'); v.controls = true; v.preload = 'metadata'; v.src = fileUrl(file.id); v.className = isVid ? 'fvid' : 'faud';
@@ -721,10 +761,12 @@
   function renderHome() {
     const main = $('chat');
     const keepFocus = document.activeElement && document.activeElement.id;
+    convLeave();
     main.innerHTML = '';
     const top = document.createElement('div'); top.className = 'topbar';
     top.innerHTML = `<button class="iconbtn back mback" type="button" title="К беседам">${I.left}</button><span class="ttl">${I.users}<span>Друзья</span></span>`;
     top.querySelector('.mback').onclick = () => { mobFriends = false; render(); };
+    { const hb = kHelp.button('friends'); hb.style.marginLeft = 'auto'; hb.style.order = '99'; top.appendChild(hb); }
     const pend = list.filter((f) => f.status === 'incoming' || f.status === 'outgoing').length;
     for (const [id, label] of [['online', 'В сети'], ['all', 'Все'], ['pending', 'Ожидание'], ['add', 'Добавить в друзья']]) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'tab' + (id === 'add' ? ' add' : '') + (tab === id ? ' on' : ''); b.dataset.tab = id;
@@ -1076,7 +1118,90 @@
     item(I.trash, 'Удалить из друзей', async () => { if (await kAsk(`Удалить ${f.name} из друзей? Переписка тоже удалится.`, 'Удалить', { danger: true })) { await F.remove(f.id); if (cur === f.id) cur = null; closeDm(f.id); refresh(); } }, 'danger');
     place(m, r);
   }
-  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.card, .menu, .rbtn, .ava, .nm span')) closeFloat(); });
+  document.addEventListener('pointerdown', (e) => { if (floatBy && floatBy.contains(e.target)) return; if (!e.target.closest('.card, .menu, .rbtn, .ava, .nm span')) { closeFloat(); floatBy = null; } });
+  // ---------- беседа (личка и группа): каркас строится один раз, дальше меняется только то, что поменялось ----------
+  let conv = null;                 // { key, head, stage, box, form, inp, ... }
+  const convMem = new Map();       // где ты был в каждой беседе — туда и вернёшься
+  function convLeave() { if (conv && conv.box) { const st = kChat.capture(conv.box); if (st) convMem.set(conv.key, st); } conv = null; }
+  function convOpen(key, build) {
+    const main = $('chat');
+    if (conv && conv.key === key && conv.box.isConnected && main.contains(conv.box)) return conv;
+    convLeave();
+    main.innerHTML = '';
+    conv = build(main); conv.key = key; conv.fresh = true;
+    kChat.watch(conv.box);
+    return conv;
+  }
+  function convFill(c, items, emptyHtml) {
+    if (!items.length) { c.box.innerHTML = `<div class="ractempty" data-keep="1" style="margin:auto">${emptyHtml}</div>`; c.fresh = false; return; }
+    c.box.querySelector('.ractempty')?.remove();
+    kChat.sync(c.box, items);
+    if (c.fresh) { kChat.restore(c.box, convMem.get(c.key)); c.fresh = false; }
+  }
+  // одно сообщение — точно так же, как на сервере (kchat.js): аватарка, ник и время, цитата, текст, файл, реакции
+  const linkify = (el, text) => text.split(/(https?:\/\/\S+)/g).forEach((part, i) => { if (i % 2) { const a = document.createElement('a'); a.href = part; a.textContent = part; a.target = '_blank'; a.rel = 'noopener'; el.appendChild(a); } else el.appendChild(document.createTextNode(part)); });
+  function msgItems(msgs, o) {
+    const items = []; let lastDay = '', lastFrom = null, lastTs = 0;
+    msgs.forEach((m, i) => {
+      const dk = kChat.dayKey(m.ts);
+      if (dk !== lastDay) { lastDay = dk; lastFrom = null; const lbl = kChat.dayLabel(m.ts); items.push({ key: 'day:' + dk, sig: lbl, build: () => kChat.daySep(m.ts) }); }
+      const from = o.fromKey(m);
+      if (m.invite) { lastFrom = null; items.push({ key: 'm:' + (m.mid || m.ts), sig: 'inv:' + o.nameOf(m), build: () => inviteRow(m, o) }); return; }
+      const cont = !m.reply && lastFrom === from && m.ts - lastTs < 5 * 60000; lastFrom = from; lastTs = m.ts;
+      const st = o.statusOf ? o.statusOf(m, i) : '';
+      const a = o.avaOf(m);
+      const sig = [cont ? 1 : 0, m.text || '', m.file ? m.file.id : '', JSON.stringify(m.reactions || {}), st, o.nameOf(m), a.avatar ? a.avatar.length + a.avatar.slice(-24) : '', m.edited || ''].join('|');
+      items.push({ key: 'm:' + (m.mid || m.ts + ':' + from), sig, build: () => msgRow(m, o, cont, st) });
+    });
+    return items;
+  }
+  function msgRow(m, o, cont, st) {
+    const row = document.createElement('div'); row.className = 'msg' + (cont ? ' cont' : ''); row.dataset.mid = m.mid || ''; row.dataset.ts = m.ts;
+    const av = ava(o.avaOf(m), false); av.classList.add('clickable'); av.onclick = (e) => { e.stopPropagation(); o.onAva && o.onAva(m, av); };
+    row.appendChild(av);
+    const body = document.createElement('div'); body.className = 'mbody';
+    if (m.reply) body.appendChild(quoteView(m.reply));
+    if (!cont) {
+      const meta = document.createElement('div'); meta.className = 'meta'; meta.title = kChat.fullTime(m.ts);
+      const b = document.createElement('b'); b.textContent = o.nameOf(m); b.onclick = (e) => { e.stopPropagation(); o.onAva && o.onAva(m, av); };
+      meta.append(b, kChat.timeOf(m.ts));
+      if (st) { const x = document.createElement('span'); x.className = 'st'; x.textContent = '· ' + st; meta.appendChild(x); }
+      body.appendChild(meta);
+    }
+    if (m.text) { const t = document.createElement('div'); t.className = 'text'; linkify(t, m.text); if (cont && st) { const x = document.createElement('span'); x.className = 'ked'; x.textContent = st; t.appendChild(x); } body.appendChild(t); }
+    if (m.file) { body.appendChild(fileView(m.file)); if (cont && st && !m.text) { const x = document.createElement('span'); x.className = 'ked'; x.textContent = st; body.appendChild(x); } }
+    body.appendChild(rxView(m, o.target, o.uname));
+    row.appendChild(body);
+    rxHook(row, m, o.target, o.nameOf(m), o.mineOf(m));
+    return row;
+  }
+  function inviteRow(m, o) {
+    const row = document.createElement('div'); row.className = 'msg'; row.dataset.mid = m.mid || ''; row.dataset.ts = m.ts;
+    row.appendChild(ava(o.avaOf(m), false));
+    const body = document.createElement('div'); body.className = 'mbody';
+    const meta = document.createElement('div'); meta.className = 'meta'; const b = document.createElement('b'); b.textContent = o.nameOf(m); meta.append(b, kChat.timeOf(m.ts)); body.appendChild(meta);
+    const c = document.createElement('div'); c.className = 'inv';
+    const t = document.createElement('div'); t.style.flex = '1';
+    t.innerHTML = '<b></b><span></span>';
+    t.firstChild.textContent = o.mineOf(m) ? `Ты позвал на «${m.invite.name || m.invite.address}»` : `Зовёт на «${m.invite.name || m.invite.address}»`;
+    t.lastChild.textContent = m.invite.address;
+    c.insertAdjacentHTML('beforeend', I.server); c.appendChild(t);
+    if (!o.mineOf(m)) {
+      const go = document.createElement('button'); go.className = 'btn'; go.textContent = 'Зайти';
+      go.onclick = async () => { go.disabled = true; go.textContent = 'Подключаюсь…'; const r = await F.join(m.invite.address, m.invite.name); if (r && r.error) { kSay(r.error); } go.disabled = false; go.textContent = 'Зайти'; };
+      c.appendChild(go);
+    }
+    body.appendChild(c); row.appendChild(body);
+    return row;
+  }
+  // повторное нажатие на ту же кнопку закрывает открытое ею окно (карточка, меню)
+  let floatBy = null;
+  function kToggleFloat(btn, open) {
+    const isOpen = floatBy === btn && document.querySelector('.card, .menu');
+    closeFloat(); floatBy = null;
+    if (isOpen) return;
+    open(); floatBy = btn;
+  }
   // ---------- переписка с другом ----------
   async function renderDm() {
     const main = $('chat');
@@ -1087,11 +1212,24 @@
     const meNow = await F.me();
     const key = f.id + ':' + msgs.length + ':' + msgs.filter((m) => m.delivered).length + ':' + rxKey(msgs) + ':' + f.online + ':' + JSON.stringify(f.presence) + ':' + (meNow.server ? meNow.server.address : '') + ':' + (call ? call.id + call.state : '');
     if (key === lastRendered) return;
-    const keepInput = main.querySelector('#msgInput') && main.querySelector('#msgInput').value;
-    const sameFriend = lastRendered.startsWith(f.id + ':');
-    const sc = scrollState(sameFriend);
     lastRendered = key;
-    main.innerHTML = '';
+    const myName = myProf.name || 'Я';
+    const c = convOpen('dm:' + f.id, (main) => {
+      const head = document.createElement('div');
+      const stage = document.createElement('div'); stage.className = 'stageslot';
+      const box = document.createElement('div'); box.id = 'msgs';
+      const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
+      let inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать ${f.name}`;
+      const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
+      form.append(inp, sb);
+      form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(f.id); kChat.restore(box, { bottom: true }); await F.send(f.id, v, rp); refresh(); };
+      replyBar(form, f.id);
+      inp = attachTo(form, inp, { id: f.id }, main);
+      main.append(head, stage, box, form);
+      if (shown) setTimeout(() => inp.focus(), 0);
+      return { head, stage, box, form, inp };
+    });
+    // шапка
     const head = document.createElement('div'); head.className = 'chead';
     const who = document.createElement('div'); who.style.cursor = 'pointer'; who.title = 'Профиль';
     who.innerHTML = '<div class="nm"></div><div class="st"></div>';
@@ -1099,7 +1237,7 @@
     const sp = document.createElement('span'); sp.className = 'sp';
     const inv = document.createElement('button'); inv.className = 'btn ghost'; inv.innerHTML = I.invite + '<span>Позвать на сервер</span>';
     inv.title = 'Позвать на один из твоих серверов';
-    inv.onclick = (e) => { e.stopPropagation(); inviteMenu(f, inv.getBoundingClientRect()); };
+    inv.onclick = (e) => { e.stopPropagation(); kToggleFloat(inv, () => inviteMenu(f, inv.getBoundingClientRect())); };
     const back = document.createElement('button'); back.className = 'iconbtn back'; back.title = 'К друзьям'; back.innerHTML = I.left;
     back.onclick = goHome;
     const cb = document.createElement('button'); cb.className = 'iconbtn callme'; cb.innerHTML = I.phone;
@@ -1108,63 +1246,30 @@
     cb.onclick = () => startCall(f);
     const pr = document.createElement('button'); pr.className = 'iconbtn'; pr.title = 'Профиль'; pr.innerHTML = I.user;
     const mo = document.createElement('button'); mo.className = 'iconbtn'; mo.title = 'Ещё'; mo.innerHTML = I.more;
-    mo.onclick = () => friendMenu(f, mo.getBoundingClientRect());
+    mo.onclick = (e) => { e.stopPropagation(); kToggleFloat(mo, () => friendMenu(f, mo.getBoundingClientRect())); };
     const cl = document.createElement('button'); cl.className = 'iconbtn'; cl.title = 'Закрыть беседу'; cl.innerHTML = I.x;
     cl.onclick = () => closeDm(f.id);
     const hav = ava(f, true);
-    pr.onclick = () => openCard(f, pr); who.onclick = () => openCard(f, hav); hav.style.cursor = 'pointer'; hav.onclick = () => openCard(f, hav);
+    pr.onclick = (e) => { e.stopPropagation(); kToggleFloat(pr, () => openCard(f, pr)); };
+    who.onclick = (e) => { e.stopPropagation(); kToggleFloat(who, () => openCard(f, hav)); };
+    hav.style.cursor = 'pointer'; hav.onclick = (e) => { e.stopPropagation(); kToggleFloat(hav, () => openCard(f, hav)); };
     inv.classList.add('mhide'); pr.classList.add('mhide'); cl.classList.add('mhide');
-    head.append(back, hav, who, sp, cb, inv, pr, mo, cl);
-    const box = document.createElement('div'); box.id = 'msgs';
-    let lastDay = '';
-    for (const m of msgs) {
-      const day = new Date(m.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-      if (day !== lastDay) { lastDay = day; const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.appendChild(d); }
-      const row = document.createElement('div'); row.className = 'm' + (m.from === 'me' ? ' me' : ''); row.dataset.mid = m.mid || '';
-      if (m.invite) {
-        const c = document.createElement('div'); c.className = 'inv';
-        const t = document.createElement('div'); t.style.flex = '1';
-        t.innerHTML = '<b></b><span></span>';
-        t.firstChild.textContent = m.from === 'me' ? `Ты позвал на «${m.invite.name || m.invite.address}»` : `Зовёт на «${m.invite.name || m.invite.address}»`;
-        t.lastChild.textContent = m.invite.address;
-        c.insertAdjacentHTML('beforeend', I.server); c.appendChild(t);
-        if (m.from !== 'me') {
-          const go = document.createElement('button'); go.className = 'btn'; go.textContent = 'Зайти';
-          go.onclick = async () => { go.disabled = true; go.textContent = 'Подключаюсь…'; const r = await F.join(m.invite.address, m.invite.name); if (r && r.error) { kSay(r.error); } go.disabled = false; go.textContent = 'Зайти'; };
-          c.appendChild(go);
-        }
-        row.appendChild(c);
-      } else {
-        if (m.reply) row.appendChild(quoteView(m.reply));
-        if (m.file) row.appendChild(fileView(m.file));
-        if (m.text) {
-          const b = document.createElement('div'); b.className = 'b';
-          m.text.split(/(https?:\/\/\S+)/g).forEach((part, i) => {
-            if (i % 2) { const a = document.createElement('a'); a.href = part; a.textContent = part; a.target = '_blank'; b.appendChild(a); } else b.appendChild(document.createTextNode(part));
-          });
-          row.appendChild(b);
-        }
-      }
-      if (!m.invite) { row.appendChild(rxView(m, { id: f.id }, (uid) => (uid === me.id ? (myProf.name || 'Я') : f.name))); rxHook(row, m, { id: f.id }, m.from === 'me' ? (myProf.name || 'Я') : f.name, m.from === 'me'); }
-      const t = document.createElement('div'); t.className = 't';
-      t.textContent = new Date(m.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) + (m.from === 'me' ? (m.delivered ? ' · доставлено' : ' · ждёт друга') : '');
-      row.appendChild(t);
-      box.appendChild(row);
-    }
-    if (!msgs.length) box.innerHTML = `<div class="ractempty" style="margin:auto">Это начало вашей переписки с ${f.name.replace(/[<>&]/g, '')}.<br>Напиши первым — или позови на сервер.</div>`;
-    const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
-    let inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать ${f.name}`;
-    const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
-    form.append(inp, sb);
-    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(f.id); await F.send(f.id, v, rp); refresh(); };
-    replyBar(form, f.id);
-    inp = attachTo(form, inp, { id: f.id }, main);
-    main.append(head);
-    mountStage(main);
-    main.append(box, form);
-    restoreScroll(box, sc);
-    if (sameFriend && keepInput) inp.value = keepInput;
-    if (shown) inp.focus();
+    head.append(back, hav, who, sp, cb, inv, pr, mo, kHelp.button('dm'), cl);
+    c.head.replaceWith(head); c.head = head;
+    mountStage(c.stage);
+    // лента: как на сервере — аватарка, ник, время; меняется только то, что поменялось
+    let lastMine = -1; msgs.forEach((m, i) => { if (m.from === 'me') lastMine = i; });
+    const items = msgItems(msgs, {
+      target: { id: f.id },
+      fromKey: (m) => m.from,
+      nameOf: (m) => (m.from === 'me' ? myName : f.name),
+      avaOf: (m) => (m.from === 'me' ? { name: myName, avatar: myProf.avatar } : f),
+      onAva: (m, el) => { if (m.from !== 'me') kToggleFloat(el, () => openCard(f, el)); },
+      mineOf: (m) => m.from === 'me',
+      statusOf: (m, i) => (m.from !== 'me' ? '' : !m.delivered ? 'ждёт друга' : i === lastMine ? 'доставлено' : ''),
+      uname: (uid) => (uid === me.id ? myName : f.name),
+    });
+    convFill(c, items, `Это начало вашей переписки с ${f.name.replace(/[<>&]/g, '')}.<br>Напиши первым — или позови на сервер.`);
   }
   // ---------- моя панель внизу слева ----------
   let myProf = await A.getProfile().catch(() => null) || {};
@@ -1176,7 +1281,7 @@
     w.firstChild.textContent = myProf.name || 'Я';
     w.lastChild.textContent = gcall ? 'в звонке группы' : call && call.state === 'live' ? 'в звонке' : voice ? 'в голосе' : 'в сети';
     b.append(av, w);
-    b.onclick = () => openCard({ name: myProf.name || 'Я', avatar: myProf.avatar, bio: myProf.bio, color: myProf.color, color2: myProf.color2, status: 'me', online: true }, b);
+    b.title = 'Профиль: ник, аватарка, шапка'; b.onclick = () => settingsDialog('profile'); // как на сервере: свой ник внизу — настройки профиля
     // как на сервере: в звонке — его состояние, вне звонка — заранее выбранное
     const inCall = gcall || (call && call.state !== 'ringing');
     const st = gcall ? { muted: gcall.muted, deaf: gcall.deaf } : call && call.state !== 'ringing' ? { muted: call.muted, deaf: call.deaf } : voice ? { muted: voice.muted, deaf: voice.deaf } : pref;
@@ -1187,7 +1292,7 @@
     const d = document.createElement('button'); d.type = 'button'; d.className = 'iconbtn' + (st.deaf ? ' off' : ''); d.innerHTML = st.deaf ? I.headOff : I.head;
     d.title = st.deaf ? 'Включить звук' : 'Выключить звук';
     d.onclick = () => { if (gcall) gDeaf(!gcall.deaf); else if (inCall) setDeaf(!call.deaf); else if (voice) F.voiceCmd('deaf'); else setDeaf(!pref.deaf); };
-    const cog = document.createElement('button'); cog.type = 'button'; cog.className = 'iconbtn'; cog.title = 'Настройки голоса'; cog.innerHTML = I.cog; cog.onclick = () => voiceDialog();
+    const cog = document.createElement('button'); cog.type = 'button'; cog.className = 'iconbtn'; cog.title = 'Настройки'; cog.innerHTML = I.cog; cog.onclick = () => settingsDialog('voice');
     p.append(b, grp(m, 'in', 'Микрофон: выбрать устройство'), grp(d, 'out', 'Звук: куда выводить'), cog);
   }
 
@@ -1229,7 +1334,7 @@
     r.value = Math.round((VS[key] ?? 1) * 100); vb.textContent = r.value + '%';
     r.oninput = () => { vb.textContent = r.value + '%'; VS[key] = r.value / 100; if (isIn) liveGain(); else applyOut(); };
     r.onchange = () => saveVS({ [key]: r.value / 100 });
-    el.querySelector('.vbmore').onclick = () => { closeDev(); voiceDialog(); };
+    el.querySelector('.vbmore').onclick = () => { closeDev(); settingsDialog('voice'); };
     document.body.appendChild(el);
     const place = () => { const rc = (btn.closest('.devgrp') || btn).getBoundingClientRect(); el.style.left = Math.max(8, Math.min(rc.left, innerWidth - el.offsetWidth - 8)) + 'px'; el.style.top = Math.max(8, rc.top - el.offsetHeight - 8) + 'px'; };
     place(); if (window.ResizeObserver) new ResizeObserver(place).observe(el);
@@ -1252,7 +1357,33 @@
   async function applyOut() {
     const auds = [call && call.audio, ...(gcall ? [...gcall.peers.values()].map((x) => x.audio) : [])].filter(Boolean);
     const dv = VS.outLabel ? (await navigator.mediaDevices.enumerateDevices().catch(() => [])).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel) : null;
-    for (const a of auds) { setVol(a, (a === (call && call.audio) ? (call.vol ?? 1) : 1) * (VS.masterVol ?? 1)); if (a.setSinkId) a.setSinkId(dv ? dv.deviceId : '').catch(() => {}); }
+    for (const a of auds) { if (a.setSinkId) a.setSinkId(dv ? dv.deviceId : '').catch(() => {}); }
+    applyPeerVol();
+  }
+  // громкость каждого собеседника (до 200%) и «заглушить для себя» — запоминается по человеку, как на сервере
+  let pvol = {}; try { pvol = JSON.parse(localStorage.getItem('pvol') || '{}') || {}; } catch {}
+  const volOf = (id) => { const x = pvol[id] || {}; return x.mute ? 0 : (x.v ?? 1); };
+  function savePvol() { try { localStorage.setItem('pvol', JSON.stringify(pvol)); } catch {} }
+  function applyPeerVol() {
+    const m = VS.masterVol ?? 1;
+    if (call && call.audio) setVol(call.audio, volOf(call.id) * m);
+    if (gcall) for (const [id, p] of gcall.peers) if (p.audio) setVol(p.audio, volOf(id) * m);
+  }
+  function volPop(id, anchor) {
+    const f = list.find((x) => x.id === id) || personOf(id) || { name: 'Участник' };
+    if (floatBy === anchor && document.querySelector('.menu.volpop')) { closeFloat(); floatBy = null; return; }
+    closeFloat();
+    const x = pvol[id] || {};
+    const m = document.createElement('div'); m.className = 'menu volpop';
+    m.innerHTML = '<div class="vh"><b></b></div><label class="vl">Громкость: <b class="vv"></b></label><input type="range" min="0" max="200" step="5"><label class="chk vm"><input type="checkbox"> Заглушить для себя</label>';
+    m.querySelector('.vh b').textContent = f.name || 'Участник';
+    const r = m.querySelector('input[type=range]'), vv = m.querySelector('.vv'), mu = m.querySelector('.vm input');
+    r.value = Math.round((x.v ?? 1) * 100); vv.textContent = r.value + '%'; mu.checked = !!x.mute;
+    r.oninput = () => { vv.textContent = r.value + '%'; pvol[id] = Object.assign(pvol[id] || {}, { v: r.value / 100 }); applyPeerVol(); };
+    r.onchange = savePvol;
+    mu.onchange = () => { pvol[id] = Object.assign(pvol[id] || {}, { mute: mu.checked }); savePvol(); applyPeerVol(); drawStage(); };
+    m.onpointerdown = (e) => e.stopPropagation();
+    place(m, anchor.getBoundingClientRect()); floatBy = anchor;
   }
   // громкость до 200%: сверх 100% — через усилитель WebAudio (сам <audio> тогда беззвучный, но играет)
   function setVol(a, v) {
@@ -1269,34 +1400,193 @@
     a.volume = Math.min(1, v);
   }
   // ---------- настройки голоса (общие с серверами) ----------
-  function voiceDialog() {
-    const dl = document.createElement('dialog'); dl.className = 'kdlg vdlg';
-    const NS = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Максимум'], ['browser', 'Встроенный'], ['off', 'Выключен']].filter(([v]) => !A.android || !['smart', 'dfn', 'ultra'].includes(v));
-    dl.innerHTML = `<div class="kd-b"><div class="kd-t">Настройки голоса</div><div class="kd-x">Общие для звонков в личке, группах и на серверах.</div>
-      <label class="vl">Шумодав</label><div class="seg" id="vdNs"></div>
-      <label class="vl">Сила шумодава: <b id="vdStrV"></b></label><input type="range" id="vdStr" min="40" max="100" step="5">
-      <label class="chk"><input type="checkbox" id="vdEc"> Убирать эхо</label>
-      <label class="chk"><input type="checkbox" id="vdAgc"> Выравнивать громкость микрофона</label>
-      <p class="hint">Шумодав сменится со следующего звонка.</p>
-      <label class="chk"><input type="checkbox" id="vdSnd"> Звуки (звонки, сообщения, вход в голос)</label>
-      <label class="vl">Громкость звуков: <b id="vdSndV"></b></label><input type="range" id="vdSndVol" min="0" max="200" step="5">
-      <details class="vsnd"><summary>Звуки по событиям — послушать, поставить свой</summary><div id="vdSndList"></div></details></div><div class="kd-f"><button type="button" class="ok">Готово</button></div>`;
-    dl.querySelector('.ok').onclick = () => dl.close();
-    const seg = dl.querySelector('#vdNs');
-    for (const [v, t] of NS) { const x = document.createElement('button'); x.type = 'button'; x.textContent = t; x.classList.toggle('on', VS.nsMode === v); x.onclick = () => { saveVS({ nsMode: v }); seg.querySelectorAll('button').forEach((y) => y.classList.toggle('on', y === x)); }; seg.appendChild(x); }
-    const sr = dl.querySelector('#vdStr'), sv = dl.querySelector('#vdStrV'); sr.value = VS.nsStrength ?? 80; sv.textContent = sr.value + '%';
-    sr.oninput = () => { sv.textContent = sr.value + '%'; }; sr.onchange = () => saveVS({ nsStrength: Number(sr.value) });
-    const ec = dl.querySelector('#vdEc'), agc = dl.querySelector('#vdAgc'); ec.checked = VS.ec !== false; agc.checked = VS.agc !== false;
-    ec.onchange = () => saveVS({ ec: ec.checked }); agc.onchange = () => saveVS({ agc: agc.checked });
-    if (window.KSound) KSound.ready.then(() => {
-      const sc = dl.querySelector('#vdSnd'), sv2 = dl.querySelector('#vdSndVol'), sl = dl.querySelector('#vdSndV');
-      sc.checked = KSound.enabled; sv2.value = Math.round(KSound.volume * 100); sl.textContent = sv2.value + '%';
-      sc.onchange = () => { KSound.enabled = sc.checked; };
-      sv2.oninput = () => { sl.textContent = sv2.value + '%'; }; sv2.onchange = () => { KSound.volume = sv2.value / 100; KSound.play('dm', 1); };
-      dl.querySelector('.vsnd').addEventListener('toggle', (e) => { if (e.target.open) KSound.renderSettings(dl.querySelector('#vdSndList')); });
-    });
-    dl.addEventListener('close', () => dl.remove());
+  // ---------- настройки — те же вкладки, что на сервере: профиль, голос, стрим, вид (всё общее для всего приложения) ----------
+  function voiceDialog() { return settingsDialog('voice'); }
+  const PALETTES = [['#22e1ff', '#ff3ec8', 'Неон'], ['#ff3ec8', '#8b5cff', 'Синтвейв'], ['#b6ff2e', '#22e1ff', 'Кислота'], ['#ff8a3d', '#ff3e7a', 'Закат'], ['#8be9ff', '#b39dff', 'Лёд'], ['#ff4d6d', '#ffb02e', 'Рубин']];
+  const BANNERS = [['#22e1ff', '#ff3ec8'], ['#ff3ec8', '#8b5cff'], ['#b6ff2e', '#22e1ff'], ['#ff8a3d', '#ff3e7a'], ['#8be9ff', '#b39dff'], ['#ff4d6d', '#ffb02e'], ['#1f2937', '#4b5563'], ['#14532d', '#22c55e']];
+  const fileUrlOf = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+  async function smallAvatar(f) {
+    const bmp = await createImageBitmap(f); const side = Math.min(bmp.width, bmp.height);
+    const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 128, 128);
+    for (const q of [0.85, 0.7, 0.5, 0.35]) { const u = c.toDataURL('image/webp', q); if (u.length < 55000) return u; }
+    return null;
+  }
+  async function bannerOf(f) {
+    if (f.type === 'image/gif') { if (f.size > 1.5 * 1024 * 1024) { kSay('Гифка для шапки — до 1.5 МБ'); return null; } return fileUrlOf(f); }
+    const bmp = await createImageBitmap(f); const W = 600, H = 240, k = Math.max(W / bmp.width, H / bmp.height);
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.drawImage(bmp, (W - bmp.width * k) / 2, (H - bmp.height * k) / 2, bmp.width * k, bmp.height * k);
+    return c.toDataURL('image/webp', 0.85);
+  }
+  let setDlg = null;
+  async function settingsDialog(tab = 'voice') {
+    if (setDlg && setDlg.open) { setDlg.close(); return; }
+    const dl = document.createElement('dialog'); dl.className = 'kdlg sdlg'; setDlg = dl;
+    const TABS = [['profile', I.user, 'Профиль'], ['voice', I.mic, 'Голос'], ['stream', I.screen, 'Стрим'], ['look', P('<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2a10 10 0 0 0 0 20c.9 0 1.6-.7 1.6-1.6 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.9.7-1.6 1.6-1.6H16a6 6 0 0 0 6-6c0-4.9-4.5-8.6-10-8.6z"/>'), 'Вид']];
+    dl.innerHTML = '<div class="stabs"></div><div class="kd-b spane"></div><div class="kd-f"><span class="hslot"></span><span style="flex:1"></span><button type="button" class="ok">Готово</button></div>';
+    const tabsEl = dl.querySelector('.stabs'), pane = dl.querySelector('.spane');
+    let cur = tab, dirty = null; // dirty() — есть несохранённые правки профиля; save() — сохранить их
+    dl.querySelector('.hslot').appendChild(kHelp.button(() => cur));
+    for (const [id, ic, name] of TABS) { const b = document.createElement('button'); b.type = 'button'; b.className = 'stab'; b.dataset.t = id; b.innerHTML = ic + '<span></span>'; b.lastChild.textContent = name; b.onclick = () => show(id); tabsEl.appendChild(b); }
+    const done = () => { if (dirty && dirty.check()) dirty.save(); dl.close(); };
+    dl.querySelector('.ok').onclick = done;
+    function show(id) {
+      if (dirty && dirty.check()) dirty.save();
+      dirty = null; cur = id; pane.innerHTML = '';
+      tabsEl.querySelectorAll('.stab').forEach((b) => b.classList.toggle('on', b.dataset.t === id));
+      ({ profile: paneProfile, voice: paneVoice, stream: paneStream, look: paneLook })[id]();
+    }
+    const h3 = (t, lead) => { const h = document.createElement('h3'); h.textContent = t; pane.appendChild(h); if (lead) { const p = document.createElement('p'); p.className = 'lead'; p.textContent = lead; pane.appendChild(p); } };
+    // профиль
+    function paneProfile() {
+      h3('Профиль', 'Так тебя видят другие: нажми на любой ник — откроется такая карточка.');
+      const start = { name: myProf.name || '', avatar: myProf.avatar || null, bio: myProf.bio || '', color: myProf.color || null, color2: myProf.color2 || null, banner: myProf.banner || null };
+      const d = { ...start };
+      const w = document.createElement('div'); w.className = 'sprof';
+      w.innerHTML = `<div class="srow"><label class="savapick" title="Сменить аватарку"><span class="sava"></span><input type="file" accept="image/*" hidden></label>
+        <div style="flex:1;min-width:0"><label class="vl">Ник</label><input type="text" class="sname" maxlength="24"><button type="button" class="linkbtn sadel">Убрать аватарку</button></div></div>
+        <label class="vl">О себе <span class="scnt"></span></label><textarea class="sbio" maxlength="190" rows="3" placeholder="Во что играешь, когда тебя ловить…"></textarea>
+        <label class="vl">Шапка карточки — картинка или гифка</label>
+        <div class="srow"><label class="btn ghost">Загрузить<input type="file" class="sbf" accept="image/gif,image/png,image/jpeg,image/webp" hidden></label><button type="button" class="linkbtn sbdel">Убрать картинку</button><span class="hint">до 1.5 МБ, гифки двигаются</span></div>
+        <label class="vl">Или цвет</label><div class="sban"></div>
+        <div class="sprev"></div>
+        <div class="srow" style="margin-top:12px"><button type="button" class="btn ssave">Сохранить профиль</button><button type="button" class="btn ghost sundo">Отменить изменения</button></div>`;
+      pane.appendChild(w);
+      const q = (c) => w.querySelector(c);
+      const paint = () => {
+        const av = ava({ name: q('.sname').value || 'Я', avatar: d.avatar }, false); av.classList.add('sava'); q('.sava').replaceWith(av);
+        q('.scnt').textContent = q('.sbio').value.length + '/190'; q('.sadel').hidden = !d.avatar; q('.sbdel').hidden = !d.banner;
+        w.querySelectorAll('.sban button').forEach((b) => b.classList.toggle('on', b.dataset.a === d.color && b.dataset.b === d.color2));
+        const pv = q('.sprev'); pv.innerHTML = '';
+        const ban = document.createElement('div'); ban.className = 'spban';
+        ban.style.background = d.banner ? `center / cover url("${d.banner}")` : `linear-gradient(135deg, ${d.color || 'var(--accent)'}, ${d.color2 || 'var(--accent2)'})`;
+        const a2 = ava({ name: q('.sname').value || 'Я', avatar: d.avatar }, false); a2.classList.add('spava');
+        const t = document.createElement('div'); t.className = 'spt'; t.innerHTML = '<b></b><span></span>'; t.firstChild.textContent = q('.sname').value || 'Я'; t.lastChild.textContent = q('.sbio').value;
+        pv.append(ban, a2, t);
+      };
+      q('.sname').value = d.name; q('.sbio').value = d.bio;
+      for (const [a, b] of BANNERS) { const x = document.createElement('button'); x.type = 'button'; x.dataset.a = a; x.dataset.b = b; x.style.background = `linear-gradient(135deg, ${a}, ${b})`; x.onclick = () => { d.color = a; d.color2 = b; paint(); }; q('.sban').appendChild(x); }
+      q('.savapick input').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const u = await smallAvatar(f); if (u) { d.avatar = u; paint(); } } catch { kSay('Не получилось открыть картинку'); } };
+      q('.sadel').onclick = () => { d.avatar = null; paint(); };
+      q('.sbf').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; try { const u = await bannerOf(f); if (u) { d.banner = u; paint(); } } catch { kSay('Не получилось открыть картинку'); } };
+      q('.sbdel').onclick = () => { d.banner = null; paint(); };
+      q('.sname').oninput = paint; q('.sbio').oninput = paint;
+      const save = async () => {
+        const name = q('.sname').value.trim().slice(0, 24); if (!name) { flash('Впиши ник'); return; }
+        const np = { ...myProf, name, avatar: d.avatar, bio: q('.sbio').value.trim().slice(0, 190), color: d.color, color2: d.color2, banner: d.banner };
+        await A.setProfile(np).catch(() => {});
+        myProf = await A.getProfile().catch(() => np) || np;
+        Object.assign(start, { name, avatar: d.avatar, bio: np.bio, color: d.color, color2: d.color2, banner: d.banner });
+        renderMe(); lastRendered = ''; gLast = ''; refresh(); flash('Профиль сохранён');
+      };
+      dirty = { check: () => q('.sname').value.trim() !== start.name || q('.sbio').value.trim() !== start.bio || d.avatar !== start.avatar || d.color !== start.color || d.color2 !== start.color2 || d.banner !== start.banner, save };
+      q('.ssave').onclick = save;
+      q('.sundo').onclick = () => { Object.assign(d, start); q('.sname').value = start.name; q('.sbio').value = start.bio; paint(); flash('Изменения отменены'); };
+      q('.sname').onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } };
+      paint();
+    }
+    // голос
+    function paneVoice() {
+      h3('Голос', 'Общие для звонков в личке, группах и на серверах.');
+      const NS = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Максимум'], ['browser', 'Встроенный'], ['off', 'Выключен']].filter(([v]) => !A.android || !['smart', 'dfn', 'ultra'].includes(v));
+      const box = document.createElement('div');
+      box.innerHTML = `<label class="vl">Громкость микрофона: <b class="vgv"></b></label><input type="range" class="vg" min="0" max="200" step="5">
+        <label class="vl">Громкость участников (общая): <b class="vmv"></b></label><input type="range" class="vm" min="0" max="200" step="5">
+        <p class="hint">Громкость отдельного человека — нажми на него в звонке.</p>
+        <label class="vl">Шумодав</label><div class="seg vns"></div>
+        <label class="vl">Сила шумодава: <b class="vsv"></b></label><input type="range" class="vs" min="40" max="100" step="5">
+        <label class="chk"><input type="checkbox" class="vec"> Эхоподавление</label>
+        <label class="chk"><input type="checkbox" class="vagc"> Автогромкость микрофона</label>
+        <label class="chk"><input type="checkbox" class="vsnd"> Звуки: сообщения, звонки, вход и выход</label>
+        <label class="vl">Громкость звуков: <b class="vsndv"></b></label><input type="range" class="vsndr" min="0" max="200" step="5">
+        <details class="vsnds"><summary>Звуки по событиям — послушать, поставить свой</summary><div class="vsndl"></div></details>
+        <div class="vhk" hidden><label class="vl">Горячие клавиши (работают даже в игре)</label>
+          <div class="hkrow"><span>Микрофон вкл/выкл</span><button type="button" class="btn ghost hk" data-act="mute"></button></div>
+          <div class="hkrow"><span>Звук вкл/выкл</span><button type="button" class="btn ghost hk" data-act="deaf"></button></div><p class="hint hkerr"></p></div>`;
+      pane.appendChild(box);
+      const q = (c) => box.querySelector(c);
+      const g = q('.vg'), gv = q('.vgv'); g.value = Math.round((VS.micGain ?? 1) * 100); gv.textContent = g.value + '%';
+      g.oninput = () => { gv.textContent = g.value + '%'; VS.micGain = g.value / 100; liveGain(); }; g.onchange = () => saveVS({ micGain: g.value / 100 });
+      const mv = q('.vm'), mvv = q('.vmv'); mv.value = Math.round((VS.masterVol ?? 1) * 100); mvv.textContent = mv.value + '%';
+      mv.oninput = () => { mvv.textContent = mv.value + '%'; VS.masterVol = mv.value / 100; applyOut(); }; mv.onchange = () => saveVS({ masterVol: mv.value / 100 });
+      const seg = q('.vns');
+      for (const [v, t] of NS) { const x = document.createElement('button'); x.type = 'button'; x.textContent = t; x.classList.toggle('on', VS.nsMode === v); x.onclick = () => { saveVS({ nsMode: v }); seg.querySelectorAll('button').forEach((y) => y.classList.toggle('on', y === x)); }; seg.appendChild(x); }
+      const sr = q('.vs'), sv = q('.vsv'); sr.value = VS.nsStrength ?? 80; sv.textContent = sr.value + '%';
+      sr.oninput = () => { sv.textContent = sr.value + '%'; }; sr.onchange = () => saveVS({ nsStrength: Number(sr.value) });
+      const ec = q('.vec'), agc = q('.vagc'); ec.checked = VS.ec !== false; agc.checked = VS.agc !== false;
+      ec.onchange = () => saveVS({ ec: ec.checked }); agc.onchange = () => saveVS({ agc: agc.checked });
+      if (window.KSound) KSound.ready.then(() => {
+        const sc = q('.vsnd'), sv2 = q('.vsndr'), sl = q('.vsndv');
+        sc.checked = KSound.enabled; sv2.value = Math.round(KSound.volume * 100); sl.textContent = sv2.value + '%';
+        sc.onchange = () => { KSound.enabled = sc.checked; };
+        sv2.oninput = () => { sl.textContent = sv2.value + '%'; }; sv2.onchange = () => { KSound.volume = sv2.value / 100; KSound.play('dm', 1); };
+        q('.vsnds').addEventListener('toggle', (e) => { if (e.target.open) KSound.renderSettings(q('.vsndl')); });
+      });
+      // горячие клавиши (на компе): одна клавиша, просто Ctrl/Alt, сочетание или боковая кнопка мыши
+      if (A.hotkeys && A.setHotkey && !window.kPhone) {
+        q('.vhk').hidden = false;
+        const MODN = { LCtrl: 'Левый Ctrl', RCtrl: 'Правый Ctrl', LAlt: 'Левый Alt', RAlt: 'Правый Alt', LShift: 'Левый Shift', RShift: 'Правый Shift' };
+        const pk = (x) => (MODN[x] || (x ? x.replace('CommandOrControl', 'Ctrl').replace('Mouse4', 'Мышь: назад').replace('Mouse5', 'Мышь: вперёд').replace(/(^|\+)Space$/, '$1Пробел') : 'не задано'));
+        const draw = (k) => box.querySelectorAll('.hk').forEach((b) => { if (!b.classList.contains('rec')) b.textContent = pk(k[b.dataset.act]); });
+        A.hotkeys().then(draw);
+        const MODK = { ControlLeft: 'LCtrl', ControlRight: 'RCtrl', AltLeft: 'LAlt', AltRight: 'RAlt', ShiftLeft: 'LShift', ShiftRight: 'RShift' };
+        let rec = null, modOnly = null;
+        const stop = () => { if (!rec) return; rec.classList.remove('rec'); rec = null; A.pauseHotkeys && A.pauseHotkeys(false); A.hotkeys().then(draw); };
+        const save = async (act, accel) => { const r = await A.setHotkey(act, accel); q('.hkerr').textContent = r && r.error ? r.error : ''; if (r && r.hotkeys) draw(r.hotkeys); stop(); };
+        box.querySelectorAll('.hk').forEach((b) => (b.onclick = () => { stop(); rec = b; b.classList.add('rec'); b.textContent = 'Нажми клавишу…'; q('.hkerr').textContent = 'Одна клавиша (можно просто Ctrl или Alt) или сочетание. Esc — отмена.'; A.pauseHotkeys && A.pauseHotkeys(true); }));
+        const KEY = (code) => { if (/^Key[A-Z]$/.test(code)) return code.slice(3); if (/^Digit\d$/.test(code)) return code.slice(5); if (/^F\d{1,2}$/.test(code)) return code; if (/^Numpad\d$/.test(code)) return 'Num' + code.slice(6); return { Space: 'Space', Tab: 'Tab', Insert: 'Insert', Delete: 'Delete', Home: 'Home', End: 'End', PageUp: 'PageUp', PageDown: 'PageDown', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', Backquote: '`' }[code] || null; };
+        const kd = (e) => {
+          if (!rec) return; e.preventDefault(); e.stopPropagation();
+          if (MODK[e.code] || /^Meta/.test(e.code)) { modOnly = e.repeat ? modOnly : (MODK[e.code] && !modOnly ? e.code : null); return; }
+          modOnly = null;
+          if (e.code === 'Escape') return stop();
+          const k = KEY(e.code); if (!k) { q('.hkerr').textContent = 'Эту клавишу назначить нельзя'; return; }
+          save(rec.dataset.act, [e.ctrlKey && 'CommandOrControl', e.altKey && 'Alt', e.shiftKey && 'Shift', k].filter(Boolean).join('+'));
+        };
+        const ku = (e) => { if (!rec) return; e.preventDefault(); e.stopPropagation(); if (modOnly && e.code === modOnly) { const a = MODK[e.code]; modOnly = null; save(rec.dataset.act, a); } };
+        window.addEventListener('keydown', kd, true); window.addEventListener('keyup', ku, true);
+        dl.addEventListener('close', () => { stop(); window.removeEventListener('keydown', kd, true); window.removeEventListener('keyup', ku, true); });
+      }
+    }
+    // стрим
+    async function paneStream() {
+      h3('Стрим', 'Как твой экран увидят зрители.');
+      const l = document.createElement('label'); l.className = 'vl'; l.textContent = 'Качество'; pane.appendChild(l);
+      const pref = (A.shareGet ? await A.shareGet().catch(() => null) : null) || sharePref;
+      pane.appendChild(kShareQ.controls(pref, (c) => { sharePref = c; A.shareSet && A.shareSet(c); }));
+      const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Его же можно выбрать в окне «Что показать?» и поменять во время стрима.'; pane.appendChild(p);
+    }
+    // вид — один на всё приложение
+    async function paneLook() {
+      h3('Вид', 'Цвета, свечение и анимации. Меняется сразу и везде.');
+      const th = Object.assign({ accent: '#22e1ff', accent2: '#ff3ec8', glow: 0.7, motion: true, bg: 'calm', bgDim: 0.55, bgBlur: 0 }, await A.getTheme().catch(() => null) || {});
+      const put = (o) => { Object.assign(th, o); delete th.at; applyTheme(th); A.setTheme(th).catch(() => {}); };
+      const box = document.createElement('div');
+      box.innerHTML = `<label class="vl">Палитра</label><div class="swat"></div>
+        <label class="vl">Свечение: <b class="lgv"></b></label><input type="range" class="lg" min="0" max="100" step="5">
+        <label class="vl">Фон</label><div class="seg lbg"></div>
+        <div class="lcust"><label class="btn ghost">Загрузить картинку или гифку<input type="file" class="lbf" accept="image/*" hidden></label>
+          <label class="vl">Затемнение: <b class="ldv"></b></label><input type="range" class="ld" min="0" max="90" step="5"></div>
+        <label class="chk"><input type="checkbox" class="lmo"> Анимации интерфейса</label>`;
+      pane.appendChild(box);
+      const q = (c) => box.querySelector(c);
+      for (const [a, b, n] of PALETTES) { const x = document.createElement('button'); x.type = 'button'; x.title = n; x.style.background = `linear-gradient(135deg, ${a}, ${b})`; x.classList.toggle('on', th.accent === a && th.accent2 === b); x.onclick = () => { put({ accent: a, accent2: b }); box.querySelectorAll('.swat button').forEach((y) => y.classList.toggle('on', y === x)); }; q('.swat').appendChild(x); }
+      const gl = q('.lg'), glv = q('.lgv'); gl.value = Math.round((th.glow ?? 0.7) * 100); glv.textContent = gl.value + '%';
+      gl.oninput = () => { glv.textContent = gl.value + '%'; put({ glow: gl.value / 100 }); };
+      const BG = [['calm', 'Спокойный'], ['grid', 'Сетка'], ['aurora', 'Живое сияние'], ['custom', 'Своя картинка']];
+      const syncC = () => { q('.lcust').hidden = th.bg !== 'custom'; };
+      for (const [v, t] of BG) { const x = document.createElement('button'); x.type = 'button'; x.textContent = t; x.classList.toggle('on', th.bg === v); x.onclick = () => { put({ bg: v }); box.querySelectorAll('.lbg button').forEach((y) => y.classList.toggle('on', y === x)); syncC(); }; q('.lbg').appendChild(x); }
+      q('.lbf').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f) return; const r = await A.setBg(await f.arrayBuffer(), f.type).catch(() => null); if (r && r.error) { kSay(r.error); return; } put({ bg: 'custom' }); loadBg(); };
+      const dm = q('.ld'), dmv = q('.ldv'); dm.value = Math.round((th.bgDim ?? 0.55) * 100); dmv.textContent = dm.value + '%';
+      dm.oninput = () => { dmv.textContent = dm.value + '%'; put({ bgDim: dm.value / 100 }); };
+      q('.lmo').checked = th.motion !== false; q('.lmo').onchange = () => put({ motion: q('.lmo').checked });
+      syncC();
+    }
+    dl.addEventListener('close', () => { dl.remove(); if (setDlg === dl) setDlg = null; });
+    { let out = false; dl.addEventListener('pointerdown', (e) => { const r = dl.getBoundingClientRect(); out = e.target === dl && (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom); }); dl.addEventListener('click', (e) => { if (out && e.target === dl) done(); out = false; }); }
     document.body.appendChild(dl); dl.showModal();
+    show(tab);
   }
 
   $('navHome').querySelector('.ic').innerHTML = I.users;
@@ -1382,9 +1672,10 @@
     }
     if (call.state === 'live' || call.state === 'connecting') {
       const vol = document.createElement('label'); vol.className = 'cvol'; vol.title = 'Громкость друга';
-      vol.innerHTML = I.vol; const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 200; r.step = 5; r.value = Math.round((call.vol ?? 1) * 100);
+      vol.innerHTML = I.vol; const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 200; r.step = 5; r.value = Math.round(((pvol[call.id] || {}).v ?? 1) * 100);
       const fill = () => r.style.setProperty('--v', (r.value / 2) + '%'); fill();
-      r.oninput = () => { fill(); call.vol = r.value / 100; if (call.audio) setVol(call.audio, call.vol * (VS.masterVol ?? 1)); };
+      r.oninput = () => { fill(); pvol[call.id] = Object.assign(pvol[call.id] || {}, { v: r.value / 100 }); applyPeerVol(); };
+      r.onchange = savePvol;
       vol.appendChild(r); bar.appendChild(vol);
       btn(call.muted ? 'off' : '', call.muted ? I.micOff : I.mic, call.muted ? 'Включить микрофон' : 'Выключить микрофон', () => setMuted(!call.muted));
       btn(call.deaf ? 'off' : '', call.deaf ? I.headOff : I.head, call.deaf ? 'Включить звук' : 'Выключить звук', () => setDeaf(!call.deaf));
@@ -1502,7 +1793,7 @@
     pc.ontrack = (e) => {
       if (onRemoteTrack(c.id, e)) return;
       const a = c.audio || (c.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
-      setVol(a, (c.vol ?? 1) * (VS.masterVol ?? 1));
+      setVol(a, volOf(c.id) * (VS.masterVol ?? 1));
       (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
       a.play().catch(() => {});
       watchTalk(e.track);
@@ -1584,7 +1875,7 @@
     if (id === me.id) return { name: (myProf.name || 'Я'), avatar: myProf.avatar };
     const f = list.find((x) => x.id === id); if (f) return f;
     for (const g of groups) { const mb = g.members.find((x) => x.id === id); if (mb) return mb; }
-    return { name: 'кент' };
+    return { name: 'Без ника' };
   }
   const hasVideo = (id) => (id === me.id ? !!share : !!(remoteSharing.get(id) && remoteVid.get(id) && remoteVid.get(id).getVideoTracks().some((t) => t.readyState === 'live')));
   function vidOf(id) {
@@ -1598,7 +1889,7 @@
   function mountStage(container) {
     const c = stageCtx();
     if (!c) { stageEl.remove(); return false; }
-    container.appendChild(stageEl);
+    if (stageEl.parentElement !== container) container.appendChild(stageEl); // не трогаем, если уже на месте: иначе слетит полный экран
     drawStage();
     return true;
   }
@@ -1616,14 +1907,18 @@
       if (vid) {
         t.appendChild(vidOf(id));
         t.title = 'Нажми — на весь звонок, ещё раз — обратно';
-        t.onclick = () => { stageFocus = stageFocus === id ? null : id; drawStage(); };
+        t.onclick = () => { if (document.fullscreenElement === stageEl) return; stageFocus = stageFocus === id ? null : id; drawStage(); };
+        t.ondblclick = (e) => { e.preventDefault(); stageFull(id); };
       } else {
         const a = ava(p, false); a.classList.add('tava'); t.appendChild(a);
+        if (id !== me.id) { t.title = 'Нажми — громкость ' + (p.name || ''); t.style.cursor = 'pointer'; t.onclick = (e) => { e.stopPropagation(); volPop(id, t); }; }
       }
+      if (id !== me.id) t.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); volPop(id, t); };
+      if (id !== me.id && (pvol[id] || {}).mute) t.classList.add('pmuted');
       const nm = document.createElement('div'); nm.className = 'tname';
       const muted = id === me.id ? (c.muted || c.deaf) : remoteMuted.get(id);
       nm.innerHTML = (muted ? I.micOff : '') + '<span></span>' + (vid ? ' <i class="live">В ЭФИРЕ</i>' : '');
-      nm.querySelector('span').textContent = (p.name || 'кент') + (id === me.id ? ' (ты)' : '');
+      nm.querySelector('span').textContent = (p.name || 'Без ника') + (id === me.id ? ' (ты)' : '');
       t.appendChild(nm);
       if (c.wait && id !== me.id) { const w = document.createElement('div'); w.className = 'twait'; w.textContent = call && call.state === 'ringing' ? 'Звоним…' : 'Соединяемся…'; t.appendChild(w); }
       tiles.appendChild(t);
@@ -1634,10 +1929,24 @@
     btn(c.muted ? 'off' : '', c.muted ? I.micOff : I.mic, c.muted ? 'Включить микрофон' : 'Выключить микрофон', () => (isG ? gMute(!gcall.muted) : setMuted(!call.muted)));
     btn(c.deaf ? 'off' : '', c.deaf ? I.headOff : I.head, c.deaf ? 'Включить звук' : 'Выключить звук', () => (isG ? gDeaf(!gcall.deaf) : setDeaf(!call.deaf)));
     if (!c.wait) btn(share ? 'on' : '', share ? I.stop : I.screen, share ? 'Остановить показ экрана' : 'Показать экран', () => startShareCall());
-    if (stageFocus) btn('', I.full, 'Во весь экран', () => { const t = stageEl.querySelector('.tile.focused'); if (t) (document.fullscreenElement ? document.exitFullscreen() : t.requestFullscreen()).catch(() => {}); });
+    if (c.ids.some((id) => hasVideo(id))) { const fs = document.fullscreenElement === stageEl; btn(fs ? 'on' : '', I.full, fs ? 'Выйти из полного экрана (Esc)' : 'На весь экран (двойной клик по стриму)', () => stageFull()); }
     btn('red', I.hang, isG ? 'Выйти из звонка' : 'Завершить звонок', () => (isG ? gLeave() : endCall(call.state === 'ringing' && call.dir === 'out' ? 'cancel' : 'end')));
     stageEl.append(tiles, bar);
     paintTalk();
+  }
+  // стрим на весь экран: вся сцена уходит в полный экран (её перерисовка полный экран не сбрасывает)
+  function stageFull(id) {
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    const c = stageCtx(); if (!c) return;
+    if (id) stageFocus = id; else if (!stageFocus) stageFocus = c.ids.find((x) => hasVideo(x)) || null;
+    drawStage();
+    stageEl.requestFullscreen({ navigationUI: 'hide' }).then(() => { try { if (window.kPhone && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch {} }).catch(() => {});
+  }
+  {
+    let idleT = 0;
+    const wake = () => { stageEl.classList.add('act'); clearTimeout(idleT); idleT = setTimeout(() => stageEl.classList.remove('act'), 2500); };
+    stageEl.addEventListener('mousemove', wake); stageEl.addEventListener('pointerdown', wake);
+    document.addEventListener('fullscreenchange', () => { const on = document.fullscreenElement === stageEl; stageEl.classList.toggle('isfs', on); if (on) wake(); else try { screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); } catch {} drawStage(); });
   }
   function paintTalk() {
     const c = stageCtx(); if (!c || !stageEl.isConnected) return;
@@ -1659,18 +1968,28 @@
   async function addShareTo(pc) {
     if (!share || share.senders.has(pc)) return;
     const snd = pc.addTrack(share.track, share.stream); share.senders.set(pc, snd);
-    try { const prm = snd.getParameters(); if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}]; prm.encodings[0].maxBitrate = 2500000; await snd.setParameters(prm); } catch {}
+    await tuneShare(snd);
+  }
+  // качество демки — то же, что на серверах: выбирается в окне «Что показать?», меняется на лету
+  let sharePref = { q: '1080_30', hint: 'auto' };
+  if (A.shareGet) A.shareGet().then((p) => { if (p) sharePref = p; }).catch(() => {});
+  if (A.onShare) A.onShare((p) => { if (!p) return; sharePref = p; if (share && !window.kAndroid) kShareQ.apply(share.track, p).then(() => { for (const snd of share.senders.values()) tuneShare(snd); }); });
+  async function tuneShare(snd) {
+    try { const prm = snd.getParameters(); if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}]; kShareQ.tuneSender(prm, sharePref, share ? share.senders.size : 1); await snd.setParameters(prm); } catch {}
   }
   async function getShareStream() {
     if (window.kAndroid && window.kAndroid.screenStream) return window.kAndroid.screenStream({ w: 1280, h: 720, fps: 12 });
-    return navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 30, max: 30 }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    if (A.shareGet) sharePref = await A.shareGet().catch(() => sharePref) || sharePref;
+    const st = await navigator.mediaDevices.getDisplayMedia({ video: kShareQ.constraints(sharePref.q), audio: false });
+    if (A.shareGet) { sharePref = await A.shareGet().catch(() => sharePref) || sharePref; await kShareQ.apply(st.getVideoTracks()[0], sharePref); }
+    return st;
   }
   async function startShareCall() {
     if (share) return stopShareCall();
     let stream = null; try { stream = await getShareStream(); } catch { return; }
     if (!stream) return;
     const track = stream.getVideoTracks()[0]; if (!track) return;
-    track.contentHint = 'detail';
+    try { track.contentHint = window.kAndroid ? 'detail' : kShareQ.hintOf(sharePref); } catch {}
     share = { stream, track, senders: new Map() };
     track.onended = () => stopShareCall();
     for (const [id, pc] of sharePcs()) { await addShareTo(pc); renego(id, pc).catch(() => {}); }
@@ -1759,11 +2078,29 @@
     if (g.unread && shown) F.groupRead(g.id);
     const key = g.id + ':' + msgs.length + ':' + rxKey(msgs) + ':' + JSON.stringify(g.members.map((m) => m.id + m.online)) + g.name + ':' + gcallKey(g.id);
     if (key === gLast) return;
-    const keep = main.querySelector('#msgInput') && main.querySelector('#msgInput').value;
-    const same = gLast.startsWith(g.id + ':');
-    const sc = scrollState(same);
     gLast = key; lastRendered = '';
-    main.innerHTML = '';
+    const myName = myProf.name || 'Я';
+    const c = convOpen('g:' + g.id, (main) => {
+      const head = document.createElement('div');
+      const body = document.createElement('div'); body.className = 'gbody';
+      const col = document.createElement('div'); col.className = 'gcol';
+      const banner = document.createElement('div'); banner.className = 'gbanner';
+      const stage = document.createElement('div'); stage.className = 'stageslot';
+      const box = document.createElement('div'); box.id = 'msgs';
+      const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
+      let inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать в «${gTitle(g)}»`;
+      const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
+      form.append(inp, sb);
+      form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(g.id); kChat.restore(box, { bottom: true }); await F.groupSend(g.id, v, rp); refresh(); };
+      replyBar(form, g.id);
+      inp = attachTo(form, inp, { gid: g.id }, main);
+      col.append(banner, stage, box, form);
+      const mem = document.createElement('div');
+      body.append(col, mem);
+      main.append(head, body);
+      if (shown) setTimeout(() => inp.focus(), 0);
+      return { head, banner, stage, box, form, inp, mem };
+    });
     const head = document.createElement('div'); head.className = 'chead';
     const who = document.createElement('div'); who.innerHTML = '<div class="nm"></div><div class="st"></div>';
     who.firstChild.textContent = gTitle(g);
@@ -1776,47 +2113,25 @@
     cb.disabled = !!(gcall && gcall.gid === g.id) || !!call;
     cb.onclick = () => gJoin(g);
     const add = document.createElement('button'); add.className = 'iconbtn'; add.title = 'Добавить друзей'; add.innerHTML = I.users; add.onclick = () => groupDialog(g);
-    const mo = document.createElement('button'); mo.className = 'iconbtn'; mo.title = 'Ещё'; mo.innerHTML = I.more; mo.onclick = () => groupMenu(g, mo.getBoundingClientRect());
+    const mo = document.createElement('button'); mo.className = 'iconbtn'; mo.title = 'Ещё'; mo.innerHTML = I.more; mo.onclick = (e) => { e.stopPropagation(); kToggleFloat(mo, () => groupMenu(g, mo.getBoundingClientRect())); };
     const cl = document.createElement('button'); cl.className = 'iconbtn'; cl.title = 'Закрыть беседу'; cl.innerHTML = I.x; cl.onclick = () => closeDm(g.id);
     cl.classList.add('mhide');
-    head.append(back, gIcon(g), who, sp, cb, add, mo, cl);
-    const body = document.createElement('div'); body.className = 'gbody';
-    const col = document.createElement('div'); col.className = 'gcol';
-    const banner = renderGcallBar(g); if (banner) col.appendChild(banner);
-    mountStage(col);
-    const box = document.createElement('div'); box.id = 'msgs';
-    let lastDay = '', lastFrom = '', lastTs = 0;
-    for (const m of msgs) {
-      const day = new Date(m.ts).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-      if (day !== lastDay) { lastDay = day; lastFrom = ''; const d = document.createElement('div'); d.className = 'day'; d.textContent = day; box.appendChild(d); }
-      const cont = lastFrom === m.from && m.ts - lastTs < 5 * 60000; lastFrom = m.from; lastTs = m.ts;
-      const row = document.createElement('div'); row.className = 'gm' + (cont ? ' cont' : ''); row.dataset.mid = m.mid || '';
-      const mb = g.members.find((x) => x.id === m.from) || { name: m.name };
-      const av = ava({ name: mb.name || m.name, avatar: mb.avatar }, false);
-      if (!cont) { av.style.cursor = 'pointer'; av.onclick = () => { const f = list.find((x) => x.id === m.from); if (f) openCard(f, av); }; }
-      const b = document.createElement('div'); b.className = 'gb';
-      if (!cont) { const h = document.createElement('div'); h.className = 'gh'; h.innerHTML = '<b></b><span></span>'; h.firstChild.textContent = m.from === me.id ? (myProf.name || 'Я') : (mb.name || m.name); h.lastChild.textContent = new Date(m.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); b.appendChild(h); }
-      if (m.reply) b.appendChild(quoteView(m.reply));
-      if (m.file) b.appendChild(fileView(m.file));
-      if (m.text) {
-        const t = document.createElement('div'); t.className = 'gt';
-        m.text.split(/(https?:\/\/\S+)/g).forEach((part, i) => { if (i % 2) { const a = document.createElement('a'); a.href = part; a.textContent = part; a.target = '_blank'; t.appendChild(a); } else t.appendChild(document.createTextNode(part)); });
-        b.appendChild(t);
-      }
-      b.appendChild(rxView(m, { gid: g.id }, (uid) => (uid === me.id ? (myProf.name || 'Я') : ((g.members.find((x) => x.id === uid) || {}).name || 'кент'))));
-      rxHook(row, m, { gid: g.id }, m.from === me.id ? (myProf.name || 'Я') : (mb.name || m.name), m.from === me.id);
-      row.append(cont ? Object.assign(document.createElement('div'), { className: 'gpad' }) : av, b);
-      box.appendChild(row);
-    }
-    if (!msgs.length) box.innerHTML = `<div class="ractempty" style="margin:auto">Это начало группы «${gTitle(g).replace(/[<>&]/g, '')}».<br>Пиши — сообщение увидят все участники.</div>`;
-    const form = document.createElement('form'); form.className = 'send'; form.autocomplete = 'off';
-    let inp = document.createElement('input'); inp.id = 'msgInput'; inp.maxLength = 4000; inp.placeholder = `Написать в «${gTitle(g)}»`;
-    const sb = document.createElement('button'); sb.className = 'btn'; sb.type = 'submit'; sb.innerHTML = I.send; sb.title = 'Отправить (Enter)';
-    form.append(inp, sb);
-    form.onsubmit = async (e) => { e.preventDefault(); const v = inp.value.trim(); if (!v) return; inp.value = ''; const rp = takeReply(g.id); await F.groupSend(g.id, v, rp); refresh(); };
-    replyBar(form, g.id);
-    inp = attachTo(form, inp, { gid: g.id }, main);
-    col.append(box, form);
+    head.append(back, gIcon(g), who, sp, cb, add, mo, kHelp.button('group'), cl);
+    c.head.replaceWith(head); c.head = head;
+    const banner = renderGcallBar(g) || Object.assign(document.createElement('div'), { className: 'gbanner', hidden: true });
+    c.banner.replaceWith(banner); c.banner = banner;
+    mountStage(c.stage);
+    const memOf = (uid) => g.members.find((x) => x.id === uid);
+    const items = msgItems(msgs, {
+      target: { gid: g.id },
+      fromKey: (m) => m.from,
+      nameOf: (m) => (m.from === me.id ? myName : ((memOf(m.from) || {}).name || m.name)),
+      avaOf: (m) => { const mb = memOf(m.from) || {}; return m.from === me.id ? { name: myName, avatar: myProf.avatar } : { name: mb.name || m.name, avatar: mb.avatar }; },
+      onAva: (m, el) => { const f = list.find((x) => x.id === m.from); if (f) kToggleFloat(el, () => openCard(f, el)); },
+      mineOf: (m) => m.from === me.id,
+      uname: (uid) => (uid === me.id ? myName : ((memOf(uid) || {}).name || 'участник')),
+    });
+    convFill(c, items, `Это начало группы «${gTitle(g).replace(/[<>&]/g, '')}».<br>Пиши — сообщение увидят все участники.`);
     // участники справа
     const mem = document.createElement('div'); mem.className = 'gmem';
     mem.innerHTML = `<div class="fcap">УЧАСТНИКИ — ${g.members.length}</div>`;
@@ -1828,14 +2143,11 @@
       w.firstChild.textContent = m.id === me.id ? (myProf.name || m.name) + ' (ты)' : m.name + (g.owner === m.id ? ' 👑' : '');
       if (gcall && gcall.gid === g.id && gcall.parts.has(m.id)) { const s2 = document.createElement('div'); s2.className = 'st'; s2.textContent = 'в звонке'; w.appendChild(s2); }
       r.append(a, w);
-      r.onclick = () => { if (f) openCard(f, a); };
+      r.onclick = (e) => { e.stopPropagation(); if (f) kToggleFloat(r, () => openCard(f, a)); };
+      if (m.id !== me.id) r.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); volPop(m.id, r); };
       mem.appendChild(r);
     }
-    body.append(col, mem);
-    main.append(head, body);
-    restoreScroll(box, sc);
-    if (same && keep) inp.value = keep;
-    if (shown) inp.focus();
+    c.mem.replaceWith(mem); c.mem = mem;
   }
 
   // ---------- звонок в группе: каждый с каждым (WebRTC), сигналы — через связи участников ----------
@@ -1910,7 +2222,7 @@
     pc.ontrack = (e) => {
       if (onRemoteTrack(id, e)) return;
       const a = p.audio || (p.audio = new Audio()); a.autoplay = true; a.srcObject = new MediaStream([e.track]); a.muted = !!c.deaf;
-      setVol(a, VS.masterVol ?? 1);
+      setVol(a, volOf(id) * (VS.masterVol ?? 1));
       (async () => { if (VS.outLabel && a.setSinkId) { const d = (await navigator.mediaDevices.enumerateDevices()).find((x) => x.kind === 'audiooutput' && x.label === VS.outLabel); if (d) a.setSinkId(d.deviceId).catch(() => {}); } })();
       a.play().catch(() => {});
       gTalk(id, e.track);

@@ -27,18 +27,25 @@
   .cancel { background: var(--panel2); color: var(--text); }
   .ok { background: var(--accent); color: #04130a; }
   .ok:disabled { opacity: .5; cursor: default; }
+  .qrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; width: 100%; }
+  .qrow > span { color: var(--dim); }
+  .kshareq { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .kshareq select { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; }
+  .kshareq-net { color: var(--dim); }
 </style>
+<script src="../public/kshare.js"></script>
 </head>
 <body>
 <header>
-  <h2>Что показать кентам?</h2>
+  <h2>Что показать?</h2>
   <div class="tabs"><button id="tScreen" class="on">Экраны</button><button id="tWin">Окна</button></div>
 </header>
 <div id="grid"></div>
 <footer>
+  <div class="qrow"><span>Качество:</span><div id="q"></div></div>
   <label><input type="checkbox" id="audio">
     <span>Со звуком системы
-      <small id="audioHint">Кенты услышат игру, видео, музыку — всё, что играет на компе, кроме голосов из Кентовки.</small></span>
+      <small id="audioHint">Зрители услышат игру, видео, музыку — всё, что играет на компе, кроме голосов из Кентовки.</small></span>
   </label>
   <button class="b cancel" id="cancel">Отмена</button>
   <button class="b ok" id="ok" disabled>Показать</button>
@@ -71,7 +78,11 @@
   };
   $('tScreen').onclick = () => setTab('screen');
   $('tWin').onclick = () => setTab('window');
-  const choose = () => sel && A.pickerChoose({ id: sel, audio: $('audio').checked });
+  // качество перед показом — по умолчанию то, что выбирал в прошлый раз
+  const pref = (A.shareGet ? await A.shareGet() : null) || { q: '1080_30', hint: 'auto' };
+  const qc = window.kShareQ.controls(pref, () => {});
+  $('q').appendChild(qc);
+  const choose = () => { if (!sel) return; const c = qc.value(); A.pickerChoose({ id: sel, audio: $('audio').checked, q: c.q, hint: c.hint }); };
   $('ok').onclick = choose;
   $('cancel').onclick = () => A.pickerChoose(null);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') A.pickerChoose(null); if (e.key === 'Enter') choose(); });

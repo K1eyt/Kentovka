@@ -373,7 +373,7 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
       if (!me.admitted && m.type !== 'hello' && m.type !== 'ping') return;
       switch (m.type) {
         case 'hello': {
-          me.name = String(m.name || 'кент').trim().slice(0, 24) || 'кент';
+          me.name = String(m.name || 'Без ника').trim().slice(0, 24) || 'Без ника';
           // id приложения засчитываем, только если подписан ключом аккаунта (иначе — как гость из браузера)
           me.appId = verifyAccount(m, nonce);
           if (m.appId && !me.appId) send(ws, { type: 'notice', text: 'Не получилось подтвердить твой аккаунт на этом сервере — заходишь как гость.' });
@@ -729,7 +729,7 @@ if (require.main === module) {
   startServer({ port, direct }).then(({ addresses }) => {
     console.log('\n  Кентовка запущена!\n');
     for (const a of addresses) {
-      console.log(`  https://${a.address}:${port}   (${a.name})${a.radmin ? '   <-- локальная сеть, кидай кентам эту' : ''}`);
+      console.log(`  https://${a.address}:${port}   (${a.name})${a.radmin ? '   <-- локальная сеть, кидай друзьям эту' : ''}`);
     }
     console.log(`  https://localhost:${port}   (для себя)\n`);
   }).catch((e) => {

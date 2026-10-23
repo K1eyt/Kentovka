@@ -38,6 +38,15 @@ class Blend extends AudioWorkletProcessor {
     this.declick = p.declick ?? true;
     this.dryOff = []; this.t = 0; this.prevX = 0; this.slowHF = 1e-5; this.clickRun = 0; this.events = []; this.duck = 1; this.dw = 1;
     this.clickLen = Math.round(0.03 * sampleRate);
+    // плавный кран: шумодав часто обрывает конец слова за 10–20 мс — тогда хвост доигрывается живым звуком
+    // (выровненным по задержке) и затухает примерно за 220 мс; при mute/смене режима — без щелчков
+    this.rSlow = 0; this.wE = 0;
+    this.tailAmt = p.tail ?? 0.9;
+    this.tailRel = Math.exp(-BLOCK / (0.22 * sampleRate));
+    this.relW = 1 - Math.exp(-BLOCK / (0.25 * sampleRate));   // подмешивание уходит за ~250 мс (было ~120)
+    const sr = sampleRate;
+    this.duckDn = 1 - Math.exp(-1 / (0.0012 * sr)); this.duckUp = 1 - Math.exp(-1 / (0.012 * sr));
+    this.dwDn = 1 - Math.exp(-1 / (0.0015 * sr)); this.dwUp = 1 - Math.exp(-1 / (0.02 * sr));
     this.port.onmessage = (e) => {
       if (e.data && typeof e.data.keep === 'number') this.keep = e.data.keep;
       if (e.data && typeof e.data.declick === 'boolean') this.declick = e.data.declick;
@@ -115,10 +124,16 @@ class Blend extends AudioWorkletProcessor {
     if (voice > 0.5) this.hold = this.holdBlocks;
     else if (this.hold > 0) { this.hold--; voice = Math.max(voice, 0.75); }
     const target = voice * this.keep;
-    // подмешивание: открывается за ~5 мс, уходит за ~120 мс
-    const k = target > this.w ? 0.55 : 0.022;
-    const w0 = this.w, w1 = this.w + (target - this.w) * k;
+    // подмешивание: открывается за ~5 мс, уходит плавно, ~250 мс
+    const k = target > this.w ? 0.55 : this.relW;
+    const w1 = this.w + (target - this.w) * k;
     this.w = w1;
+    // хвост: насколько шумодав сейчас пропускает звук (быстро) и сколько пропускал только что (медленно затухает)
+    const rFast = rd > 3e-4 ? Math.min(1, rw / rd) : 0;
+    if (rFast > this.rSlow) this.rSlow = this.rSlow + (rFast - this.rSlow) * 0.5; else this.rSlow *= this.tailRel;
+    const tail = Math.max(0, this.rSlow - rFast) * this.tailAmt;
+    const e0 = this.wE, e1 = Math.min(1, Math.max(w1, tail));
+    this.wE = e1;
     const duckTo = active ? 1 : 0.08;           // поверх голоса щелчок не слышно — голос не трогаем; в паузах глушим (−22 дБ)
     const ev = this.events;
     for (let i = 0; i < n; i++) {
@@ -128,9 +143,10 @@ class Blend extends AudioWorkletProcessor {
       let noDry = inClick;
       if (!noDry) for (let e = 0; e < this.dryOff.length; e++) if (g >= this.dryOff[e].s && g < this.dryOff[e].e) { noDry = true; break; }
       const tg = inClick ? duckTo : 1;
-      this.duck += (tg - this.duck) * (tg < this.duck ? 0.25 : 0.004);
-      this.dw += ((noDry ? 0 : 1) - this.dw) * (noDry ? 0.2 : 0.01);
-      const w = (w0 + (w1 - w0) * (i / n)) * this.dw;
+      // приглушение щелчка — за ~1 мс, а не мгновенно (мгновенный обрыв и есть «бьёт по ушам»)
+      this.duck += (tg - this.duck) * (tg < this.duck ? this.duckDn : this.duckUp);
+      this.dw += ((noDry ? 0 : 1) - this.dw) * (noDry ? this.dwDn : this.dwUp);
+      const w = (e0 + (e1 - e0) * (i / n)) * this.dw;
       out[i] = (wet[i] * (1 - w) + dd[i] * w) * this.duck;
     }
     this.t += n;
@@ -146,11 +162,11 @@ class Gate extends AudioWorkletProcessor {
     this.setThreshold(p.threshold ?? -50);
     this.look = Math.round(0.005 * sampleRate);  // 5 мс заглядывания вперёд
     this.ring = new Float32Array(this.look + BLOCK + 1); this.pos = 0;
-    this.floor = dbToLin(-40);
+    this.floor = dbToLin(-45);
     this.g = this.floor; this.env = 0; this.hold = 0;
     this.holdBlocks = Math.round(0.3 * sampleRate / BLOCK);
-    this.attack = 1 - Math.exp(-1 / (0.001 * sampleRate));   // 1 мс
-    this.release = 1 - Math.exp(-1 / (0.12 * sampleRate));   // 120 мс
+    this.attack = 1 - Math.exp(-1 / (0.004 * sampleRate));   // ~4 мс: без щелчка на первом звуке, но в пределах 5 мс заглядывания
+    this.release = 1 - Math.exp(-1 / (0.25 * sampleRate));   // ~250 мс: конец фразы затухает, а не обрывается
     this.port.onmessage = (e) => { if (e.data && typeof e.data.threshold === 'number') this.setThreshold(e.data.threshold); };
   }
   setThreshold(db) { this.open = dbToLin(db); this.close = dbToLin(db - 6); }
@@ -199,7 +215,8 @@ class Async extends AudioWorkletProcessor {
         this.wp.onmessage = (m) => {
           const a = m.data; if (!(a instanceof Float32Array)) return;
           for (let i = 0; i < a.length; i += BLOCK) this.fifo.push(a.subarray(i, i + BLOCK));
-          if (this.fifo.length > this.max) this.fifo.splice(0, this.fifo.length - this.target);
+          // отстаём — выкидываем лишнее, но стык сглаживаем: следующий блок плавно перетекает из выкинутого
+          if (this.fifo.length > this.max) { const cut = this.fifo.length - this.target; this.xf = this.fifo[cut - 1]; this.fifo.splice(0, cut); }
         };
       } else if (this.wp && typeof d.keep === 'number') this.wp.postMessage({ keep: d.keep });
     };
@@ -212,10 +229,22 @@ class Async extends AudioWorkletProcessor {
       this.n += BLOCK;
       if (this.n >= this.inbuf.length) { const b = this.inbuf; this.wp.postMessage(b, [b.buffer]); this.inbuf = new Float32Array(BLOCK * this.batch); this.n = 0; }
     }
-    if (!this.primed) { if (this.fifo.length >= this.target) this.primed = true; else return true; }
+    if (!this.primed) {
+      if (this.fifo.length >= this.target) { this.primed = true; this.fadeIn = true; }
+      else return true;
+    }
     const blk = this.fifo.shift();
-    if (blk) out.set(blk);
-    else { this.primed = false; this.under++; } // поток не успел — копим запас заново (тишина 2.7 мс лучше треска)
+    const n = out.length;
+    if (blk) {
+      if (this.xf) { const x = this.xf; for (let i = 0; i < n; i++) { const t = 0.5 - 0.5 * Math.cos(Math.PI * (i + 1) / n); out[i] = x[i] * (1 - t) + blk[i] * t; } this.xf = null; }
+      else if (this.fadeIn) { for (let i = 0; i < n; i++) out[i] = blk[i] * (0.5 - 0.5 * Math.cos(Math.PI * (i + 1) / n)); }
+      else out.set(blk);
+      this.fadeIn = false; this.prev = blk;
+    } else {
+      // поток не успел: не обрываем звук, а гасим последний блок за 2.7 мс и копим запас заново
+      if (this.prev) { const p = this.prev; for (let i = 0; i < n; i++) out[i] = p[i] * (0.5 + 0.5 * Math.cos(Math.PI * (i + 1) / n)); this.prev = null; }
+      this.primed = false; this.under++;
+    }
     return true;
   }
 }

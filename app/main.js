@@ -22,6 +22,9 @@ app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 // не прятать свой адрес за «.local» — иначе прямые соединения для файлов через локальную сеть не находят друг друга
 app.commandLine.appendSwitch('disable-features', 'WebRtcHideLocalIpsWithMdns');
+// демка: захват экрана и окон через Windows Graphics Capture — игры в полноэкранном/безрамочном режиме
+// идут живыми кадрами, а не одной замёрзшей картинкой (старый способ захвата видит только статичный кадр)
+if (process.platform === 'win32') app.commandLine.appendSwitch('enable-features', 'WebRtcAllowWgcScreenCapturer,WebRtcAllowWgcWindowCapturer');
 
 // для тестов: две Кентовки на одном компе, у каждой своя папка
 if (process.env.KENTOVKA_USERDATA) app.setPath('userData', process.env.KENTOVKA_USERDATA);
@@ -45,6 +48,9 @@ function setupKapp(ses) {
     ['/ns-async.js', path.join(ROOT, 'public', 'ns-async.js')],
     ['/ksound.js', path.join(ROOT, 'public', 'ksound.js')],
     ['/kplatform.js', path.join(ROOT, 'public', 'kplatform.js')],
+    ['/kchat.js', path.join(ROOT, 'public', 'kchat.js')],
+    ['/kshare.js', path.join(ROOT, 'public', 'kshare.js')],
+    ['/khelp.js', path.join(ROOT, 'public', 'khelp.js')],
     ['/df-worker.js', path.join(ROOT, 'public', 'df-worker.js')],
     ['/kselect.js', path.join(ROOT, 'public', 'kselect.js')],
     ['/', __dirname],
@@ -143,7 +149,10 @@ const DEFAULT_PORT = 8443;
 const DEFAULT_HOTKEYS = { mute: 'CommandOrControl+Shift+M', deaf: 'CommandOrControl+Shift+D' };
 const HOTKEYS = { ...DEFAULT_HOTKEYS }; // свои сочетания — из настроек (config.hotkeys)
 // одна клавиша, сочетание или боковая кнопка мыши (Mouse4/Mouse5)
-const ACCEL_RE = /^((CommandOrControl|Ctrl|Alt|Shift|Super)\+){0,3}([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Num[0-9]|Space|Tab|Insert|Delete|Home|End|PageUp|PageDown|Up|Down|Left|Right|CapsLock|Plus|-|=|\[|\]|;|'|,|\.|\/|\\|`|Mouse[345])$/;
+const ACCEL_RE = /^(((CommandOrControl|Ctrl|Alt|Shift|Super)\+){0,3}([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Num[0-9]|Space|Tab|Insert|Delete|Home|End|PageUp|PageDown|Up|Down|Left|Right|CapsLock|Plus|-|=|\[|\]|;|'|,|\.|\/|\\|`|Mouse[345])|[LR](Ctrl|Alt|Shift))$/;
+// одна клавиша-модификатор (левый/правый Ctrl, Alt, Shift) срабатывает, когда её отпустили и между этим не нажимали
+// ничего другого: Ctrl+C, Alt+Tab и т.п. микрофон не переключают
+const MOD_ONLY = { LCtrl: 'Ctrl', RCtrl: 'CtrlRight', LAlt: 'Alt', RAlt: 'AltRight', LShift: 'Shift', RShift: 'ShiftRight' };
 // Горячие клавиши слушаем через системный «хук» клавиатуры (как Discord): клавиша не отнимается
 // у других программ — поэтому не бывает «занято другим приложением», и можно поставить одну клавишу.
 // Если хук не загрузился — запасной путь через globalShortcut.
@@ -165,18 +174,29 @@ function startHook() {
   try {
     hook = require('uiohook-napi');
     const down = new Set();
+    let modPending = null; // нажали один модификатор — ждём, отпустят ли его «в одиночку»
+    const fireMod = (keycode) => {
+      if (hotkeysPaused) return;
+      for (const action of Object.keys(HOTKEYS)) { const k = MOD_ONLY[HOTKEYS[action]]; if (k && hook.UiohookKey[k] === keycode) sendHotkey(action); }
+    };
+    const isMod = (kc) => Object.values(MOD_ONLY).some((k) => hook.UiohookKey[k] === kc);
     const fire = (keycode, mouse, e) => {
       if (hotkeysPaused) return;
       for (const action of Object.keys(HOTKEYS)) {
+        if (MOD_ONLY[HOTKEYS[action]]) continue;
         const a = parseAccel(HOTKEYS[action]);
         if (!a.key) continue;
         const hit = mouse ? a.key === 'Mouse' + mouse : hookKeycode(a.key) === keycode;
         if (hit && !!e.ctrlKey === a.ctrl && !!e.altKey === a.alt && !!e.shiftKey === a.shift) sendHotkey(action);
       }
     };
-    hook.uIOhook.on('keydown', (e) => { if (down.has(e.keycode)) return; down.add(e.keycode); fire(e.keycode, 0, e); });
-    hook.uIOhook.on('keyup', (e) => down.delete(e.keycode));
-    hook.uIOhook.on('mousedown', (e) => { if (e.button >= 3 && e.button <= 5) fire(0, e.button, e); }); // 3 — колесо, 4/5 — боковые
+    hook.uIOhook.on('keydown', (e) => {
+      if (down.has(e.keycode)) return;
+      modPending = isMod(e.keycode) && down.size === 0 ? e.keycode : null;
+      down.add(e.keycode); fire(e.keycode, 0, e);
+    });
+    hook.uIOhook.on('keyup', (e) => { down.delete(e.keycode); if (modPending === e.keycode) { modPending = null; fireMod(e.keycode); } });
+    hook.uIOhook.on('mousedown', (e) => { modPending = null; if (e.button >= 3 && e.button <= 5) fire(0, e.button, e); }); // 3 — колесо, 4/5 — боковые
     hook.uIOhook.start();
     hookOk = true;
   } catch (err) { console.error('хук клавиатуры не запустился, работаем через globalShortcut:', err.message); hook = null; hookOk = false; }
@@ -186,7 +206,7 @@ function registerHotkeys() {
   globalShortcut.unregisterAll();
   for (const action of Object.keys(HOTKEYS)) {
     const accel = HOTKEYS[action];
-    if (!accel || /^Mouse/.test(parseAccel(accel).key)) continue;
+    if (!accel || /^Mouse/.test(parseAccel(accel).key) || MOD_ONLY[accel]) continue;
     try { globalShortcut.register(accel, () => sendHotkey(action)); } catch {}
   }
   return [];
@@ -320,10 +340,28 @@ function ensureFriendsView() {
   friendsView.webContents.setWindowOpenHandler(({ url }) => { if (/^https?:\/\//.test(url)) require('electron').shell.openExternal(url); return { action: 'deny' }; });
   friendsView.webContents.on('will-navigate', (e) => e.preventDefault());
   friendsView.webContents.on('render-process-gone', () => { friendsView = null; if (friendsShown) { friendsShown = false; tellShown(); } });
+  hookHtmlFull(friendsView.webContents);
   return friendsView;
+}
+// стрим или видео «на весь экран» (кнопка ⛶ на странице): окно уходит в полный экран, а эта страница
+// занимает его целиком — поверх полосы серверов и заголовка. Esc / та же кнопка — обратно.
+let htmlFull = null, htmlFullWas = false;
+function hookHtmlFull(wc) {
+  wc.on('enter-html-full-screen', () => {
+    htmlFull = wc; htmlFullWas = win.isFullScreen();
+    if (!htmlFullWas) win.setFullScreen(true);
+    setTimeout(layoutFriends, 0); setTimeout(layoutFriends, 300);
+  });
+  wc.on('leave-html-full-screen', () => {
+    if (htmlFull !== wc) return;
+    htmlFull = null;
+    if (!htmlFullWas && win.isFullScreen()) win.setFullScreen(false);
+    setTimeout(layoutFriends, 0); setTimeout(layoutFriends, 300);
+  });
 }
 function contentRect() {
   const [W, H] = win.getContentSize();
+  if (htmlFull && !htmlFull.isDestroyed()) return { x: 0, y: 0, width: W, height: H };
   const z = win.webContents.getZoomFactor ? win.webContents.getZoomFactor() : 1;
   const tb = win.isFullScreen() ? 0 : 32;
   const a = friendsArea || { x: 0, y: tb, w: W, h: H - tb };
@@ -766,7 +804,7 @@ function setupMedia(ses) {
 function openPicker(sources) {
   return new Promise((resolve) => {
     const picker = new BrowserWindow({
-      parent: win, modal: true, width: 760, height: 560, resizable: true, minimizable: false,
+      parent: win, modal: true, width: 780, height: 620, resizable: true, minimizable: false,
       backgroundColor: '#1a1b1e', autoHideMenuBar: true, title: 'Что показать?', icon: ICON,
       webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
     });
@@ -976,6 +1014,7 @@ function makeTabView(tab) {
   wc.setWindowOpenHandler(({ url }) => { if (/^https?:\/\//.test(url)) require('electron').shell.openExternal(url); return { action: 'deny' }; });
   wc.on('will-navigate', (e, url) => { if (!url.startsWith(tab.url)) e.preventDefault(); });
   wc.on('render-process-gone', () => { if (tabs.get(tab.key) === tab) closeTab(tab.key); });
+  hookHtmlFull(wc);
   wc.on('before-input-event', (e, inp) => { if (inp.type === 'keyDown' && inp.key === 'F11') { e.preventDefault(); win.setFullScreen(!win.isFullScreen()); } });
   return v;
 }
@@ -1118,7 +1157,8 @@ ipcMain.handle('app:profile-set', (e, p) => {
   const name = String(p.name || '').trim().slice(0, 24);
   const avatar = typeof p.avatar === 'string' && p.avatar.length < 60000 && p.avatar.startsWith('data:image/') ? p.avatar : null;
   const col = (x) => (/^#[0-9a-f]{6}$/i.test(x || '') ? x : null);
-  const c = loadConfig(); c.profile = { name, avatar, bio: String(p.bio || '').slice(0, 190), color: col(p.color), color2: col(p.color2) }; c.profileAt = Date.now(); saveConfig(c); try { if (friends) friends.syncSiblings(); } catch {}
+  const banner = typeof p.banner === 'string' && p.banner.length < 2200000 && /^data:image\/(gif|png|jpeg|webp);base64,/.test(p.banner) ? p.banner : null;
+  const c = loadConfig(); c.profile = { name, avatar, bio: String(p.bio || '').slice(0, 190), color: col(p.color), color2: col(p.color2), banner }; c.profileAt = Date.now(); saveConfig(c); try { if (friends) friends.syncSiblings(); } catch {}
   if (friends) friends.announce();
 });
 // тема из настроек Кентовки — чтобы стартовый экран был в тех же цветах
@@ -1154,7 +1194,23 @@ ipcMain.handle('app:bg-set', async (e, data, mime) => {
 ipcMain.handle('picker:sources', () => pickerSources.map((s) => ({
   id: s.id, name: s.name, screen: s.id.startsWith('screen:'), thumb: s.thumbnail.toDataURL(),
 })));
-ipcMain.handle('picker:choose', (e, choice) => { if (pickerResolve) pickerResolve(choice); });
+ipcMain.handle('picker:choose', (e, choice) => {
+  if (choice && choice.q) shareSet({ q: choice.q, hint: choice.hint });
+  if (pickerResolve) pickerResolve(choice);
+});
+// качество демки: выбирается в окне «Что показать?», в настройках «Стрим» и во время стрима — одно на всё приложение
+const SHARE_Q = /^(720|1080|1440|src)_(15|30|60)$/;
+function shareGet() { const c = loadConfig(); const s = c.share || {}; return { q: SHARE_Q.test(s.q) ? s.q : '1080_30', hint: ['detail', 'motion', 'auto'].includes(s.hint) ? s.hint : 'auto' }; }
+function shareSet(o) {
+  const c = loadConfig(); const cur = shareGet();
+  if (o && SHARE_Q.test(o.q)) cur.q = o.q;
+  if (o && ['detail', 'motion', 'auto'].includes(o.hint)) cur.hint = o.hint;
+  c.share = cur; saveConfig(c, true);
+  toPages('share:prefs', cur);
+  return cur;
+}
+ipcMain.handle('share:get', () => shareGet());
+ipcMain.handle('share:set', (e, o) => shareSet(o));
 
 // ---------- мосты на VPS: свой (ссылка KNTB1…) и запасные адреса серверов ----------
 let viaAlt = null; // зашли не по общей сети, а через мост
