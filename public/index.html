@@ -1852,11 +1852,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       b.onclick = (ev) => { ev.stopPropagation(); react(m, e); };
       box.appendChild(b);
     }
-    if (box.children.length && m.mid) {
-      const add = document.createElement('button'); add.type = 'button'; add.className = 'rchip add'; add.title = 'Ещё реакция'; add.innerHTML = ICON.smile;
-      add.onclick = (ev) => { ev.stopPropagation(); openReactPicker(m, add); };
-      box.appendChild(add);
-    }
+    // кнопки «ещё реакция» нет: реакции ставятся одной кнопкой-смайликом у сообщения (или через правый клик)
     box.hidden = !box.children.length;
   }
   function react(m, e) {

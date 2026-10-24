@@ -1,6 +1,6 @@
 {
   "name": "kentovka",
-  "version": "1.8.8",
+  "version": "1.8.9",
   "description": "Кентовка — голос, чат и демка экрана для своих",
   "main": "app/main.js",
   "scripts": {

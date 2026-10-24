@@ -960,7 +960,6 @@
       b.onclick = (ev) => { ev.stopPropagation(); doReact(m, target, e); };
       box.appendChild(b);
     }
-    if (box.children.length) { const a = document.createElement('button'); a.type = 'button'; a.className = 'rchip add'; a.title = 'Ещё реакция'; a.innerHTML = I.smile; a.onclick = (ev) => { ev.stopPropagation(); rxPicker(m, target, a.getBoundingClientRect()); }; box.appendChild(a); }
     box.hidden = !box.children.length;
     return box;
   }

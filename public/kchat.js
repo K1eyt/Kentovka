@@ -24,16 +24,13 @@
      наборов) имеют разную высоту и базовую линию — поэтому эмодзи сидит в жёсткой клетке 18×18 по центру */
   .reacts { align-items: center; }
   .rchip { display: inline-flex; align-items: center; gap: 5px; height: 26px; min-height: 26px; max-height: 26px; box-sizing: border-box; padding: 0 9px 0 7px; margin: 0; border-radius: 99px;
-    background: var(--panel2); border: 1px solid var(--line); font: 600 13px/1 var(--font, "Segoe UI", sans-serif); color: var(--dim); vertical-align: top; overflow: hidden; flex: none;
+    background: var(--panel2); border: 1px solid var(--line); font: 600 13px/1 var(--font, "Segoe UI", sans-serif); color: var(--dim); vertical-align: top; overflow: visible; white-space: nowrap; flex: none;
     transition: border-color var(--t-fast, .12s), background var(--t-fast, .12s); }
-  .rchip .em { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; flex: none; overflow: visible;
+  .rchip .em { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; width: auto; height: 18px; flex: none; overflow: visible; white-space: nowrap;
     font-size: 15px; line-height: 18px; font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif; font-variant-emoji: emoji; font-style: normal; }
   .rchip .n { display: inline-block; height: 18px; line-height: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .rchip:hover { border-color: rgba(var(--acc-rgb), .5); }
   .rchip.mine { background: rgba(var(--acc-rgb), .14); border-color: rgba(var(--acc-rgb), .6); color: var(--text); }
-  .rchip.add { padding: 0 7px; display: none; } .rchip.add svg { width: 15px; height: 15px; display: block; }
-  .msg:hover .rchip.add, .rchip.add:focus-visible { display: inline-flex; }
-  @media (hover: none) { .rchip.add { display: inline-flex; } }
   .msg > .ava { width: 38px; height: 38px; font-size: 15px; margin-top: 2px; flex: none; }
   .msg.cont { padding-top: 1px; padding-bottom: 1px; }
   .msg.cont > .ava { visibility: hidden; height: 0; }
