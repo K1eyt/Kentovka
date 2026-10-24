@@ -165,14 +165,14 @@
   .addform input, .addform input:focus, .addform input:focus-visible { outline: none; flex: 1; border: 0; background: none; box-shadow: none; padding: 6px 0; min-width: 0; }
   #addErr { font-size: 13px; margin-top: 8px; color: var(--red); min-height: 18px; }
   #addErr.ok { color: var(--green); }
-  .mine { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .mine code { font: 600 14px var(--font-display); color: var(--accent); letter-spacing: .03em; padding: 3px 8px; border-radius: 6px; background: var(--panel2); }
-  .mine + .mine { margin-top: 10px; padding-top: 0; border-top: 0; }
-  .mine:empty { display: none; }
+  .mycode { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--dim); font-size: 13.5px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .mycode code { font: 600 14px var(--font-display); color: var(--accent); letter-spacing: .03em; padding: 3px 8px; border-radius: 6px; background: var(--panel2); }
+  .mycode + .mycode { margin-top: 10px; padding-top: 0; border-top: 0; }
+  .mycode:empty { display: none; }
   .near h3 { font: 700 12px var(--font-display); color: var(--dim); margin: 22px 0 8px; letter-spacing: .02em; }
   .near .nrow { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--panel2); margin-bottom: 6px; }
   .near .nrow span { flex: 1; min-width: 0; } .near .nrow small { color: var(--dim); margin-left: 6px; }
-  .mine button { font-size: 12.5px; color: var(--dim); text-decoration: underline dotted; } .mine button:hover { color: var(--text); }
+  .mycode button { font-size: 12.5px; color: var(--dim); text-decoration: underline dotted; } .mycode button:hover { color: var(--text); }
   .rpanel { border-left: 1px solid var(--line); padding: 16px; overflow-y: auto; min-height: 0; }
   .rpanel h3 { margin: 4px 0 14px; font: 700 18px var(--font-display); }
   .act { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; cursor: pointer; transition: border-color var(--t); }
@@ -812,7 +812,7 @@
     const d = document.createElement('div'); d.className = 'addbox';
     d.innerHTML = `<h2>Добавить в друзья</h2><p>Впиши код Кентовки друга (<b>KNT-4F7A2C</b>) или его адрес в локальной сети. Можно с портом: <b>26.12.34.56:8444</b>.</p>
       <form class="addform" id="addForm" autocomplete="off"><input id="addIp" placeholder="Код KNT-… или адрес, например 26.12.34.56" spellcheck="false" aria-label="Код или адрес друга"><button class="btn" id="addBtn" type="submit">Отправить заявку</button></form>
-      <div id="addErr"></div><div class="mine" id="myCode"></div><div class="mine" id="mine"></div><div class="near" id="near"></div>`;
+      <div id="addErr"></div><div class="mycode" id="myCode"></div><div class="mycode" id="mine"></div><div class="near" id="near"></div>`;
     box.appendChild(d);
     const err0 = d.querySelector('#addErr'); err0.textContent = addNote.text; err0.className = addNote.ok ? 'ok' : '';
     d.querySelector('#addIp').value = addNote.draft || '';
