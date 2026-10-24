@@ -51,6 +51,7 @@ function setupKapp(ses) {
     ['/kchat.js', path.join(ROOT, 'public', 'kchat.js')],
     ['/kshare.js', path.join(ROOT, 'public', 'kshare.js')],
     ['/khelp.js', path.join(ROOT, 'public', 'khelp.js')],
+    ['/kui.css', path.join(ROOT, 'public', 'kui.css')],
     ['/df-worker.js', path.join(ROOT, 'public', 'df-worker.js')],
     ['/kselect.js', path.join(ROOT, 'public', 'kselect.js')],
     ['/', __dirname],
@@ -665,6 +666,7 @@ ipcMain.handle('friends:remove', (e, id) => friends && friends.remove(id));
 ipcMain.handle('friends:messages', (e, id) => (friends ? friends.messages(id) : []));
 ipcMain.handle('friends:read', (e, id) => friends && friends.read(id));
 ipcMain.handle('friends:send', (e, id, text, reply) => friends && friends.send(id, text, reply));
+ipcMain.handle('friends:edit', (e, target, mid, text) => friends && friends.editMsg(target && typeof target === 'object' ? { id: target.id ? String(target.id) : undefined, gid: target.gid ? String(target.gid) : undefined } : null, String(mid || ''), String(text || '')));
 ipcMain.handle('friends:delete', (e, target, mid, forAll) => friends && friends.deleteMsg(target && typeof target === 'object' ? { id: target.id ? String(target.id) : undefined, gid: target.gid ? String(target.gid) : undefined } : null, String(mid || ''), !!forAll));
 ipcMain.handle('friends:react', (e, target, mid, emoji) => friends && friends.react(target && typeof target === 'object' ? { id: target.id ? String(target.id) : undefined, gid: target.gid ? String(target.gid) : undefined } : null, String(mid || ''), String(emoji || '')));
 // «Позвать на сервер»: список серверов, где ты состоишь
@@ -805,7 +807,7 @@ function openPicker(sources) {
   return new Promise((resolve) => {
     const picker = new BrowserWindow({
       parent: win, modal: true, width: 780, height: 620, resizable: true, minimizable: false,
-      backgroundColor: '#1a1b1e', autoHideMenuBar: true, title: 'Что показать?', icon: ICON,
+      backgroundColor: '#11131f', autoHideMenuBar: true, title: 'Что показать?', icon: ICON,
       webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, sandbox: true },
     });
     let done = false;

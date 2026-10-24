@@ -209,6 +209,13 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
           if (i >= 0) { list.splice(i, 1); save(); changed(); }
           break;
         }
+        case 'edit': { // друг исправил своё сообщение
+          if (!authed || !f) return;
+          const x = (db.dms[peer] || []).find((y) => y.mid === m.mid && y.from === 'them');
+          const text = short(m.text, 4000).trim();
+          if (x && (text || x.file) && x.text !== text) { x.text = text; x.edited = Number(m.edited) || Date.now(); save(); changed(); }
+          break;
+        }
         case 'rx': { // друг поставил или убрал реакцию в личке
           if (!authed || !f) return;
           const x = (db.dms[peer] || []).find((y) => y.mid === m.mid);
@@ -346,6 +353,13 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
         if (i >= 0) { list.splice(i, 1); save(); changed(); gsendAll(g, { t: 'g-del', gid, mid: m.mid, from: who }, peerId); }
         break;
       }
+      case 'g-edit': { // участник исправил своё сообщение (передаём дальше)
+        const who = /^[0-9a-f]{32}$/.test(m.from || '') ? m.from : peerId;
+        const x = (db.gm[gid] || []).find((y) => y.mid === m.mid && y.from === who);
+        const text = short(m.text, 4000).trim();
+        if (x && (text || x.file) && x.text !== text) { x.text = text; x.edited = Number(m.edited) || Date.now(); save(); changed(); gsendAll(g, { t: 'g-edit', gid, mid: m.mid, from: who, text, edited: x.edited }, peerId); }
+        break;
+      }
       case 'g-rx': { // реакция в группе (передаём дальше тем, кто не на прямой связи)
         const who = /^[0-9a-f]{32}$/.test(m.from || '') && isMember(g, m.from) ? m.from : peerId;
         const x = (db.gm[gid] || []).find((y) => y.mid === m.mid);
@@ -437,6 +451,7 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
     }
     if (db.delOut && db.delOut[id] && db.delOut[id].length) { for (const mid of db.delOut[id]) ws.send(JSON.stringify({ t: 'del', mid })); delete db.delOut[id]; save(); }
     for (const x of db.dms[id] || []) if (x.rxOut) { ws.send(JSON.stringify({ t: 'rx', mid: x.mid, mine: myRx(x) })); delete x.rxOut; }
+    for (const x of db.dms[id] || []) if (x.editOut) { ws.send(JSON.stringify({ t: 'edit', mid: x.mid, text: x.text, edited: x.edited })); delete x.editOut; save(); }
   }
 
   // ---------- скачивание файла кусками (по 4 куска за раз) ----------
@@ -646,6 +661,23 @@ function createFriends({ dataDir, cert, getProfile, getPresence, getAlts, onChan
       const i = list.findIndex((y) => y.mid === mid); if (i < 0) return false;
       const x = list[i]; list.splice(i, 1);
       if (forAll && x.from === 'me' && x.delivered) { db.delOut = db.delOut || {}; (db.delOut[id] = db.delOut[id] || []).push(mid); }
+      save(); flush(id); changed(); return true;
+    },
+    // исправить своё сообщение: другу (дойдёт, когда появится) или всем в группе
+    editMsg(target, mid, text) {
+      mid = String(mid || ''); text = short(text, 4000).trim();
+      if (target && target.gid) {
+        const g = db.groups[target.gid]; const x = g && (db.gm[g.id] || []).find((y) => y.mid === mid);
+        if (!x || x.from !== db.me.id || (!text && !x.file)) return false;
+        if (x.text === text) return true;
+        x.text = text; x.edited = Date.now(); save();
+        gsendAll(g, { t: 'g-edit', gid: g.id, mid, from: db.me.id, text, edited: x.edited }); changed(); return true;
+      }
+      const id = target && target.id; const x = (db.dms[id] || []).find((y) => y.mid === mid);
+      if (!x || x.from !== 'me' || x.invite || (!text && !x.file)) return false;
+      if (x.text === text) return true;
+      x.text = text; x.edited = Date.now();
+      if (x.delivered) x.editOut = true; // ещё не доставлено — уйдёт сразу с новым текстом
       save(); flush(id); changed(); return true;
     },
     // поставить или убрать реакцию (нажал ещё раз — убрал)

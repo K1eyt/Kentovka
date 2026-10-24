@@ -492,6 +492,19 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
           broadcast({ type: 'delete', mid: h.mid, file: h.file ? h.file.id : null, by: me.name });
           break;
         }
+        case 'edit': { // правка своего сообщения (чужие — никто, даже хост)
+          if (!me.name) return;
+          const h = history.find((x) => x.mid === m.mid);
+          if (!h) return;
+          if (h.from !== me.name) return send(ws, { type: 'notice', text: 'Редактировать можно только свои сообщения.' });
+          const text = String(m.text || '').slice(0, 2000).trim();
+          if (!text && !h.file) return;
+          if (text === (h.text || '')) return;
+          h.text = text; h.edited = Date.now();
+          saveHistory();
+          broadcast({ type: 'edited', mid: h.mid, text: h.text, edited: h.edited });
+          break;
+        }
         case 'react': { // реакция на сообщение: нажал ещё раз — убрал
           if (!me.name) return;
           const h = history.find((x) => x.mid === m.mid);

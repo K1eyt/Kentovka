@@ -133,6 +133,7 @@ if (isLocal) {
       read: (id) => ipcRenderer.invoke('friends:read', id),
       send: (id, text, reply) => ipcRenderer.invoke('friends:send', id, text, reply),
       deleteMsg: (target, mid, forAll) => ipcRenderer.invoke('friends:delete', target, mid, forAll),
+      editMsg: (target, mid, text) => ipcRenderer.invoke('friends:edit', target, mid, text),
       invite: (id, key) => ipcRenderer.invoke('friends:invite', id, key),
       inviteList: () => ipcRenderer.invoke('friends:invite-list'),
       react: (target, mid, emoji) => ipcRenderer.invoke('friends:react', target, mid, emoji),
