@@ -1,0 +1,18 @@
+sockets [ 'webview_devtools_remote_3520' ]
+pages [ 'http://127.0.0.1:18444/launcher.html' ]
+контекст вкладки сервера 5 http://127.0.0.1:33596 http://127.0.0.1:18444 http://127.0.0.1:18444
+вкладка во фрейме, приложение true true
+url http://127.0.0.1:33596/
+kAndroid true
+myName Тест
+audioDevices "{\"outputs\":[{\"id\":\"2\",\"name\":\"Динамик телефона\"}],\"inputs\":[{\"id\":\"builtin\",\"name\":\"Микрофон телефона\"}],\"curOut\":\"2\",\"curIn\":\"builtin\",\"note\":\"Микрофон блютуз-гарнитуры работает вместе с её звуком. Нужен звук в наушниках, а микрофон телефона — выбери «Микрофон телефона» или вариант «звук (микрофон телефона)» в выводе.\"}"
+nsMode default off
+ws connected (каналы) общий | ОбщийЗайти
+getUserMedia ok
+secure context true
+rnnoise ok 157234 running
+rnnoise (как в чате) режим записан
+voice peers [{"st":"connected","audio":true}]
+inVoice true
+messages "Тут пока тихоНапиши что-нибудь в чат или зайди в голосовой канал.Зайти в голосовой каналПоставить аватарку"
+peers {"peers":1,"voice":128000,"viewers":0,"share":0}

@@ -1,0 +1,1 @@
+Starting: Intent { cmp=ru.kentovka.app/.MainActivity (has extras) }

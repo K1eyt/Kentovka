@@ -1,0 +1,2 @@
+pid: 3520
+      topResumedActivity=ActivityRecord{c530369 u0 com.google.android.apps.nexuslauncher/.NexusLauncherActivity} t8}

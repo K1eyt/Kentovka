@@ -1,0 +1,26 @@
+pages page http://127.0.0.1:18444/launcher.html
+url http://127.0.0.1:18444/launcher.html
+режим программы true
+регистрация скрыта true
+фрейм друзей true
+фрейм: адрес и приложение http://127.0.0.1:18444/friends.html | object | object | complete
+я {"id":"7084118f05dace448929c73904e906c3","code":"KNT-42D93C","name":"Тест","addrs":["10.0.2.15","10.0.2.16"]}
+добавить друга {"ok":true,"name":"Друг-бот"}
+друзья ["Друг-бот:friend:true"]
+ошибки страниц: нет
+личка ["me: привет с телефона ✓","them: эхо: привет с телефона"]
+картинка от друга {"name":"картинка.png","size":5275,"mime":"image/png","done":true,"mine":false,"progress":1,"loading":false,"offline":false}
+скрин встал над полем 1
+скрин с клавиатуры ушёл ["скрин.png"]
+картинка видна 144x144 http://127.0.0.1:18444/dmfile/40d626ca021cb878665df54f29aa80c7
+кнопка звонка нажата
+звонок {"id":"57fd610bae2d39a3c5ed5d04dc2725f8","name":"Друг-бот","state":"connecting","group":false}
+звонок {"id":"57fd610bae2d39a3c5ed5d04dc2725f8","name":"Друг-бот","state":"live","group":false}
+сцена есть, плиток 2
+звонок после {"id":"57fd610bae2d39a3c5ed5d04dc2725f8","name":"Друг-бот","state":"live","group":false}
+положить ок Завершить звонок
+звонок в конце null
+сохранить аккаунт {"ok":true,"file":"/data/user/0/ru.kentovka.app/files/kentovka/docs/Kentovka/Сохранения/Кентовка-Тест-2026-10-24_15-20.knt"}
+сохранения в Документах total 8
+-rwxrwx--- 1 u0_a160 media_rw 3034 2026-10-24 15:20 Кентовка-Тест-2026-10-24_15-20.knt
+

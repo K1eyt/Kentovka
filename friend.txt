@@ -1,0 +1,20 @@
+15:17:11 друг слушает 18455
+15:17:11 бот для звонков готов
+15:19:55 заявка от Тест
+15:19:59 сообщение Тест привет с телефона
+15:20:03 сообщение Тест пришли файл
+15:20:03 отправил картинку
+15:20:13 сообщение Тест 📎 скрин.png
+15:20:16 звонок ring 
+15:20:19 звонок signal sdp
+15:20:19 звонок signal candidate
+15:20:19 звонок signal candidate
+15:20:19 звонок: дорожка от телефона
+15:20:19 звонок: ice Failed to execute 'addIceCandidate' on 'RTCPeerConnection': The remote description was null
+15:20:19 звонок: ice Failed to execute 'addIceCandidate' on 'RTCPeerConnection': The remote description was null
+15:20:19 звонок: состояние connecting
+15:20:19 звонок: состояние connected
+15:20:25 звонок end 
+15:20:32 звонок: состояние disconnected
+15:20:42 звонок: состояние failed
+15:21:25 звонок gone 

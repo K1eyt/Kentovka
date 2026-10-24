@@ -1,0 +1,247 @@
+--------- beginning of main
+10-24 15:19:28.723  3520  3520 I kentovka: запускаю node
+10-24 15:19:29.140  3520  3520 I kentovka: библиотеки загружены
+10-24 15:19:29.789  3520  3520 I kentovka: программа распакована: /data/user/0/ru.kentovka.app/files/nodeproject
+10-24 15:19:29.793  3520  3674 I kentovka: node стартует
+10-24 15:19:31.097  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:31.097  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:31.932  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:19:31.933  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:19:31.933  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:19:32.145  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:19:32.148  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:19:32.148  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inTextureCoords
+10-24 15:19:32.271  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:32.272  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:32.392  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:32.392  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:19:32.563  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:32.563  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:32.563  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:19:32.563  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name texSubset
+10-24 15:19:36.204  3520  3675 I kentovka-node: Кентовка (Android) слушает http://127.0.0.1:18444
+10-24 15:19:45.917  3520  3675 I kentovka-node: хук клавиатуры не запустился, работаем через globalShortcut: нет на Android
+10-24 15:19:48.624  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name resolveLevel_and_idx
+10-24 15:19:48.624  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name p01
+10-24 15:19:48.624  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name p23
+10-24 15:19:48.624  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name fanPointAttrib
+10-24 15:19:48.917  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:48.917  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:49.065  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:49.066  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:49.066  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:19:49.224  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:19:49.224  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:19:49.224  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:19:49.317  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:49.317  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:49.317  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:19:49.407  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name fillBounds
+10-24 15:19:49.409  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:49.409  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name locations
+10-24 15:19:49.539  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:19:49.539  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:19:49.540  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:19:49.638  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name radii_selector
+10-24 15:19:49.639  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name corner_and_radius_outsets
+10-24 15:19:49.640  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name aa_bloat_and_coverage
+10-24 15:19:49.642  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name radii_x
+10-24 15:19:49.642  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 4 name radii_y
+10-24 15:19:49.643  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 5 name skew
+10-24 15:19:49.643  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 6 name translate_and_localrotate
+10-24 15:19:49.643  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 7 name color
+10-24 15:19:50.294  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name fillBounds
+10-24 15:19:50.310  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:19:50.310  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name locations
+10-24 15:19:50.310  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name sizeInAtlas
+10-24 15:19:50.469  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:50.486  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:19:50.639  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:19:50.639  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:19:50.644  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:19:51.524  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:19:51.524  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:19:51.524  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:19:52.092  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name radii_selector
+10-24 15:19:52.093  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name corner_and_radius_outsets
+10-24 15:19:52.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name aa_bloat_and_coverage
+10-24 15:19:52.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name radii_x
+10-24 15:19:52.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 4 name radii_y
+10-24 15:19:52.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 5 name skew
+10-24 15:19:52.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 6 name translate_and_localrotate
+10-24 15:19:52.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 7 name color
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name radii_selector
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name corner_and_radius_outsets
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name aa_bloat_and_coverage
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name radii_x
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 4 name radii_y
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 5 name skew
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 6 name translate_and_localrotate
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 7 name localrect
+10-24 15:19:52.530  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 8 name color
+10-24 15:19:52.872  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name pts01Attr
+10-24 15:19:52.872  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name pts23Attr
+10-24 15:19:52.872  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name argsAttr
+10-24 15:19:53.522  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name pts01Attr
+10-24 15:19:53.522  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name pts23Attr
+10-24 15:19:53.522  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name argsAttr
+10-24 15:19:54.256  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name matrix2d
+10-24 15:19:54.256  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name translate
+10-24 15:19:54.256  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name pathBounds
+10-24 15:19:54.425  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:54.425  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:19:54.425  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name texSubset
+10-24 15:19:59.247  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:19:59.250  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:09.204  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:09.204  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:20:09.204  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inEllipseOffset
+10-24 15:20:09.204  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name inEllipseRadii
+10-24 15:20:09.381  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:09.381  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:20:09.381  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:20:09.538  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:09.539  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:20:09.539  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:20:09.655  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name a_vertex
+10-24 15:20:09.754  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:09.754  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:20:09.892  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:09.892  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:20:10.015  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:10.015  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:20:10.137  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:10.137  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:20:11.662  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:11.662  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:11.742  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:11.742  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:11.823  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:11.823  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:20:11.823  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:20:11.891  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:11.892  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:20:11.984  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:11.984  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:12.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:12.098  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:12.192  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:12.192  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:12.291  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:12.291  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:12.387  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:12.391  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inCoverage
+10-24 15:20:13.079  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:13.080  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inTextureCoords
+10-24 15:20:18.209  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:20:18.210  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:20:18.828  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:20:20.576  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:20.576  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:20:20.576  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:20:27.352  4509  4509 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:27.917  5408  5408 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.033  5425  5425 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.092  5443  5443 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.171  5467  5467 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.244  5484  5484 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.313  5501  5501 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.365  5518  5518 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.438  5535  5535 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.507  5552  5552 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.565  5569  5569 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.620  5586  5586 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.686  5603  5603 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.749  5620  5620 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.813  5637  5637 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.887  5654  5654 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:28.966  5672  5672 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:29.034  5689  5689 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:38.101  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name inPosition
+10-24 15:20:38.101  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name inColor
+10-24 15:20:38.101  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name inCircleEdge
+10-24 15:20:38.485  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:38.485  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:38.485  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:20:38.498  3520  3675 I kentovka-node: [INFO:CONSOLE(0)] "The deviceorientation events are blocked by permissions policy. See https://github.com/w3c/webappsec-permissions-policy/blob/master/features.md#sensor-features", source:  (0)
+10-24 15:20:38.627  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name fillBounds
+10-24 15:20:38.627  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:38.627  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name locations
+10-24 15:20:38.748  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:38.748  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:20:38.852  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:38.852  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:38.852  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:20:39.019  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:39.019  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:39.305  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:20:39.309  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name radii_selector
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name corner_and_radius_outsets
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name aa_bloat_and_coverage
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name radii_x
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 4 name radii_y
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 5 name skew
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 6 name translate_and_localrotate
+10-24 15:20:39.378  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 7 name color
+10-24 15:20:39.615  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:39.615  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:39.615  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:20:39.855  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:20:39.855  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:20:39.855  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:20:39.855  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name texSubset
+10-24 15:20:40.841  6010  6010 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:40.906  6029  6029 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:40.975  6046  6046 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:41.040  6063  6063 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:45.965  6184  6184 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:46.241  6204  6204 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:46.921  6248  6248 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:47.368  6347  6347 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:20:47.453  6377  6377 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:03.515  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:21:04.784  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:21:04.791  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:21:04.791  3520  3675 I kentovka-node: [ERROR:web_contents_delegate.cc(239)] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+10-24 15:21:05.070  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:21:05.072  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:21:05.231  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:21:05.231  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:21:05.369  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:21:05.369  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name localCoord
+10-24 15:21:05.468  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:21:05.468  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:21:05.468  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:21:05.649  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:21:05.651  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:21:05.651  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:21:05.651  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name texSubset
+10-24 15:21:09.316  6856  6856 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:09.633  6886  6886 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:09.728  6904  6904 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name radii_selector
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name corner_and_radius_outsets
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name aa_bloat_and_coverage
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name radii_x
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 4 name radii_y
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 5 name skew
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 6 name translate_and_localrotate
+10-24 15:21:12.961  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 7 name color
+10-24 15:21:13.272  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name radii_selector
+10-24 15:21:13.272  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name corner_and_radius_outsets
+10-24 15:21:13.272  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name aa_bloat_and_coverage
+10-24 15:21:13.272  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 3 name radii_x
+10-24 15:21:13.273  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 4 name radii_y
+10-24 15:21:13.273  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 5 name skew
+10-24 15:21:13.273  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 6 name translate_and_localrotate
+10-24 15:21:13.273  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 7 name color
+10-24 15:21:13.697  6930  6930 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:15.820  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 0 name position
+10-24 15:21:15.820  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 1 name color
+10-24 15:21:15.820  3520  3675 I kentovka-node: s_glBindAttribLocation: bind attrib 2 name localCoord
+10-24 15:21:19.243  7020  7020 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:19.774  7047  7047 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:20.057  7076  7076 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:20.320  7094  7094 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
+10-24 15:21:20.462  7111  7111 I AndroidRuntime: VM exiting with result code 0, cleanup skipped.
