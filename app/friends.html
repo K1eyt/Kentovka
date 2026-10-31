@@ -8,6 +8,7 @@
 <script src="/kchat.js"></script>
 <script src="/kshare.js"></script>
 <script src="/khelp.js"></script>
+<script src="/kpop.js"></script>
 <style>
   :root {
     --bg: #0a0b14; --panel: #11131f; --panel2: #171a2a; --panel3: #1e2236; --line: #262a40;
@@ -104,8 +105,6 @@
   .devchev svg { width: 12px; height: 12px; transition: transform var(--t-fast, .12s); }
   .devchev:hover, .devchev.open { color: var(--text); background: var(--panel3); }
   .devchev.open svg { transform: rotate(180deg); }
-  .devpop { position: fixed; z-index: 80; width: 280px; max-width: calc(100vw - 16px); padding: 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 34px rgba(0,0,0,.55); }
-  .devpop h4 { margin: 0 0 8px; font: 700 14px var(--font-display); }
   .devpop label, .vdlg .vl { display: block; color: var(--dim); font-size: 12.5px; margin: 12px 0 6px; }
   .devpop label b, .vdlg .vl b { color: var(--text); }
   .devpop input[type=range], .vdlg input[type=range] { width: 100%; accent-color: var(--accent); }
@@ -116,8 +115,6 @@
   .devlist button.on i { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 3px, transparent 4px); }
   .devlist button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .devpop .hint, .vdlg .hint { font-size: 12px; color: var(--faint); margin: 8px 6px 0; }
-  .devpop .vbmore { margin-top: 10px; font-size: 12.5px; color: var(--dim); text-decoration: underline dotted; }
-  .devpop .vbmore:hover { color: var(--text); }
   dialog.kdlg.vdlg .kd-b { white-space: normal; }
   .vdlg .seg { display: flex; gap: 4px; flex-wrap: wrap; }
   .vdlg .seg button { flex: 1 1 auto; min-width: 0; padding: 8px 6px; font: 600 12.5px var(--font-display); color: var(--dim); overflow-wrap: normal; word-break: normal; hyphens: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -389,6 +386,13 @@
   .stage .twait { position: absolute; top: 8px; right: 8px; font-size: 12px; color: var(--dim); }
   .stage .sbar { display: flex; justify-content: center; gap: 10px; padding: 10px; }
   .stage .sbar .cbtn.on { background: var(--green, #3ddc97); color: #06110b; }
+  .stage .sbar .devgrp.big { position: relative; background: none; }
+  .stage .sbar .devgrp.big .devchev { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; margin: 0; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); }
+  .stage .sbar .devgrp.big .devchev svg { width: 11px; height: 11px; }
+  .stage .tile.cam { width: 280px; height: 170px; background: #000; cursor: zoom-in; }
+  .stage .tile.cam video.kcam { object-fit: cover; }
+  .stage.hasvid .tile.cam:not(.focused) { width: 150px; height: 92px; }
+  .stage.focus .tile.cam.focused video.kcam { object-fit: contain; }
   /* файлы в переписке */
   .fv { display: flex; flex-direction: column; gap: 6px; max-width: min(420px, 100%); margin: 2px 0; }
   .m.me .fv { align-self: flex-end; }
@@ -428,6 +432,8 @@
   const F = A.friends;
   const P = (d) => `<svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
   const I = {
+    video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',
+    videoOff: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.7 0H14a2 2 0 0 1 2 2v3.3l1 1L23 7v10M1 1l22 22"/></svg>',
     users: P('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'),
     send: P('<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>'),
     home: P('<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>'),
@@ -662,7 +668,7 @@
     if (document.querySelector('.lbox') && window.__lboxClose) { window.__lboxClose(); return true; }
     const d = [...document.querySelectorAll('dialog[open]')].pop(); if (d) { d.close(); return true; }
     if (replyTo && document.querySelector('.replybar')) { replyTo = null; document.querySelector('.replybar').remove(); return true; }
-    if (document.querySelector('.card, .menu, .devpop')) { closeFloat(); closeDev(); return true; }
+    if (document.querySelector('.card, .menu') || kPop.isOpen()) { closeFloat(); closeDev(); return true; }
     if (narrow() && (cur || mobFriends)) { goHome(); return true; }
     return false;
   };
@@ -1305,49 +1311,29 @@
     p.append(b, grp(m, 'in', 'Микрофон: выбрать устройство'), grp(d, 'out', 'Звук: куда выводить'), cog);
   }
 
-  // ---------- выбор микрофона и наушников (стрелочка), как на сервере ----------
-  let devOpen = null;
-  function closeDev() { if (devOpen) { devOpen.el.remove(); devOpen.btn.classList.remove('open'); devOpen = null; } }
-  document.addEventListener('pointerdown', (e) => { if (devOpen && !e.target.closest('.devpop, .devchev')) closeDev(); });
-  async function devPop(kind, btn) {
-    if (devOpen && devOpen.btn === btn) return closeDev();
-    closeDev();
-    const isIn = kind === 'in';
-    const el = document.createElement('div'); el.className = 'devpop';
-    el.innerHTML = `<h4>${isIn ? 'Микрофон' : 'Звук'}</h4><div class="devlist"></div><label>${isIn ? 'Громкость микрофона' : 'Громкость друзей'}: <b></b></label><input type="range" min="0" max="200" step="5"><button type="button" class="vbmore">Все настройки голоса</button>`;
-    devOpen = { el, btn }; btn.classList.add('open');
-    const list = el.querySelector('.devlist');
-    const draw = async () => {
-      list.innerHTML = '';
-      const KA = window.kAndroid && window.kAndroid.audioDevices ? window.kAndroid : null;
-      const nat = KA ? KA.audioDevices() : null;
-      const item = (name, on, fn) => { const x = document.createElement('button'); x.type = 'button'; x.classList.toggle('on', on); x.innerHTML = '<i></i><span></span>'; x.lastChild.textContent = name; x.title = name; x.onclick = fn; list.appendChild(x); };
-      if (nat) {
-        const arr = isIn ? nat.inputs : nat.outputs, curD = isIn ? nat.curIn : nat.curOut;
-        for (const dv of arr || []) item(dv.name, String(dv.id) === String(curD), () => { KA.setAudioDevice(isIn ? 'in' : 'out', dv.id); setTimeout(draw, 350); });
-        if (nat.note) { const h = document.createElement('p'); h.className = 'hint'; h.textContent = nat.note; list.appendChild(h); }
-        return;
-      }
-      const devs = (await navigator.mediaDevices.enumerateDevices().catch(() => [])).filter((x) => x.kind === (isIn ? 'audioinput' : 'audiooutput') && x.deviceId !== 'communications');
-      const curL = isIn ? VS.micLabel : VS.outLabel;
-      if (!devs.length || !devs[0].label) { list.innerHTML = '<p class="hint">Список появится после первого звонка (нужно разрешение на микрофон).</p>'; return; }
-      for (const dv of devs) {
-        const name = dv.deviceId === 'default' ? 'Как в системе' : dv.label;
-        const on = dv.deviceId === 'default' ? !curL : dv.label === curL;
-        item(name, on, async () => { saveVS(isIn ? { micLabel: dv.deviceId === 'default' ? '' : dv.label } : { outLabel: dv.deviceId === 'default' ? '' : dv.label }); if (isIn) await swapMic(); else applyOut(); draw(); });
-      }
-    };
-    draw();
-    const r = el.querySelector('input'), vb = el.querySelector('label b');
-    const key = isIn ? 'micGain' : 'masterVol';
-    r.value = Math.round((VS[key] ?? 1) * 100); vb.textContent = r.value + '%';
-    r.oninput = () => { vb.textContent = r.value + '%'; VS[key] = r.value / 100; if (isIn) liveGain(); else applyOut(); };
-    r.onchange = () => saveVS({ [key]: r.value / 100 });
-    el.querySelector('.vbmore').onclick = () => { closeDev(); settingsDialog('voice'); };
-    document.body.appendChild(el);
-    const place = () => { const rc = (btn.closest('.devgrp') || btn).getBoundingClientRect(); el.style.left = Math.max(8, Math.min(rc.left, innerWidth - el.offsetWidth - 8)) + 'px'; el.style.top = Math.max(8, rc.top - el.offsetHeight - 8) + 'px'; };
-    place(); if (window.ResizeObserver) new ResizeObserver(place).observe(el);
-  }
+  // ---------- всплывающие окна: микрофон, звук, камера — общий модуль kpop.js, как на серверах ----------
+  const closeDev = () => kPop.close();
+  const popMicA = {
+    devId: () => null, devLabel: () => VS.micLabel || '',
+    pickDev: async (d) => { saveVS({ micLabel: d ? d.label : '' }); await swapMic(); },
+    gain: () => VS.micGain ?? 1,
+    setGain: (v, fin) => { VS.micGain = v; liveGain(); if (fin) saveVS({ micGain: v }); },
+    analyser: () => { const h = gcall || (call && call.state !== 'ringing' ? call : null); return h && h.mic ? h.mic.an : null; },
+    ns: () => VS.nsMode || 'smart',
+    setNs: async (m) => { saveVS({ nsMode: m }); await swapMic(); },
+    strength: () => VS.nsStrength ?? 80,
+    setStrength: async (v, fin) => { VS.nsStrength = v; if (fin) { saveVS({ nsStrength: v }); await swapMic(); } },
+    more: () => settingsDialog('voice'),
+  };
+  const popOutA = {
+    devId: () => null, devLabel: () => VS.outLabel || '',
+    canPick: () => !!((window.kAndroid && window.kAndroid.audioDevices) || HTMLMediaElement.prototype.setSinkId),
+    pickDev: async (d) => { saveVS({ outLabel: d ? d.label : '' }); await applyOut(); },
+    vol: () => VS.masterVol ?? 1,
+    setVol: (v, fin) => { VS.masterVol = v; applyOut(); if (fin) saveVS({ masterVol: v }); },
+    more: () => settingsDialog('voice'),
+  };
+  function devPop(kind, btn) { closeFloat(); floatBy = null; return kind === 'in' ? kPop.mic(btn, popMicA) : kind === 'cam' ? kPop.cam(btn, popCamA) : kPop.out(btn, popOutA); }
   // смена устройства прямо в звонке
   async function swapMic() {
     const holders = [call && call.mic ? call : null, gcall && gcall.mic ? gcall : null].filter(Boolean);
@@ -1380,19 +1366,15 @@
   }
   function volPop(id, anchor) {
     const f = list.find((x) => x.id === id) || personOf(id) || { name: 'Участник' };
-    if (floatBy === anchor && document.querySelector('.menu.volpop')) { closeFloat(); floatBy = null; return; }
-    closeFloat();
-    const x = pvol[id] || {};
-    const m = document.createElement('div'); m.className = 'menu volpop';
-    m.innerHTML = '<div class="vh"><b></b></div><label class="vl">Громкость: <b class="vv"></b></label><input type="range" min="0" max="200" step="5"><label class="chk vm"><input type="checkbox"> Заглушить для себя</label>';
-    m.querySelector('.vh b').textContent = f.name || 'Участник';
-    const r = m.querySelector('input[type=range]'), vv = m.querySelector('.vv'), mu = m.querySelector('.vm input');
-    r.value = Math.round((x.v ?? 1) * 100); vv.textContent = r.value + '%'; mu.checked = !!x.mute;
-    r.oninput = () => { vv.textContent = r.value + '%'; pvol[id] = Object.assign(pvol[id] || {}, { v: r.value / 100 }); applyPeerVol(); };
-    r.onchange = savePvol;
-    mu.onchange = () => { pvol[id] = Object.assign(pvol[id] || {}, { mute: mu.checked }); savePvol(); applyPeerVol(); drawStage(); };
-    m.onpointerdown = (e) => e.stopPropagation();
-    place(m, anchor.getBoundingClientRect()); floatBy = anchor;
+    closeFloat(); floatBy = null;
+    kPop.person(anchor, {
+      key: 'f' + id, name: f.name || 'Участник',
+      vol: () => Math.min(2, (pvol[id] || {}).v ?? 1),
+      setVol: (v, fin) => { pvol[id] = Object.assign(pvol[id] || {}, { v }); applyPeerVol(); if (fin) savePvol(); },
+      muted: () => !!(pvol[id] || {}).mute,
+      setMuted: (b) => { pvol[id] = Object.assign(pvol[id] || {}, { mute: b }); savePvol(); applyPeerVol(); drawStage(); },
+      profile: list.find((x) => x.id === id) ? () => openCard(list.find((x) => x.id === id), anchor) : null,
+    });
   }
   // громкость до 200%: сверх 100% — через усилитель WebAudio (сам <audio> тогда беззвучный, но играет)
   function setVol(a, v) {
@@ -1739,7 +1721,7 @@
   function endCall(kind = 'end', note) {
     if (!call) return;
     const c = call; call = null;
-    stopShareCall(true); clearRemote(c.id); stageFocus = null;
+    stopShareCall(true); stopCamCall(true); clearRemote(c.id); stageFocus = null;
     tone(null); clearTimeout(c.timer);
     if (kind) say(c.id, kind === 'cancel' ? 'end' : kind, null, c.cid);
     try { c.pc && c.pc.close(); } catch {}
@@ -1868,7 +1850,7 @@
     if (m.k === 'decline') return endCall(null, `${call.name} не может говорить`);
     if (m.k === 'busy') return endCall(null, `${call.name} сейчас в другом звонке`);
     if (m.k === 'end') return endCall(null, call.state === 'live' ? 'Звонок завершён' : call.dir === 'in' ? 'Пропущенный звонок' : null);
-    if (m.k === 'state' && m.data) { call.remote = { muted: !!m.data.muted }; remoteMuted.set(call.id, !!m.data.muted); remoteSharing.set(call.id, !!m.data.sharing); renderCall(); drawStage(); return; }
+    if (m.k === 'state' && m.data) { call.remote = { muted: !!m.data.muted }; remoteMuted.set(call.id, !!m.data.muted); remoteSharing.set(call.id, !!m.data.sharing); setRemoteVidState(call.id, m.data); renderCall(); drawStage(); return; }
     if (m.k === 'signal' && m.data) { if (call.pc) await onSig(m.data); else (call.early = call.early || []).push(m.data); }
   });
   async function onSig(d) {
@@ -1905,15 +1887,19 @@
     for (const g of groups) { const mb = g.members.find((x) => x.id === id); if (mb) return mb; }
     return { name: 'Без ника' };
   }
-  const hasVideo = (id) => (id === me.id ? !!share : !!(remoteSharing.get(id) && remoteVid.get(id) && remoteVid.get(id).getVideoTracks().some((t) => t.readyState === 'live')));
-  function vidOf(id) {
-    let v = videoEls.get(id);
-    if (!v) { v = document.createElement('video'); v.autoplay = true; v.playsInline = true; v.muted = true; videoEls.set(id, v); }
-    const src = id === me.id ? (share && share.stream) : remoteVid.get(id);
+  const hasVideo = (id) => (id === me.id ? !!share : !!remoteScreen(id));          // показывает экран
+  const hasCam = (id) => (id === me.id ? !!cam : !!remoteCam(id));                  // включил камеру
+  function vidEl(key, src) {
+    let v = videoEls.get(key);
+    if (!v) { v = document.createElement('video'); v.autoplay = true; v.playsInline = true; v.muted = true; videoEls.set(key, v); }
     if (v.srcObject !== src) v.srcObject = src || null;
     if (src) v.play().catch(() => {});
     return v;
   }
+  const vidOf = (id) => vidEl(id, id === me.id ? (share && share.stream) : remoteScreen(id));
+  const camVidOf = (id) => { const v = vidEl(id + ':c', id === me.id ? (cam && cam.stream) : remoteCam(id)); v.className = 'kcam' + (id === me.id ? ' mirror' : ''); return v; };
+  // плитки: у каждого своя (камера или аватарка), а показ экрана — отдельной большой плиткой
+  const tileKeys = (c) => { const k = []; for (const id of c.ids) { k.push(id); if (hasVideo(id)) k.push(id + ':s'); } return k; };
   function mountStage(container) {
     const c = stageCtx();
     if (!c) { stageEl.remove(); return false; }
@@ -1924,40 +1910,46 @@
   function drawStage() {
     const c = stageCtx();
     if (!c) { stageEl.remove(); return; }
-    if (stageFocus && !hasVideo(stageFocus)) stageFocus = null;
+    const keys = tileKeys(c);
+    if (stageFocus && !keys.includes(stageFocus)) stageFocus = null;
+    if (stageFocus && !stageFocus.endsWith(':s') && !hasCam(stageFocus)) stageFocus = null;
     stageEl.classList.toggle('focus', !!stageFocus);
-    stageEl.classList.toggle('hasvid', c.ids.some((id) => hasVideo(id)));
+    stageEl.classList.toggle('hasvid', keys.some((k) => k.endsWith(':s')));
     stageEl.innerHTML = '';
     const tiles = document.createElement('div'); tiles.className = 'tiles';
-    for (const id of c.ids) {
-      const p = personOf(id), vid = hasVideo(id);
-      const t = document.createElement('div'); t.className = 'tile' + (vid ? ' vid' : '') + (stageFocus === id ? ' focused' : ''); t.dataset.id = id;
-      if (vid) {
-        t.appendChild(vidOf(id));
+    for (const key of keys) {
+      const scr = key.endsWith(':s'), id = scr ? key.slice(0, -2) : key;
+      const p = personOf(id), cm = !scr && hasCam(id);
+      const t = document.createElement('div'); t.className = 'tile' + (scr ? ' vid' : '') + (cm ? ' cam' : '') + (stageFocus === key ? ' focused' : '');
+      if (!scr) t.dataset.id = id; else t.dataset.sid = id;
+      if (scr || cm) {
+        t.appendChild(scr ? vidOf(id) : camVidOf(id));
         t.title = 'Нажми — на весь звонок, ещё раз — обратно';
-        t.onclick = () => { if (document.fullscreenElement === stageEl) return; stageFocus = stageFocus === id ? null : id; drawStage(); };
-        t.ondblclick = (e) => { e.preventDefault(); stageFull(id); };
+        t.onclick = () => { if (document.fullscreenElement === stageEl) return; stageFocus = stageFocus === key ? null : key; drawStage(); };
+        t.ondblclick = (e) => { e.preventDefault(); stageFull(key); };
       } else {
         const a = ava(p, false); a.classList.add('tava'); t.appendChild(a);
         if (id !== me.id) { t.title = 'Нажми — громкость ' + (p.name || ''); t.style.cursor = 'pointer'; t.onclick = (e) => { e.stopPropagation(); volPop(id, t); }; }
       }
-      if (id !== me.id) t.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); volPop(id, t); };
-      if (id !== me.id && (pvol[id] || {}).mute) t.classList.add('pmuted');
+      if (id !== me.id && !scr) t.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); volPop(id, t); };
+      if (id !== me.id && !scr && (pvol[id] || {}).mute) t.classList.add('pmuted');
       const nm = document.createElement('div'); nm.className = 'tname';
       const muted = id === me.id ? (c.muted || c.deaf) : remoteMuted.get(id);
-      nm.innerHTML = (muted ? I.micOff : '') + '<span></span>' + (vid ? ' <i class="live">В ЭФИРЕ</i>' : '');
+      nm.innerHTML = (!scr && muted ? I.micOff : '') + '<span></span>' + (scr ? ' <i class="live">ЭКРАН</i>' : '');
       nm.querySelector('span').textContent = (p.name || 'Без ника') + (id === me.id ? ' (ты)' : '');
       t.appendChild(nm);
-      if (c.wait && id !== me.id) { const w = document.createElement('div'); w.className = 'twait'; w.textContent = call && call.state === 'ringing' ? 'Звоним…' : 'Соединяемся…'; t.appendChild(w); }
+      if (!scr && c.wait && id !== me.id) { const w = document.createElement('div'); w.className = 'twait'; w.textContent = call && call.state === 'ringing' ? 'Звоним…' : 'Соединяемся…'; t.appendChild(w); }
       tiles.appendChild(t);
     }
     const bar = document.createElement('div'); bar.className = 'sbar';
     const btn = (cls, ic, title, fn) => { const b = document.createElement('button'); b.className = 'cbtn ' + cls; b.innerHTML = ic; b.title = title; b.onclick = fn; bar.appendChild(b); return b; };
+    const grp = (b, kind, title) => { const g = document.createElement('span'); g.className = 'devgrp big'; const ch = document.createElement('button'); ch.type = 'button'; ch.className = 'devchev'; ch.title = title; ch.innerHTML = I.chev; ch.onclick = (e) => { e.stopPropagation(); devPop(kind, ch); }; b.replaceWith(g); g.append(b, ch); return g; };
     const isG = c.kind === 'g';
-    btn(c.muted ? 'off' : '', c.muted ? I.micOff : I.mic, c.muted ? 'Включить микрофон' : 'Выключить микрофон', () => (isG ? gMute(!gcall.muted) : setMuted(!call.muted)));
-    btn(c.deaf ? 'off' : '', c.deaf ? I.headOff : I.head, c.deaf ? 'Включить звук' : 'Выключить звук', () => (isG ? gDeaf(!gcall.deaf) : setDeaf(!call.deaf)));
+    grp(btn(c.muted ? 'off' : '', c.muted ? I.micOff : I.mic, c.muted ? 'Включить микрофон' : 'Выключить микрофон', () => (isG ? gMute(!gcall.muted) : setMuted(!call.muted))), 'in', 'Микрофон: устройство, громкость, шумодав');
+    grp(btn(c.deaf ? 'off' : '', c.deaf ? I.headOff : I.head, c.deaf ? 'Включить звук' : 'Выключить звук', () => (isG ? gDeaf(!gcall.deaf) : setDeaf(!call.deaf))), 'out', 'Звук: куда выводить и громкость');
+    if (!c.wait) grp(btn(cam ? 'on' : '', cam ? I.video : I.videoOff, cam ? 'Выключить камеру' : 'Включить камеру', () => startCamCall()), 'cam', 'Камера: выбрать и настроить');
     if (!c.wait) btn(share ? 'on' : '', share ? I.stop : I.screen, share ? 'Остановить показ экрана' : 'Показать экран', () => startShareCall());
-    if (c.ids.some((id) => hasVideo(id))) { const fs = document.fullscreenElement === stageEl; btn(fs ? 'on' : '', I.full, fs ? 'Выйти из полного экрана (Esc)' : 'На весь экран (двойной клик по стриму)', () => stageFull()); }
+    if (keys.some((k) => k.endsWith(':s') || (!k.endsWith(':s') && hasCam(k)))) { const fs = document.fullscreenElement === stageEl; btn(fs ? 'on' : '', I.full, fs ? 'Выйти из полного экрана (Esc)' : 'На весь экран (двойной клик по видео)', () => stageFull()); }
     btn('red', I.hang, isG ? 'Выйти из звонка' : 'Завершить звонок', () => (isG ? gLeave() : endCall(call.state === 'ringing' && call.dir === 'out' ? 'cancel' : 'end')));
     stageEl.append(tiles, bar);
     paintTalk();
@@ -1966,7 +1958,7 @@
   function stageFull(id) {
     if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
     const c = stageCtx(); if (!c) return;
-    if (id) stageFocus = id; else if (!stageFocus) stageFocus = c.ids.find((x) => hasVideo(x)) || null;
+    if (id) stageFocus = id; else if (!stageFocus) stageFocus = tileKeys(c).find((k) => k.endsWith(':s')) || c.ids.find((x) => hasCam(x)) || null;
     drawStage();
     stageEl.requestFullscreen({ navigationUI: 'hide' }).then(() => { try { if (window.kPhone && screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch {} }).catch(() => {});
   }
@@ -2032,17 +2024,117 @@
     drawStage();
   }
   function sendCallState() {
-    if (gcall) gsay(gcall.gid, 'state', { muted: gcall.muted || gcall.deaf, sharing: !!share });
-    else if (call) say(call.id, 'state', { muted: call.muted || call.deaf, sharing: !!share });
+    const extra = { sharing: !!share, shareSid: share ? share.stream.id : null, cam: !!cam, camSid: cam ? cam.stream.id : null };
+    if (gcall) gsay(gcall.gid, 'state', Object.assign({ muted: gcall.muted || gcall.deaf }, extra));
+    else if (call) say(call.id, 'state', Object.assign({ muted: call.muted || call.deaf }, extra));
   }
+  // видео от собеседника: экран и камера различаем по id потока (его сообщает собеседник в state)
+  const remoteStreams = new Map(); // id -> Map(streamId -> MediaStream)
+  const remoteVS = new Map();      // id -> { cam, camSid, shareSid }
+  function setRemoteVidState(id, d) { remoteVS.set(id, { cam: !!d.cam, camSid: d.camSid || null, shareSid: d.shareSid || null }); }
   function onRemoteTrack(id, e) {
     if (e.track.kind !== 'video') return false;
-    remoteVid.set(id, new MediaStream([e.track]));
-    e.track.onended = () => drawStage(); e.track.onunmute = () => drawStage();
+    const st = e.streams && e.streams[0];
+    const sid = st ? st.id : e.track.id;
+    let m = remoteStreams.get(id); if (!m) remoteStreams.set(id, (m = new Map()));
+    m.set(sid, st || new MediaStream([e.track]));
+    e.track.onended = e.track.onunmute = e.track.onmute = () => drawStage();
     drawStage();
     return true;
   }
-  function clearRemote(id) { remoteVid.delete(id); remoteSharing.delete(id); remoteMuted.delete(id); talk.delete(id); const v = videoEls.get(id); if (v) { v.srcObject = null; videoEls.delete(id); } }
+  const liveVid = (s) => !!(s && s.getVideoTracks().some((t) => t.readyState === 'live' && !t.muted));
+  function remoteScreen(id) {
+    if (!remoteSharing.get(id)) return null;
+    const m = remoteStreams.get(id); if (!m) return null;
+    const vs = remoteVS.get(id) || {};
+    if (vs.shareSid && liveVid(m.get(vs.shareSid))) return m.get(vs.shareSid);
+    for (const [sid, s] of m) if (sid !== vs.camSid && liveVid(s)) return s; // старая версия у друга: id потока не сообщает
+    return null;
+  }
+  function remoteCam(id) {
+    const vs = remoteVS.get(id); if (!vs || !vs.cam) return null;
+    const m = remoteStreams.get(id); if (!m) return null;
+    if (vs.camSid && liveVid(m.get(vs.camSid))) return m.get(vs.camSid);
+    return null;
+  }
+  function clearRemote(id) { remoteVid.delete(id); remoteStreams.delete(id); remoteVS.delete(id); remoteSharing.delete(id); remoteMuted.delete(id); talk.delete(id); for (const k of [id, id + ':c']) { const v = videoEls.get(k); if (v) { v.srcObject = null; videoEls.delete(k); } } }
+
+  // ================= камера в звонке (личка и группа) =================
+  let cam = null; // { stream, track, senders: Map(pc -> sender) }
+  let camPref = { dev: '', q: '360', facing: 'user' };
+  try { camPref = Object.assign(camPref, JSON.parse(localStorage.getItem('camPref') || '{}')); } catch {}
+  const saveCamPref = () => { try { localStorage.setItem('camPref', JSON.stringify(camPref)); } catch {} };
+  const CAMQ = { '360': [640, 360, 24, 500000], '720': [1280, 720, 30, 1200000], '1080': [1920, 1080, 30, 2500000] };
+  const camQv = () => CAMQ[camPref.q] || CAMQ['360'];
+  function camC(anyDev) {
+    const [w, h, fps] = camQv();
+    const c = { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } };
+    if (window.kAndroid) c.facingMode = camPref.facing || 'user'; else if (camPref.dev && !anyDev) c.deviceId = { exact: camPref.dev };
+    return c;
+  }
+  async function tuneCam(snd) {
+    try { const prm = snd.getParameters(); if (!prm.encodings || !prm.encodings.length) prm.encodings = [{}]; const [, , fps, rate] = camQv(); prm.encodings[0].maxBitrate = rate; prm.encodings[0].maxFramerate = fps; await snd.setParameters(prm); } catch {}
+  }
+  async function addCamTo(pc) {
+    if (!cam || cam.senders.has(pc)) return;
+    const snd = pc.addTrack(cam.track, cam.stream); cam.senders.set(pc, snd);
+    await tuneCam(snd);
+  }
+  let camBusy = false;
+  async function startCamCall() {
+    if (cam) return stopCamCall();
+    if (camBusy) return;
+    if (!stageCtx()) { kSay('Камера включается в звонке.'); return; }
+    camBusy = true;
+    let stream = null;
+    try {
+      try { stream = await navigator.mediaDevices.getUserMedia({ video: camC() }); }
+      catch (e) { if (e.name === 'NotAllowedError' || e.name === 'SecurityError') throw e; stream = await navigator.mediaDevices.getUserMedia({ video: camC(true) }); }
+    } catch (e) {
+      camBusy = false;
+      kSay(e.name === 'NotAllowedError' ? 'Нет доступа к камере. Разреши камеру для Кентовки и попробуй ещё раз.' : e.name === 'NotFoundError' ? 'Камера не найдена. Подключи её и попробуй ещё раз.' : e.name === 'NotReadableError' ? 'Камера занята другой программой. Закрой её и попробуй ещё раз.' : 'Камера не включилась: ' + e.message);
+      return;
+    }
+    camBusy = false;
+    if (!stageCtx()) { stream.getTracks().forEach((t) => t.stop()); return; }
+    const track = stream.getVideoTracks()[0];
+    try { track.contentHint = 'motion'; } catch {}
+    cam = { stream, track, senders: new Map() };
+    track.onended = () => stopCamCall();
+    for (const [id, pc] of sharePcs()) { await addCamTo(pc); renego(id, pc).catch(() => {}); }
+    sendCallState(); drawStage();
+  }
+  function stopCamCall(silent) {
+    if (!cam) return;
+    const c2 = cam; cam = null;
+    c2.stream.getTracks().forEach((t) => { try { t.stop(); } catch {} });
+    if (!silent) for (const [id, pc] of sharePcs()) { const snd = c2.senders.get(pc); if (snd) { try { pc.removeTrack(snd); } catch {} renego(id, pc).catch(() => {}); } }
+    if (!silent) sendCallState();
+    drawStage();
+  }
+  // сменить камеру/качество на лету: та же дорожка заменяется у всех без переподключения
+  async function swapCam() {
+    if (!cam) return;
+    let ns = null;
+    try { ns = await navigator.mediaDevices.getUserMedia({ video: camC() }); } catch { try { ns = await navigator.mediaDevices.getUserMedia({ video: camC(true) }); } catch (e) { kSay('Камера не переключилась: ' + e.message); return; } }
+    const nt = ns.getVideoTracks()[0]; try { nt.contentHint = 'motion'; } catch {}
+    const old = cam.track;
+    for (const snd of cam.senders.values()) { await snd.replaceTrack(nt).catch(() => {}); tuneCam(snd); }
+    // id потока остаётся прежним для собеседника (msid уже согласован) — просто меняем дорожку внутри нашего потока
+    cam.stream.removeTrack(old); cam.stream.addTrack(nt); cam.track = nt; nt.onended = () => stopCamCall();
+    old.stop(); ns.getTracks().forEach((t) => { if (t !== nt) t.stop(); });
+    drawStage();
+  }
+  const popCamA = {
+    on: () => !!cam, stream: () => (cam ? cam.stream : null),
+    toggle: () => startCamCall(),
+    devId: () => camPref.dev || (cam ? cam.track.getSettings().deviceId : ''),
+    pickDev: async (d) => { camPref.dev = d ? d.deviceId : ''; saveCamPref(); await swapCam(); },
+    q: () => camPref.q || '360', setQ: async (q) => { camPref.q = q; saveCamPref(); if (cam) { const [w, h, fps] = camQv(); await cam.track.applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } }).catch(() => swapCam()); for (const snd of cam.senders.values()) tuneCam(snd); } },
+    facing: () => camPref.facing || 'user', setFacing: async (f) => { camPref.facing = f; saveCamPref(); await swapCam(); },
+    more: () => settingsDialog('voice'),
+  };
+  window.kcam = () => ({ on: !!cam, settings: cam ? cam.track.getSettings() : null, remote: [...remoteStreams.keys()].map((id) => ({ id, cam: !!remoteCam(id), screen: !!remoteScreen(id) })) });
   // ================= группы в личке (как в Discord): чат и звонок на всех =================
   const gOf = (id) => groups.find((g) => g.id === id);
   const gIcon = (g, cls) => {
@@ -2228,7 +2320,7 @@
   function gLeave() {
     if (!gcall) return;
     const c = gcall; gcall = null;
-    stopShareCall(true); for (const id of c.parts) clearRemote(id); stageFocus = null;
+    stopShareCall(true); stopCamCall(true); for (const id of c.parts) clearRemote(id); stageFocus = null;
     clearInterval(c.tick);
     F.groupCall(c.gid, { k: 'leave', cid: c.cid });
     for (const p of c.peers.values()) { try { p.pc.close(); } catch {} if (p.audio) { p.audio.srcObject = null; p.audio.remove(); } }
@@ -2246,6 +2338,7 @@
     c.peers.set(id, p);
     c.mic.stream.getTracks().forEach((t) => pc.addTrack(t, c.mic.stream));
     if (share) { if (offerer) addShareTo(pc); else setTimeout(() => { if (share && gcall === c) addShareTo(pc).then(() => renego(id, pc)).catch(() => {}); }, 2500); }
+    if (cam) { if (offerer) addCamTo(pc); else setTimeout(() => { if (cam && gcall === c) addCamTo(pc).then(() => renego(id, pc)).catch(() => {}); }, 2700); }
     pc.onicecandidate = (e) => e.candidate && gsay(c.gid, 'signal', { candidate: e.candidate.toJSON() }, id);
     pc.ontrack = (e) => {
       if (onRemoteTrack(id, e)) return;
@@ -2289,7 +2382,7 @@
       gRerender(); return;
     }
     if (!gcall || gcall.gid !== m.gid || !m.data) return;
-    if (m.k === 'state') { remoteMuted.set(m.from, !!m.data.muted); remoteSharing.set(m.from, !!m.data.sharing); drawStage(); return; }
+    if (m.k === 'state') { remoteMuted.set(m.from, !!m.data.muted); remoteSharing.set(m.from, !!m.data.sharing); setRemoteVidState(m.from, m.data); drawStage(); return; }
     if (m.k === 'signal') {
       const d = m.data;
       let p = gcall.peers.get(m.from);

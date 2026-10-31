@@ -51,6 +51,7 @@ function setupKapp(ses) {
     ['/kchat.js', path.join(ROOT, 'public', 'kchat.js')],
     ['/kshare.js', path.join(ROOT, 'public', 'kshare.js')],
     ['/khelp.js', path.join(ROOT, 'public', 'khelp.js')],
+    ['/kpop.js', path.join(ROOT, 'public', 'kpop.js')],
     ['/kui.css', path.join(ROOT, 'public', 'kui.css')],
     ['/df-worker.js', path.join(ROOT, 'public', 'df-worker.js')],
     ['/kselect.js', path.join(ROOT, 'public', 'kselect.js')],

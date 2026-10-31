@@ -15,6 +15,7 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
 <script src="/kchat.js"></script>
 <script src="/kshare.js"></script>
 <script src="/khelp.js"></script>
+<script src="/kpop.js"></script>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%2322e1ff'/><stop offset='1' stop-color='%23ff3ec8'/></linearGradient></defs><rect width='32' height='32' rx='9' fill='url(%23g)'/><text x='16' y='23' font-size='18' text-anchor='middle' fill='%23070812' font-family='sans-serif' font-weight='bold'>К</text></svg>">
 <style>
   /* ===== тема: всё строится от этих переменных, их меняет «Вид» в настройках ===== */
@@ -184,17 +185,6 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
   .vtools .vt.active svg { color: var(--accent); }
   .vtools .vt svg { width: 15px; height: 15px; flex: none; }
   .vtools .vt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #vbPop { position: fixed; z-index: 65; width: 290px; padding: 14px; border-radius: var(--r); background: var(--panel); border: 1px solid var(--line); box-shadow: 0 14px 34px rgba(0,0,0,.55); animation: pop var(--t-fast) ease-out; }
-  #vbPop h4 { margin: 0 0 10px; font: 700 14px var(--font-display); }
-  #vbPop label { display: block; color: var(--dim); font-size: 12.5px; margin: 10px 0 5px; }
-  #vbPop label b { color: var(--text); }
-  #vbPop select, #vbPop input[type=range] { width: 100%; }
-  #vbPop .mini { height: 6px; border-radius: 3px; background: var(--panel3); overflow: hidden; margin-top: 8px; }
-  #vbPop .mini i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--green), var(--accent)); transition: width .08s; }
-  #vbPop .seg { display: flex; gap: 4px; flex-wrap: wrap; }
-  #vbPop .seg button { flex: 1 1 30%; padding: 7px 4px; border-radius: 7px; background: var(--panel2); border: 1px solid var(--line); font-size: 12px; color: var(--dim); }
-  #vbPop .seg button.on { border-color: var(--accent); color: var(--text); background: rgba(var(--acc-rgb), .12); }
-  #vbPop .hint { margin-top: 8px; }
   #app.on { display: grid; animation: fadein var(--t) ease-out; }
   @keyframes fadein { from { opacity: 0; } }
   aside { background: color-mix(in srgb, var(--panel) 92%, transparent); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
@@ -204,7 +194,6 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
   .brand .title { font: 700 18px/1 var(--font-display); letter-spacing: .01em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #app.hasrail .brand .logo { display: none; }
   #app.hasrail .brand .title { font-size: 16px; }
-  #vbPop .seg { background: none; border: 0; padding: 0; }
   .brand .srv { margin-left: auto; font-size: 12px; color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
   #hostLine { display: none; margin: 10px 10px 0; padding: 8px 10px; font-size: 13px; color: var(--dim); background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-sm); }
   #hostLine b { color: var(--accent); font-family: var(--font-display); }
@@ -302,6 +291,19 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
   .vrow { display: flex; align-items: center; gap: 6px; }
   .vstatus { flex: 1; min-width: 0; color: var(--green); font-weight: 700; font-size: 13px; font-family: var(--font-display); }
   .vstatus .sub { display: block; color: var(--dim); font-weight: 400; font-size: 12px; font-family: var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vbtns { display: flex; gap: 6px; margin-top: 8px; align-items: stretch; }
+  .vbtns #shareBtn { margin-top: 0; flex: 1; min-width: 0; }
+  .vbtns .camgrp { flex: none; display: flex; align-items: stretch; }
+  #camBtn { padding: 7px 10px; border-radius: var(--r-sm) 0 0 var(--r-sm); background: var(--panel3); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: background var(--t-fast); }
+  #camBtn:hover { background: var(--line); }
+  #camBtn svg { width: 15px; height: 15px; }
+  #camBtn.sharing { background: rgba(var(--acc-rgb), .14); color: var(--accent); }
+  .camgrp .devchev { height: auto; margin-left: 0; border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--panel3); }
+  .vtile.hascam .ava, .vtile.hascam .tbg { visibility: hidden; }
+  .vtile.hascam { background: #000; }
+  .user .icons .camic { display: contents; } .user .icons .camic svg { color: var(--accent); }
+  .vtile .tlabel .camic { display: contents; } .vtile .tlabel .camic svg { color: var(--accent); }
+  .vtile.pmuted::after { content: "заглушён для тебя"; position: absolute; top: 10px; left: 10px; font-size: 11px; padding: 2px 6px; border-radius: 6px; background: rgba(0,0,0,.6); color: var(--dim); }
   #shareBtn { margin-top: 8px; width: 100%; padding: 7px 10px; border-radius: var(--r-sm); background: var(--panel3); font-size: 13px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background var(--t-fast), box-shadow var(--t-fast); }
   #shareBtn:hover { background: var(--line); }
   #shareBtn.sharing { background: rgba(var(--acc-rgb), .14); color: var(--accent); box-shadow: inset 0 0 0 1px rgba(var(--acc-rgb), .5); }
@@ -316,14 +318,6 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
   .devgrp.big .devchev { position: absolute; right: -4px; bottom: -4px; width: 20px; height: 20px; margin: 0; border-radius: 50%; background: var(--panel); border: 1px solid var(--line); }
   .devgrp.big .devchev svg { width: 11px; height: 11px; }
   .devgrp.big:hover { background: none; }
-  #vbPop .devlist { display: flex; flex-direction: column; gap: 2px; max-height: 220px; overflow-y: auto; margin: 0 -6px; }
-  #vbPop .devlist button { display: flex; align-items: center; gap: 8px; text-align: left; padding: 7px 8px; border-radius: var(--r-sm); font-size: 13.5px; color: var(--text); }
-  #vbPop .devlist button:hover { background: var(--panel2); }
-  #vbPop .devlist button i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--faint); flex: none; }
-  #vbPop .devlist button.on i { border-color: var(--accent); background: radial-gradient(circle, var(--accent) 0 3px, transparent 4px); box-shadow: 0 0 calc(8px * var(--glow)) rgba(var(--acc-rgb), .5); }
-  #vbPop .devlist button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  #vbPop .vbmore { margin-top: 10px; font-size: 12.5px; color: var(--dim); text-decoration: underline dotted; }
-  #vbPop .vbmore:hover { color: var(--text); }
   .mebtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 4px 6px; border-radius: var(--r-sm); text-align: left; }
   .mebtn:hover { background: var(--panel2); }
   .mebtn .who { min-width: 0; }
@@ -778,7 +772,7 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
         <div class="vstatus">Голос подключён<span class="sub" id="avgPing"></span></div>
         <button class="iconbtn" id="leaveBtn" title="Выйти из голоса" data-icon="hangup"></button>
       </div>
-      <button id="shareBtn" title="Показать экран"></button>
+      <div class="vbtns"><button id="shareBtn" title="Показать экран"></button><span class="devgrp camgrp"><button id="camBtn" title="Включить камеру"></button><button class="devchev" id="camDev" title="Камера: выбрать и настроить" aria-label="Настройки камеры" data-icon="chevUp"></button></span></div>
       <div class="vtools">
         <button type="button" class="vt" id="vtNs" title="Шумодав"><span data-icon="waves"></span><span id="vtNsText">Шумодав</span></button>
         <button type="button" class="vt" id="vtMic" title="Громкость микрофона"><span data-icon="mic"></span><span id="vtMicText">100%</span></button>
@@ -823,6 +817,7 @@ if (location.protocol === 'http:' && location.hostname === '127.0.0.1' && /^ktab
       <div class="callbar">
         <span class="devgrp big"><button class="cbtn" id="callMute" data-tip="Микрофон" data-icon="mic"></button><button class="devchev" id="callMicDev" title="Микрофон: выбрать устройство" aria-label="Выбрать микрофон" data-icon="chevUp"></button></span>
         <span class="devgrp big"><button class="cbtn" id="callDeaf" data-tip="Звук" data-icon="headphones"></button><button class="devchev" id="callOutDev" title="Звук: куда выводить" aria-label="Выбрать наушники или колонки" data-icon="chevUp"></button></span>
+        <span class="devgrp big"><button class="cbtn" id="callCam" data-tip="Включить камеру" data-icon="videoOff"></button><button class="devchev" id="callCamDev" title="Камера: выбрать и настроить" aria-label="Настройки камеры" data-icon="chevUp"></button></span>
         <button class="cbtn" id="callShare" data-tip="Показать экран" data-icon="screen"></button>
         <span class="callsep"></span>
         <button class="cbtn" id="callChat" data-tip="Чат" data-icon="chat"></button>
@@ -1194,6 +1189,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     server: P('<rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/>'),
     users: P('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>'),
     trash: P('<path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6"/>'),
+    video: P('<path d="M23 7l-7 5 7 5z"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
+    videoOff: P('<path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.7 0H14a2 2 0 0 1 2 2v3.3l1 1L23 7v10M1 1l22 22"/>'),
     keyboard: P('<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M9 13h6M7 16h10"/>'),
   };
   // кнопка «иконка + подпись»
@@ -1204,6 +1201,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   const setIcon = (el, k) => { if (!el) return; const old = el.querySelector('svg.i'); if (old) old.remove(); el.insertAdjacentHTML('afterbegin', ICON[k]); };
   fillIcons();
   iconLabel($('shareBtn'), 'screen', 'Показать экран');
+  $('camBtn').innerHTML = ICON.videoOff;
   iconLabel($('monitorBtn'), 'headphones', 'Послушать себя');
 
   // ---------- аватарки: ник -> картинка (приходят от сервера один раз, потом только изменения) ----------
@@ -1570,7 +1568,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
           if (inVoice && legacy.length) {
             if (!chanOf(myVoice)) myVoice = (channels.find((c) => c.type === 'voice') || {}).id;
             wsSend({ type: 'join-voice', ch: myVoice });
-            wsSend({ type: 'state', muted, deaf, sharing: false });
+            wsSend({ type: 'state', muted, deaf, sharing: false, cam: !!camStream });
           }
           $('tempBanner').hidden = !m.temp;
           if (m.temp) {
@@ -2647,7 +2645,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     if (!u.inVoice) return li;
     if (speakingNow.has(u.id)) li.classList.add('speaking');
     const ic = document.createElement('span'); ic.className = 'icons';
-    ic.innerHTML = (u.muted && !u.deaf ? ICON.micOff : '') + (u.deaf ? ICON.headphonesOff : '');
+    ic.innerHTML = (u.cam ? '<i class="camic" title="Камера включена">' + ICON.video + '</i>' : '') + (u.muted && !u.deaf ? ICON.micOff : '') + (u.deaf ? ICON.headphonesOff : '');
     ic.title = u.deaf ? 'Выключил звук' : u.muted ? 'Выключил микрофон' : '';
     li.appendChild(ic);
     if (u.sharing && sameVoice) {
@@ -2677,92 +2675,32 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     $('vtNs').classList.toggle('active', settings.nsMode !== 'off');
     $('vtMicText').textContent = Math.round(settings.micGain * 100) + '%';
   }
-  let vbOpen = null, vbMeter = null;
-  function closeVb() { const p = $('vbPop'); if (p) p.remove(); vbOpen = null; clearInterval(vbMeter); document.querySelectorAll('.vtools .vt, .devchev').forEach((b) => b.classList.remove('open')); }
-  function openVb(kind, btn) {
-    if (vbOpen === kind) return closeVb();
-    closeVb(); vbOpen = kind; btn.classList.add('open');
-    const p = document.createElement('div'); p.id = 'vbPop';
-    if (kind === 'ns') {
-      p.innerHTML = '<h4>Шумодав</h4><div class="seg" id="vbModes"></div><div id="vbStr"><label>Сила: <b id="vbStrVal"></b></label><input type="range" id="vbStrength" min="40" max="100" step="5"></div>';
-      const modes = [['smart', 'Умный'], ['rnnoise', 'RNNoise'], ['dfn', 'DeepFilter'], ['ultra', 'ИИ-Макс'], ['browser', 'Встроенный'], ['off', 'Выкл']].filter(([v]) => !window.kAndroid || !['smart', 'dfn', 'ultra'].includes(v));
-      for (const [v, t] of modes) {
-        const b = document.createElement('button'); b.type = 'button'; b.textContent = t; b.classList.toggle('on', settings.nsMode === v);
-        b.onclick = () => { $('nsMode').value = v; $('nsMode').dispatchEvent(new Event('change')); p.querySelectorAll('#vbModes button').forEach((x) => x.classList.toggle('on', x === b)); syncVb(); syncVoiceTools(); };
-        p.querySelector('#vbModes').appendChild(b);
-      }
-      const syncVb = () => {
-        p.querySelector('#vbStr').hidden = !['smart', 'dfn', 'ultra', 'rnnoise', 'gtcrn'].includes(settings.nsMode);
-        p.querySelector('#vbStrength').value = settings.nsStrength;
-        p.querySelector('#vbStrVal').textContent = settings.nsStrength + '%';
-      };
-      syncVb();
-      p.querySelector('#vbStrength').oninput = (e) => { $('nsStrength').value = e.target.value; $('nsStrength').dispatchEvent(new Event('input')); syncVb(); };
-      p.querySelector('#vbStrength').onchange = () => $('nsStrength').dispatchEvent(new Event('change'));
-    } else if (kind === 'in' || kind === 'out') {
-      // выбор устройства: микрофон или куда выводить звук
-      const isIn = kind === 'in';
-      p.innerHTML = `<h4>${isIn ? 'Микрофон' : 'Звук'}</h4><div class="devlist"></div><label>${isIn ? 'Громкость микрофона' : 'Громкость участников'}: <b class="vv"></b></label><input type="range" class="vr2" min="0" max="200" step="5"><button type="button" class="vbmore">Все настройки голоса</button>`;
-      const list = p.querySelector('.devlist'), sel = $(isIn ? 'micSelect' : 'outSelect');
-      const draw = () => {
-        list.innerHTML = '';
-        // Android: устройства переключает сам телефон (динамик, разговорный, проводные и Bluetooth-наушники)
-        const KA = window.kAndroid && window.kAndroid.audioDevices ? window.kAndroid : null;
-        const nat = KA ? KA.audioDevices() : null;
-        if (nat) {
-          const arr = isIn ? nat.inputs : nat.outputs, cur = isIn ? nat.curIn : nat.curOut;
-          for (const d of arr || []) {
-            const b = document.createElement('button'); b.type = 'button'; b.classList.toggle('on', String(d.id) === String(cur));
-            b.innerHTML = '<i></i><span></span>'; b.lastChild.textContent = d.name; b.title = d.name;
-            b.onclick = () => { KA.setAudioDevice(isIn ? 'in' : 'out', d.id); setTimeout(draw, 300); };
-            list.appendChild(b);
-          }
-          if (isIn && nat.note) { const h = document.createElement('p'); h.className = 'hint'; h.textContent = nat.note; list.appendChild(h); }
-          return;
-        }
-        for (const o of sel.options) {
-          const b = document.createElement('button'); b.type = 'button'; b.classList.toggle('on', o.value === sel.value);
-          b.innerHTML = '<i></i><span></span>'; b.lastChild.textContent = o.textContent; b.title = o.textContent;
-          b.onclick = () => { sel.value = o.value; sel.dispatchEvent(new Event('change')); draw(); };
-          list.appendChild(b);
-        }
-        if (!isIn && sel.disabled) list.innerHTML = '<p class="hint">Этот браузер не умеет выбирать, куда выводить звук.</p>';
-      };
-      fillDevices().then(draw); draw();
-      const r = p.querySelector('.vr2'), src = $(isIn ? 'micGain' : 'masterVol');
-      const show = () => { p.querySelector('.vv').textContent = r.value + '%'; };
-      r.value = src.value; show();
-      r.oninput = () => { src.value = r.value; src.dispatchEvent(new Event('input')); show(); };
-      r.onchange = () => src.dispatchEvent(new Event('change'));
-      p.querySelector('.vbmore').onclick = () => { closeVb(); openSettings('voice'); };
-    } else {
-      p.innerHTML = '<h4>Микрофон</h4><label>Громкость: <b id="vbGainVal"></b></label><input type="range" id="vbGain" min="0" max="200" step="5"><div class="mini"><i id="vbLevel"></i></div>';
-      const g = p.querySelector('#vbGain'); g.value = Math.round(settings.micGain * 100);
-      p.querySelector('#vbGainVal').textContent = g.value + '%';
-      g.oninput = () => { $('micGain').value = g.value; $('micGain').dispatchEvent(new Event('input')); p.querySelector('#vbGainVal').textContent = g.value + '%'; syncVoiceTools(); };
-      g.onchange = () => $('micGain').dispatchEvent(new Event('change'));
-      vbMeter = setInterval(() => {
-        if (!micChain) return;
-        const b = new Float32Array(micChain.analyser.fftSize); micChain.analyser.getFloatTimeDomainData(b);
-        let x = 0; for (const v of b) x += v * v; const db = 20 * Math.log10(Math.sqrt(x / b.length) + 1e-9);
-        p.querySelector('#vbLevel').style.width = Math.max(0, Math.min(100, (db + 70) / 70 * 100)) + '%';
-      }, 90);
-    }
-    document.body.appendChild(p);
-    // список устройств дорисовывается позже — окно держим над кнопкой и после этого
-    const place = () => {
-      const r = (btn.closest('.devgrp') || btn).getBoundingClientRect();
-      p.style.left = Math.max(8, Math.min(r.left, innerWidth - p.offsetWidth - 8)) + 'px';
-      p.style.top = Math.max(8, r.top - p.offsetHeight - 8) + 'px';
-    };
-    place();
-    if (window.ResizeObserver) new ResizeObserver(place).observe(p);
-  }
-  $('vtNs').onclick = (e) => { e.stopPropagation(); openVb('ns', $('vtNs')); };
-  $('vtMic').onclick = (e) => { e.stopPropagation(); openVb('mic', $('vtMic')); };
-  for (const [id, kind] of [['micDev', 'in'], ['outDev', 'out'], ['callMicDev', 'in'], ['callOutDev', 'out']]) $(id).onclick = (e) => { e.stopPropagation(); const k = kind + ':' + id; if (vbOpen === k) return closeVb(); openVb(kind, $(id)); vbOpen = k; };
-  document.addEventListener('pointerdown', (e) => { if (vbOpen && !e.target.closest('#vbPop, .vtools, .devchev')) closeVb(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && vbOpen) closeVb(); });
+  // всплывающие окна (микрофон, звук, камера) — общий модуль kpop.js, такие же, как в личке
+  const fire = (id, ev) => $(id).dispatchEvent(new Event(ev));
+  const popMicA = {
+    devId: () => (nativeAudio() ? null : settings.mic), devLabel: () => null,
+    pickDev: async (d) => { await fillDevices(); const sel = $('micSelect'); sel.value = d ? d.deviceId : ''; fire('micSelect', 'change'); },
+    gain: () => settings.micGain,
+    setGain: (v, fin) => { $('micGain').value = Math.round(v * 100); fire('micGain', 'input'); if (fin) fire('micGain', 'change'); syncVoiceTools(); },
+    analyser: () => (micChain ? micChain.analyser : null),
+    ns: () => settings.nsMode,
+    setNs: (m) => { $('nsMode').value = m; fire('nsMode', 'change'); syncVoiceTools(); },
+    strength: () => settings.nsStrength,
+    setStrength: (v, fin) => { $('nsStrength').value = v; fire('nsStrength', 'input'); if (fin) fire('nsStrength', 'change'); },
+    more: () => openSettings('voice'),
+  };
+  const popOutA = {
+    devId: () => (nativeAudio() ? null : settings.out), devLabel: () => null,
+    canPick: () => !!(nativeAudio() || HTMLMediaElement.prototype.setSinkId),
+    pickDev: async (d) => { await fillDevices(); const sel = $('outSelect'); sel.value = d ? d.deviceId : ''; fire('outSelect', 'change'); },
+    vol: () => settings.masterVol,
+    setVol: (v, fin) => { $('masterVol').value = Math.round(v * 100); fire('masterVol', 'input'); if (fin) fire('masterVol', 'change'); },
+    more: () => openSettings('voice'),
+  };
+  const closeVb = () => kPop.close();
+  $('vtNs').onclick = (e) => { e.stopPropagation(); kPop.mic($('vtNs'), popMicA); };
+  $('vtMic').onclick = (e) => { e.stopPropagation(); kPop.mic($('vtMic'), popMicA); };
+  for (const [id, kind] of [['micDev', 'in'], ['outDev', 'out'], ['callMicDev', 'in'], ['callOutDev', 'out']]) $(id).onclick = (e) => { e.stopPropagation(); if (kind === 'in') kPop.mic($(id), popMicA); else kPop.out($(id), popOutA); };
   setTimeout(syncVoiceTools, 0);
 
   // ---------- профили: кликабельные ники, мини-профиль ----------
@@ -2993,6 +2931,18 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       prev = el;
     }
   }
+  // громкость человека — то же окно, что в личке (kpop.js)
+  let pmutes = store.get('pmutes', {});
+  function personPop(u, anchor) {
+    kPop.person(anchor, {
+      key: 's' + u.id, name: u.name,
+      vol: () => Math.min(2, volumes[u.name] ?? 1),
+      setVol: (v, fin) => { volumes[u.name] = v; applyVolume(u.id); if (fin) store.set('volumes', volumes); },
+      muted: () => !!pmutes[u.name],
+      setMuted: (b) => { if (b) pmutes[u.name] = true; else delete pmutes[u.name]; store.set('pmutes', pmutes); applyVolume(u.id); renderCall(); },
+      profile: () => openProfile(u.name, anchor),
+    });
+  }
   function makeUserTile(u) {
     const el = document.createElement('div'); el.className = 'vtile'; el.dataset.key = 'u' + u.id; el.dataset.id = u.id;
     const bg = document.createElement('div'); bg.className = 'tbg'; bg.dataset.name = u.name;
@@ -3001,28 +2951,34 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     el.append(bg, ava(u.name), label);
     if (u.id !== myId) {
       const p = document.createElement('span'); p.className = 'ping wait'; p.textContent = '…'; el.appendChild(p);
-      const vol = document.createElement('div'); vol.className = 'vol';
-      const r = document.createElement('input'); r.type = 'range'; r.min = 0; r.max = 100; r.step = 5;
-      const lab = document.createElement('span');
-      const sync = () => { r.value = Math.round(Math.min(2, volumes[u.name] ?? 1) * 100); lab.textContent = r.value + '%'; };
-      sync(); el._syncVol = sync;
-      r.oninput = () => { volumes[u.name] = r.value / 100; lab.textContent = r.value + '%'; store.set('volumes', volumes); applyVolume(u.id); };
-      vol.addEventListener('pointerdown', (e) => e.stopPropagation());
-      vol.addEventListener('click', (e) => e.stopPropagation());
-      vol.insertAdjacentHTML('beforeend', ICON.volume); vol.append(r, lab); el.appendChild(vol);
       el.title = 'Нажми — громкость этого участника';
-      el.onclick = () => { openVolFor = openVolFor === u.id ? null : u.id; syncVolPopups(); };
+      el.onclick = (e) => { e.stopPropagation(); const cu = users.find((x) => x.id === u.id) || u; personPop(cu, el); };
+      el.oncontextmenu = (e) => { e.preventDefault(); el.onclick(e); };
     } else { el.classList.add('me'); el.style.cursor = 'default'; }
     return el;
   }
+  // видео камеры в плитке: своё — из камеры, чужое — из соединения
+  function camOf(u) {
+    if (!u.cam) return null;
+    if (u.id === myId) return camStream;
+    const p = peers.get(u.id); return p && p.camTrack && p.camTrack.readyState === 'live' ? (p.camStreamObj && p.camStreamObj.getVideoTracks()[0] === p.camTrack ? p.camStreamObj : (p.camStreamObj = new MediaStream([p.camTrack]))) : null;
+  }
   function updateUserTile(el, u) {
     const label = el.querySelector('.tlabel');
-    label.innerHTML = (u.deaf ? ICON.headphonesOff : u.muted ? ICON.micOff : '') + '<span></span>';
+    label.innerHTML = (u.deaf ? ICON.headphonesOff : u.muted ? ICON.micOff : '') + (u.cam ? '<i class="camic">' + ICON.video + '</i>' : '') + '<span></span>';
     label.querySelector('span').textContent = u.name;
     const a = el.querySelector('.ava'); if (a.dataset.name !== u.name) { a.dataset.name = u.name; paintAva(a, u.name); }
     const p = el.querySelector('.ping'); const peer = peers.get(u.id);
     if (p) { if (peer && peer.ping != null) setPing(p, peer.ping); p.title = peer && peer.path ? 'Путь: ' + peer.path : ''; }
-    el.classList.toggle('showvol', openVolFor === u.id);
+    const cs = camOf(u);
+    let v = el.querySelector('video.kcam');
+    if (cs) {
+      if (!v) { v = document.createElement('video'); v.className = 'kcam'; v.muted = true; v.autoplay = true; v.playsInline = true; el.insertBefore(v, el.querySelector('.tlabel')); }
+      v.classList.toggle('mirror', u.id === myId);
+      if (v.srcObject !== cs) { v.srcObject = cs; v.play().catch(() => {}); }
+    } else if (v) { v.srcObject = null; v.remove(); }
+    el.classList.toggle('hascam', !!cs);
+    el.classList.toggle('pmuted', u.id !== myId && !!pmutes[u.name]);
   }
   function makeStreamTile(u) {
     const el = document.createElement('div'); el.className = 'vtile stream'; el.dataset.key = 's' + u.id;
@@ -3301,7 +3257,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     setView('call');
     if (chatSide) renderChannel();
     wsSend({ type: 'join-voice', ch });
-    wsSend({ type: 'state', muted, deaf, sharing });
+    wsSend({ type: 'state', muted, deaf, sharing, cam: !!camStream });
     renderUsers();
     fillDevices();
   }
@@ -3309,6 +3265,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   function leaveVoice(silent) {
     if (!inVoice) return;
     stopShare();
+    stopCam(true);
     if (watching != null) closeStage(true);
     inVoice = false;
     if (!silent) sfx('leave');
@@ -3363,6 +3320,8 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       const vt = pc.addTransceiver('video', { direction: 'sendrecv' });
       preferH264(vt);
       pc.addTransceiver('audio', { direction: 'sendrecv' });
+      pc.addTransceiver('video', { direction: 'sendrecv' }); // камера (mid 3)
+      if (camStream) applyCamTo(id, peer);
     }
 
     pc.onicecandidate = (e) => e.candidate && iceOk(e.candidate, mode) && wsSend({ type: 'signal', to: id, data: { candidate: e.candidate } });
@@ -3370,6 +3329,12 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       // буфер на приёме НЕ трогаем: Chromium сам подстраивает его под сеть.
       // Принудительный ноль давал «обрывисто по 2 буквы» при неровной доставке через Radmin.
       const mid = e.transceiver.mid;
+      if (e.track.kind === 'video' && mid === '3') { // камера
+        peer.camTrack = e.track; peer.camStreamObj = null;
+        e.track.onunmute = e.track.onmute = e.track.onended = () => renderCall();
+        renderCall();
+        return;
+      }
       if (e.track.kind === 'video') {
         peer.videoTrack = e.track;
         if (watching === id) showStage(id);
@@ -3421,10 +3386,11 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
       rebalance();
       if (data.sdp.type === 'offer') {
         for (const t of peer.pc.getTransceivers()) {
-          if (t.mid === '1' || t.mid === '2') t.direction = 'sendrecv';
+          if (t.mid === '1' || t.mid === '2' || t.mid === '3') t.direction = 'sendrecv';
           if (t.mid === '1') preferH264(t);
         }
         if (sharing && viewers.has(from)) applyShareTo(from);
+        if (camStream) applyCamTo(from);
         const ans = await peer.pc.createAnswer();
         await peer.pc.setLocalDescription({ type: 'answer', sdp: tuneSdp(ans.sdp) });
         wsSend({ type: 'signal', to: from, data: { sdp: peer.pc.localDescription } });
@@ -3467,7 +3433,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   function applyVolume(id) {
     const p = peers.get(id); if (!p) return;
     const u = users.find((x) => x.id === id);
-    const v = Math.max(0, Math.min(4, (u ? (volumes[u.name] ?? 1) : 1) * settings.masterVol));
+    const v = u && pmutes[u.name] ? 0 : Math.max(0, Math.min(4, (u ? (volumes[u.name] ?? 1) : 1) * settings.masterVol));
     boostAudio(p, v);
     p.screenAudio.volume = $('stageVol').value / 100;
     p.screenAudio.muted = deaf || watching !== id;
@@ -3524,6 +3490,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     }
     lastVoiceRate = rate;
     if (sharing) for (const id of viewers) applyShareTo(id);
+    if (camStream) for (const [id, p] of peers) if (p.camRate !== camKey()) applyCamTo(id, p);
   }
   window.kentovka = Object.assign(window.kentovka || {}, { shareInfo: () => (screenStream && screenStream.getVideoTracks()[0] ? Object.assign({ hint: screenStream.getVideoTracks()[0].contentHint }, screenStream.getVideoTracks()[0].getSettings()) : null) });
   window.kentovka = Object.assign(window.kentovka || {}, { budget: () => ({ peers: peers.size, voice: lastVoiceRate, viewers: viewers.size, share: sharing ? shareBudget(qArr()[3], viewers.size) : 0 }) });
@@ -3608,7 +3575,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     iconLabel($('shareBtn'), 'stop', 'Остановить показ');
     $('shareBtn').classList.add('sharing');
     syncControls();
-    wsSend({ type: 'state', muted, deaf, sharing });
+    wsSend({ type: 'state', muted, deaf, sharing, cam: !!camStream });
     for (const id of peers.keys()) applyShareTo(id);
     if (!screenStream.getAudioTracks().length && !window.kAndroid) sys('Стрим идёт без звука. Чтобы был звук, при выборе экрана поставь галочку «Со звуком системы». Голоса из Кентовки в стрим не попадут.');
   }
@@ -3703,8 +3670,89 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     $('shareBtn').classList.remove('sharing');
     syncControls();
     if (watching === myId) closeStage(true);
-    wsSend({ type: 'state', muted, deaf, sharing });
+    wsSend({ type: 'state', muted, deaf, sharing, cam: !!camStream });
   }
+
+  // ---------- вебкамера: видят все в голосовом канале (отдельный слот, без переподключения) ----------
+  let camStream = null, camBusy = false;
+  const CAMQ = { '360': [640, 360, 24, 500000], '720': [1280, 720, 30, 1200000], '1080': [1920, 1080, 30, 2500000] };
+  const camQ = () => (econ() ? [320, 180, 15, 160000] : CAMQ[settings.camQ] || CAMQ['360']);
+  const camKey = () => camQ().join('x') + ':' + peers.size;
+  function camConstraints(anyDev) {
+    const [w, h, fps] = camQ();
+    const c = { width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } };
+    if (window.kAndroid) c.facingMode = settings.camFacing || 'user';
+    else if (settings.cam && !anyDev) c.deviceId = { exact: settings.cam };
+    return c;
+  }
+  async function startCam() {
+    if (camStream || camBusy) return;
+    if (!inVoice) { kSay('Камера включается в голосовом канале — сначала зайди в него.'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { kSay('Здесь камера не поддерживается.'); return; }
+    camBusy = true;
+    try {
+      try { camStream = await navigator.mediaDevices.getUserMedia({ video: camConstraints() }); }
+      catch (e) { if (e.name === 'NotAllowedError' || e.name === 'SecurityError') throw e; camStream = await navigator.mediaDevices.getUserMedia({ video: camConstraints(true) }); }
+    } catch (e) {
+      camBusy = false;
+      kSay(e.name === 'NotAllowedError' ? 'Нет доступа к камере. Разреши камеру для Кентовки и попробуй ещё раз.' : e.name === 'NotFoundError' ? 'Камера не найдена. Подключи её и попробуй ещё раз.' : e.name === 'NotReadableError' ? 'Камера занята другой программой. Закрой её и попробуй ещё раз.' : 'Камера не включилась: ' + e.message);
+      return;
+    }
+    camBusy = false;
+    if (!inVoice) { camStream.getTracks().forEach((t) => t.stop()); camStream = null; return; }
+    const t = camStream.getVideoTracks()[0];
+    try { t.contentHint = 'motion'; } catch {}
+    t.onended = () => stopCam();
+    sfx('stream');
+    for (const id of peers.keys()) applyCamTo(id);
+    syncCamUi(); wsSend({ type: 'state', muted, deaf, sharing, cam: true }); renderCall(); fillDevices();
+  }
+  function stopCam(silent) {
+    if (!camStream) return;
+    const s0 = camStream; camStream = null;
+    s0.getTracks().forEach((t) => t.stop());
+    for (const id of peers.keys()) applyCamTo(id);
+    syncCamUi();
+    if (!silent) { wsSend({ type: 'state', muted, deaf, sharing, cam: false }); renderCall(); }
+  }
+  async function restartCam() { if (!camStream) return; stopCam(true); await startCam(); }
+  async function applyCamTo(id, peer) {
+    const p = peer || peers.get(id); if (!p) return;
+    const t = txOf(p, '3') || (p.initiator ? p.pc.getTransceivers()[3] : null);
+    if (!t || !t.sender) return;
+    const tr = camStream ? camStream.getVideoTracks()[0] : null;
+    if (t.sender.track !== tr) await t.sender.replaceTrack(tr).catch(() => {});
+    if (!tr) { p.camRate = null; return; }
+    try {
+      const prm = t.sender.getParameters();
+      if (!prm.encodings || !prm.encodings.length) return; // ещё не договорились — rebalance повторит
+      const [, , fps, rate] = camQ();
+      prm.encodings[0].maxBitrate = peers.size > 4 ? Math.round(rate * 0.6) : rate;
+      prm.encodings[0].maxFramerate = fps;
+      prm.degradationPreference = 'balanced';
+      await t.sender.setParameters(prm);
+      p.camRate = camKey();
+    } catch {}
+  }
+  function syncCamUi() {
+    const on = !!camStream;
+    const b = $('callCam'); b.classList.toggle('on', on); setIcon(b, on ? 'video' : 'videoOff'); b.dataset.tip = on ? 'Выключить камеру' : 'Включить камеру';
+    const s2 = $('camBtn'); s2.innerHTML = ICON[on ? 'video' : 'videoOff']; s2.classList.toggle('sharing', on); s2.title = on ? 'Выключить камеру' : 'Включить камеру';
+  }
+  const popCamA = {
+    on: () => !!camStream, stream: () => camStream,
+    toggle: () => (camStream ? stopCam() : startCam()),
+    devId: () => settings.cam || (camStream && camStream.getVideoTracks()[0].getSettings().deviceId) || '',
+    pickDev: async (d) => { settings.cam = d ? d.deviceId : ''; store.set('settings', settings); await restartCam(); },
+    q: () => settings.camQ || '360', setQ: async (q) => { settings.camQ = q; store.set('settings', settings); if (camStream) { const [w, h, fps] = camQ(); await camStream.getVideoTracks()[0].applyConstraints({ width: { ideal: w }, height: { ideal: h }, frameRate: { ideal: fps, max: fps } }).catch(() => restartCam()); for (const id of peers.keys()) applyCamTo(id); } },
+    facing: () => settings.camFacing || 'user', setFacing: async (f) => { settings.camFacing = f; store.set('settings', settings); await restartCam(); },
+    more: () => openSettings('voice'),
+  };
+  $('callCam').onclick = () => (camStream ? stopCam() : startCam());
+  $('camBtn').onclick = () => (camStream ? stopCam() : startCam());
+  $('callCamDev').onclick = (e) => { e.stopPropagation(); kPop.cam($('callCamDev'), popCamA); };
+  $('camDev').onclick = (e) => { e.stopPropagation(); kPop.cam($('camDev'), popCamA); };
+  window.kentovka = Object.assign(window.kentovka || {}, { camInfo: () => ({ on: !!camStream, settings: camStream ? camStream.getVideoTracks()[0].getSettings() : null, peers: [...peers.entries()].map(([id, p]) => ({ id, cam: !!(p.camTrack && p.camTrack.readyState === 'live' && !p.camTrack.muted) })) }) });
 
   function watch(id) {
     if (watching === id) { closeStage(); return; }
@@ -3974,7 +4022,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     if (!fromApp && APP0 && APP0.saveVoiceSettings && (was !== v || !silent)) APP0.saveVoiceSettings({ muted, deaf });
     micFade(!muted && !deaf);
     syncControls();
-    wsSend({ type: 'state', muted, deaf, sharing });
+    wsSend({ type: 'state', muted, deaf, sharing, cam: !!camStream });
   }
   // микрофон вкл/выкл без щелчка: звук плавно уходит за ~25 мс, и только потом дорожка выключается
   let fadeT = 0;
@@ -4270,7 +4318,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   document.addEventListener('click', (e) => {
     if ($('side').contains(e.target) || $('rail').contains(e.target)) return;
     // мини-профиль поверх списка (на телефоне): нажатие по нему не закрывает список; закрылся список — закрываем и профиль
-    if (e.target.closest && e.target.closest('.mp.float, dialog, #ctxMenu, #reactPop, #vbPop')) return;
+    if (e.target.closest && e.target.closest('.mp.float, dialog, #ctxMenu, #reactPop, #vbPop, .kpop')) return;
     $('side').classList.remove('open'); $('app').classList.remove('drawer');
     if (document.querySelector('.mp.float')) closeProfile();
   });
@@ -4292,7 +4340,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
   // кнопка «назад» на телефоне: окно → меню → чат → список каналов → (главная)
   window.kentovkaBack = () => {
     const dl = [...document.querySelectorAll('dialog[open]')].pop(); if (dl) { dl.close(); return true; }
-    if (document.getElementById('vbPop')) { closeVb(); return true; }
+    if (kPop.isOpen()) { kPop.close(); return true; }
     if (document.getElementById('reactPop')) { closeReactPicker(); return true; }
     if ($('ctxMenu').classList.contains('on')) { hideCtx(); return true; }
     if (document.querySelector('.mp.float')) { closeProfile(); return true; }

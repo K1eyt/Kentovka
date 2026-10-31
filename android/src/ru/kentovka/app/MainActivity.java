@@ -121,7 +121,7 @@ public class MainActivity extends Activity {
         s.setDatabaseEnabled(true);
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setAllowFileAccess(true);
-        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.8.10");
+        s.setUserAgentString(s.getUserAgentString() + " KentovkaAndroid/1.9.0");
         web.addJavascriptInterface(new Bridge(), "KentovkaAndroid");
         web.setWebViewClient(new Client());
         web.setWebChromeClient(new Chrome());
@@ -737,24 +737,35 @@ public class MainActivity extends Activity {
 
     @Override
     public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
-        // ответ на микрофон (из любого окна разрешений): отвечаем всем страницам, которые ждали
-        if (!pendingPerms.isEmpty()) {
-            boolean ok = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
-            if (ok || req == REQ_MIC) {
-                for (PermissionRequest r : pendingPerms) { try { if (ok) r.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE }); else r.deny(); } catch (Exception ignored) {} }
-                pendingPerms.clear();
-            }
+        // ответ на микрофон/камеру (из любого окна разрешений): отвечаем всем страницам, которые ждали
+        if (!pendingPerms.isEmpty() && (req == REQ_MIC || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)) {
+            for (PermissionRequest r : pendingPerms) { try { grantWhatWeCan(r); } catch (Exception ignored) {} }
+            pendingPerms.clear();
         }
+    }
+    // выдаём странице то, на что есть разрешение Android: микрофон и/или камеру
+    private boolean grantWhatWeCan(PermissionRequest r) {
+        java.util.ArrayList<String> ok = new java.util.ArrayList<String>();
+        for (String x : r.getResources()) {
+            if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x) && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) ok.add(x);
+            if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x) && checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) ok.add(x);
+        }
+        if (ok.isEmpty()) { r.deny(); return false; }
+        r.grant(ok.toArray(new String[0])); return true;
     }
 
     class Chrome extends WebChromeClient {
         @Override public void onPermissionRequest(final PermissionRequest r) {
             ui.post(new Runnable() { public void run() {
-                boolean wantsMic = false;
-                for (String x : r.getResources()) if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x)) wantsMic = true;
-                if (!wantsMic) { r.deny(); return; }
-                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) r.grant(new String[] { PermissionRequest.RESOURCE_AUDIO_CAPTURE });
-                else { pendingPerms.add(r); if (pendingPerms.size() == 1) requestPermissions(new String[] { Manifest.permission.RECORD_AUDIO }, REQ_MIC); }
+                java.util.ArrayList<String> need = new java.util.ArrayList<String>();
+                boolean any = false;
+                for (String x : r.getResources()) {
+                    if (PermissionRequest.RESOURCE_AUDIO_CAPTURE.equals(x)) { any = true; if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) need.add(Manifest.permission.RECORD_AUDIO); }
+                    if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x)) { any = true; if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) need.add(Manifest.permission.CAMERA); }
+                }
+                if (!any) { r.deny(); return; }
+                if (need.isEmpty()) { grantWhatWeCan(r); return; }
+                pendingPerms.add(r); if (pendingPerms.size() == 1) requestPermissions(need.toArray(new String[0]), REQ_MIC);
             } });
         }
         @Override public boolean onShowFileChooser(WebView v, ValueCallback<Uri[]> cb, FileChooserParams p) {

@@ -296,7 +296,7 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
   };
   const userList = () => [...clients].filter(([id, c]) => c.name && c.admitted).map(([id, c]) => ({
     ip: c.ip, appId: c.appId || null, host: !!c.isHost, since: c.since,
-    id, name: c.name, inVoice: !!c.voice, voice: c.voice || null, muted: c.muted, deaf: c.deaf, sharing: !!c.voice && c.sharing, idle: !!c.idle, dup: dupHidden(id, c),
+    id, name: c.name, inVoice: !!c.voice, voice: c.voice || null, muted: c.muted, deaf: c.deaf, sharing: !!c.voice && c.sharing, cam: !!c.voice && !!c.cam, idle: !!c.idle, dup: dupHidden(id, c),
   }));
   // последние сообщения каждого канала — для нового участника
   const recentHistory = () => { const out = []; for (const c of channels) out.push(...history.filter((h) => h.ch === c.id).slice(-100)); return out.sort((a, b) => a.mid - b.mid); };
@@ -334,7 +334,7 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
     if (process.env.KENTOVKA_TEST_HOST || noHost) isHost = false; // для тестов: хост определяется по нику (ниже)
     const nonce = crypto.randomBytes(16).toString('hex');
     send(ws, { type: 'challenge', nonce, v: 1 });
-    const me = { since: Date.now(), ws, name: null, voice: null, muted: false, deaf: false, sharing: false, isHost, admitted: isHost, ip: ra.replace(/^::ffff:/, '') };
+    const me = { since: Date.now(), ws, name: null, voice: null, muted: false, deaf: false, sharing: false, cam: false, isHost, admitted: isHost, ip: ra.replace(/^::ffff:/, '') };
     clients.set(id, me);
     // впускаем: приветствие, история, список участников
     me.admit = () => {
@@ -602,7 +602,7 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
         case 'join-voice': {
           const ch = channels.some((c) => c.id === m.ch && c.type === 'voice') ? m.ch : (channels.find((c) => c.type === 'voice') || {}).id;
           if (!ch) return;
-          if (me.voice && me.voice !== ch) { me.sharing = false; broadcast({ type: 'peer-left', id }, id); }
+          if (me.voice && me.voice !== ch) { me.sharing = false; me.cam = false; broadcast({ type: 'peer-left', id }, id); }
           me.voice = ch;
           // новичок сам звонит всем, кто уже в этом голосовом канале
           send(ws, { type: 'voice-peers', ch, peers: userList().filter((u) => u.voice === ch && u.id !== id).map((u) => u.id) });
@@ -610,7 +610,7 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
           break;
         }
         case 'leave-voice':
-          me.voice = null; me.sharing = false;
+          me.voice = null; me.sharing = false; me.cam = false;
           broadcast({ type: 'peer-left', id }, id);
           pushUsers();
           break;
@@ -643,13 +643,13 @@ function startServer({ port = 8443, dataDir = __dirname, direct = null, access =
           channels = channels.filter((x) => x !== c); saveChannels();
           history = history.filter((h) => h.ch !== c.id); saveHistory();
           // кто сидел в удалённом голосовом — выходят
-          for (const [cid, cl] of clients) if (cl.voice === c.id) { cl.voice = null; cl.sharing = false; broadcast({ type: 'peer-left', id: cid }, cid); send(cl.ws, { type: 'kicked-voice' }); }
+          for (const [cid, cl] of clients) if (cl.voice === c.id) { cl.voice = null; cl.sharing = false; cl.cam = false; broadcast({ type: 'peer-left', id: cid }, cid); send(cl.ws, { type: 'kicked-voice' }); }
           broadcast({ type: 'channels', channels, deleted: c.id });
           pushUsers();
           break;
         }
         case 'state':
-          me.muted = !!m.muted; me.deaf = !!m.deaf; me.sharing = !!m.sharing;
+          me.muted = !!m.muted; me.deaf = !!m.deaf; me.sharing = !!m.sharing; me.cam = !!m.cam;
           pushUsers();
           break;
         case 'idle': // «неактивен» — давно не трогал комп
