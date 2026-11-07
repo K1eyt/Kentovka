@@ -1,0 +1,80 @@
+21:43:45 в голосе
+21:43:48 peers 
+21:43:51 peers 
+21:43:54 peers 
+21:43:57 peers 
+21:44:00 peers 
+21:44:03 peers 
+21:44:06 peers 
+21:44:09 peers 
+21:44:12 peers 
+21:44:15 peers 
+21:44:18 peers 
+21:44:21 peers 
+21:44:24 peers 
+21:44:27 peers 
+21:44:30 peers 
+21:44:33 peers 
+21:44:36 peers 
+21:44:39 peers 
+21:44:42 peers 
+21:44:45 peers 
+21:44:48 peers 
+21:44:51 peers 
+21:44:54 peers 
+21:44:57 peers 
+21:45:00 peers 
+21:45:03 peers 
+21:45:06 peers 
+21:45:09 peers 
+21:45:12 peers 
+21:45:15 peers 
+21:45:18 peers 
+21:45:21 peers 
+21:45:24 peers 
+21:45:27 peers 
+21:45:30 peers 
+21:45:33 peers 
+21:45:36 peers 
+21:45:39 peers 
+21:45:42 peers 
+21:45:45 peers 
+21:45:48 peers 
+21:45:51 peers 
+21:45:54 peers 
+21:45:57 peers 
+21:46:00 peers 
+21:46:03 peers 
+21:46:06 peers 
+21:46:10 peers 
+21:46:13 peers 
+21:46:16 peers 
+21:46:19 peers 
+21:46:22 peers 
+21:46:25 peers 
+21:46:28 peers 
+21:46:31 peers 
+21:46:34 peers 
+21:46:37 peers 
+21:46:40 peers 
+21:46:43 peers 
+21:46:46 peers 
+21:46:49 peers 
+21:46:52 peers 
+21:46:55 peers 
+21:46:58 peers 
+21:47:01 peers 
+21:47:04 peers 
+21:47:07 peers 
+21:47:10 peers 
+21:47:13 peers 
+21:47:16 peers 
+21:47:19 peers 
+21:47:22 peers connecting+audio
+21:47:25 peers connecting+audio
+21:47:28 peers connected+audio
+21:47:31 peers connected+audio
+21:47:34 peers connected+audio
+21:47:37 peers connected+audio
+21:47:40 peers connected+audio
+21:47:43 peers connected+audio
