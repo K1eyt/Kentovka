@@ -4031,7 +4031,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     const g = micChain && micChain.last && micChain.last.gain;
     clearTimeout(fadeT);
     if (!g) { tracks.forEach((t) => (t.enabled = on)); return; }
-    const t0 = g.context.currentTime;
+    const t0 = micChain.last.context.currentTime;
     try { g.cancelScheduledValues(t0); g.setValueAtTime(g.value, t0); } catch {}
     if (on) { tracks.forEach((t) => (t.enabled = true)); g.setTargetAtTime(1, t0, 0.008); }
     else { g.setTargetAtTime(0, t0, 0.007); fadeT = setTimeout(() => tracks.forEach((t) => (t.enabled = false)), 45); }
@@ -4700,7 +4700,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     // смена шумодава/микрофона без щелчка: старый звук гаснет за ~25 мс, новый так же плавно появляется
     const on = !muted && !deaf;
     try { fresh.last.gain.value = 0; } catch {}
-    if (on && micChain && micChain.last) { try { const g = micChain.last.gain, t0 = g.context.currentTime; g.cancelScheduledValues(t0); g.setValueAtTime(g.value, t0); g.setTargetAtTime(0, t0, 0.007); } catch {} await new Promise((r) => setTimeout(r, 40)); }
+    if (on && micChain && micChain.last) { try { const g = micChain.last.gain, t0 = micChain.last.context.currentTime; g.cancelScheduledValues(t0); g.setValueAtTime(g.value, t0); g.setTargetAtTime(0, t0, 0.007); } catch {} await new Promise((r) => setTimeout(r, 40)); }
     for (const p of peers.values()) {
       const t = txOf(p, '0');
       if (t) await t.sender.replaceTrack(track).catch(() => {});
@@ -4712,7 +4712,7 @@ window.kAndroid = window.KentovkaAndroid ? (() => {
     watchMicTrack();
     if (monitoring) setMonitor(true);
     watchSpeaking(localStream, () => myId);
-    if (on) try { const g = fresh.last.gain; g.setTargetAtTime(1, g.context.currentTime, 0.008); } catch {}
+    if (on) try { const g = fresh.last.gain; g.setTargetAtTime(1, fresh.last.context.currentTime, 0.008); } catch {}
   }
 
   $('micSelect').onchange = () => {
